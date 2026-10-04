@@ -5,7 +5,7 @@
 - **Team:** Insharah Irfan (`I`), Zara Noor (`Z`), Aabia Ali (`A`)
 - **Supervisor:** Dr. Ali Zeeshan Ijaz
 - **Institution/Course:** FAST-NUCES Islamabad, FYP-1
-- **Execution mode: STRICTLY SEQUENTIAL, one step at a time** (Section 10). There is no day schedule and no parallel tracks. We have time, so we go step by step and nothing starts until the previous step's gate is met.
+- **Execution mode: SEQUENTIAL BY DEFAULT, one step at a time** (Section 10). There is no day schedule and no parallel tracks. We have time, so we go step by step and nothing starts until the previous step's gate is met, except early starts allowed by D-15 (amended 2026-10-04).
 - **Deliverable for the mid-eval:** a live, deployed, CI/CD-backed core module (Section 3) plus the worksheet and report evidence (Section 12).
 
 ---
@@ -45,7 +45,7 @@
 9. **Generated text (Review Copilot) is never evidence and never an input to state assignment.**
 10. **No secrets in the repo.** Use environment variables, `.env` (gitignored), and GitHub Secrets.
 11. **Every material claim needs evidence** (commit, test, CI run, demo). The supervisor can ask any member to explain or modify any code attributed to them. Declare LLM use.
-12. **GENERIC ENGINE RULE:** the engine packages (`evaluator`, `deps`, `ledger`, `changes`, `reeval`) must contain **no** hardcoded drug names, organism names, standards (CLSI/EUCST), editions, determinant names, or scenario IDs. Everything specific is **data** (tables, rules, fixtures) or **tests**. See Section 3.2.
+12. **GENERIC ENGINE RULE:** the engine packages (`evaluator`, `deps`, `ledger`, `changes`, `reeval`) must contain **no** hardcoded drug names, organism names, standards (CLSI/EUCAST), editions, determinant names, or scenario IDs. Everything specific is **data** (tables, rules, fixtures) or **tests**. See Section 3.2.
 
 ---
 
@@ -78,18 +78,18 @@ A version-aware evidence lifecycle: a **versioned dependency graph + append-only
 
 ### 1.5 Evidence states (exactly five; operational, non-causal)
 
-| Code (confirm exact strings against the V1 pipeline) | Meaning                                                                                         |
-| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `CONCORDANT_RESISTANT`                               | Phenotype R and active mapping set has supporting genotype evidence                             |
-| `CONCORDANT_SUSCEPTIBLE`                             | Phenotype S and no active mapped determinant recorded                                           |
-| `DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S`           | Mapped genotype evidence present, phenotype S; cause unresolved                                 |
-| `DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE`          | Phenotype R, no active mapped determinant (absence of mapping is not absence of all mechanisms) |
-| `UNRESOLVED`                                         | Intermediate, missing, conflicting, censored, or otherwise insufficient evidence                |
+| Code (confirmed against the frozen files, 2026-10-04) | Meaning                                                                                         |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `CONCORDANT_RESISTANT`                                | Phenotype R and active mapping set has supporting genotype evidence                             |
+| `CONCORDANT_SUSCEPTIBLE`                              | Phenotype S and no active mapped determinant recorded                                           |
+| `DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S`            | Mapped genotype evidence present, phenotype S; cause unresolved                                 |
+| `DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE`           | Phenotype R, no active mapped determinant (absence of mapping is not absence of all mechanisms) |
+| `UNRESOLVED`                                          | Intermediate, missing, conflicting, censored, or otherwise insufficient evidence                |
 
-### 1.6 Frozen V1 facts (verify against the frozen files; see OD-1)
+### 1.6 Frozen V1 facts (verified against the frozen files in G-02; see `docs/data_facts.md`)
 
 - 10,584 exact-species isolates; 41,858 final isolate-antibiotic cases; 57,228 AST rows; 413,116 genotype evidence rows; 43,536 determinant-to-antibiotic mapping rows; 892 unique determinants; 114 data-contract QA checks passed.
-- **WARNING:** the report and the slides give different per-drug splits and totals for G+/S, R/no-mapped, and unresolved. The frozen files are the source of truth; see OD-1.
+- OD-1 resolved (G-02, D-16): the frozen files match the report numbers (for example ciprofloxacin 8,787, gentamicin 9,715, G+/S 1,288, unresolved 8,389 = 20.04%). The second set of numbers in the slides (Appendix B and the M11 findings slide) matches no frozen file and is superseded.
 - Real version transitions observed on the frozen cohort (these become **test scenarios**):
   - **Source S1->S2:** 821 isolates with metadata/provenance changes touching 2,219 case dossiers; 0 AST changes; 0 semantic genotype changes; 0 re-evaluations required (the "locality" result).
   - **AMRFinderPlus reference evolution:** 10 semantic transitions, 8 intersect historical cases (495 case IDs). 108 blaCMY/ceftriaxone cases kept the same state while the explanation/provenance changed.
@@ -100,23 +100,28 @@ A version-aware evidence lifecycle: a **versioned dependency graph + append-only
 
 ## 2. Decisions already made (do not re-litigate without team agreement)
 
-| ID   | Decision                                                                                                                                                                                                                                                                                                                                                                                                                   | Rationale                                                                          |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| D-01 | Modular monolith: one Python backend with logically separated packages; **not** microservices                                                                                                                                                                                                                                                                                                                              | Avoids distributed-systems overhead                                                |
-| D-02 | PostgreSQL stores everything, including the dependency graph as a **relational adjacency table** with an indexed **recursive CTE** for reverse reachability. No in-memory graph, no graph DB                                                                                                                                                                                                                               | Multiple backend workers need one source of truth                                  |
-| D-03 | Client is presentation-only; all evaluation, impact selection, and re-evaluation run server-side                                                                                                                                                                                                                                                                                                                           | Execution model in the proposal                                                    |
-| D-04 | Docker Compose for dev and deploy (db, api, web)                                                                                                                                                                                                                                                                                                                                                                           | FR-08                                                                              |
-| D-05 | Granularity (provisional): record-level for evidence, **rule-level** for interpretation and mapping dependencies (a node per rule key), version-level for tools. Other levels are a later ablation                                                                                                                                                                                                                         | Proposal 4.4.5, refined so one rule change does not select the whole standard      |
-| D-06 | Impact analysis = reverse reachability over realised edges **plus** applicability lookup                                                                                                                                                                                                                                                                                                                                   | Gap 6 / Section 4.4.6                                                              |
-| D-07 | Six impact categories per case: Selected, Re-evaluated, State changed, Explanation changed, Uncertainty changed, Actual affected. Soundness: Actual affected is a subset of Selected                                                                                                                                                                                                                                       | Proposal 4.4.2                                                                     |
-| D-08 | Equivalence gate across three axes (state, dependency explanation, uncertainty/provenance); any mismatch blocks release                                                                                                                                                                                                                                                                                                    | Proposal 4.4.2                                                                     |
-| D-09 | Exhaustive recomputation mode stays permanently as the correctness oracle (baseline B1)                                                                                                                                                                                                                                                                                                                                    | Proposal                                                                           |
-| D-10 | Impact oracle expected sets are hand-written by someone other than the selector implementer (A) and committed before the selector code is run against them                                                                                                                                                                                                                                                                 | Proposal 4.7.2                                                                     |
-| D-11 | Review Copilot, triage, RBAC, and other change types are **mocked or deferred** for the mid-eval and listed in the implementation-boundary table                                                                                                                                                                                                                                                                           | Scope control                                                                      |
-| D-12 | Evaluator has two modes via one generic parameter: `interpretation_version = None` means **as-reported** (trust the submitted phenotype); otherwise S/I/R is **derived from the exact MIC using an interpretation table loaded as data**. Build order: (1) prove parity with frozen V1 in as-reported mode; (2) register an interpretation table as the baseline release; (3) a changed table is just another change event | Frozen V1 uses submitted phenotypes; interpretation must be data, not code         |
-| D-13 | **Generic engine:** no specific drug, organism, standard, edition, determinant, or scenario inside engine packages. Specifics live in data files and tests. Every change enters only as a **typed change event**; future monitoring/pulling will only produce such events                                                                                                                                                  | Core must not need modification later                                              |
-| D-14 | Change classification is a **registry of differs** (one per change type), each turning "old version vs new version" into declared changed entities                                                                                                                                                                                                                                                                         | Extension point for new change types and for the future monitor                    |
-| D-15 | Work is **strictly sequential**, one step at a time, with a gate per step (Section 10)                                                                                                                                                                                                                                                                                                                                     | We have time; avoids integration chaos and keeps everyone understanding everything |
+| ID   | Decision                                                                                                                                                                                                                                                                                                                                                                                                                   | Rationale                                                                         |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| D-01 | Modular monolith: one Python backend with logically separated packages; **not** microservices                                                                                                                                                                                                                                                                                                                              | Avoids distributed-systems overhead                                               |
+| D-02 | PostgreSQL stores everything, including the dependency graph as a **relational adjacency table** with an indexed **recursive CTE** for reverse reachability. No in-memory graph, no graph DB                                                                                                                                                                                                                               | Multiple backend workers need one source of truth                                 |
+| D-03 | Client is presentation-only; all evaluation, impact selection, and re-evaluation run server-side                                                                                                                                                                                                                                                                                                                           | Execution model in the proposal                                                   |
+| D-04 | Docker Compose for dev and deploy (db, api, web)                                                                                                                                                                                                                                                                                                                                                                           | FR-08                                                                             |
+| D-05 | Granularity (provisional): record-level for evidence, **rule-level** for interpretation and mapping dependencies (a node per rule key), version-level for tools. Other levels are a later ablation                                                                                                                                                                                                                         | Proposal 4.4.5, refined so one rule change does not select the whole standard     |
+| D-06 | Impact analysis = reverse reachability over realised edges **plus** applicability lookup                                                                                                                                                                                                                                                                                                                                   | Gap 6 / Section 4.4.6                                                             |
+| D-07 | Six impact categories per case: Selected, Re-evaluated, State changed, Explanation changed, Uncertainty changed, Actual affected. Soundness: Actual affected is a subset of Selected                                                                                                                                                                                                                                       | Proposal 4.4.2                                                                    |
+| D-08 | Equivalence gate across three axes (state, dependency explanation, uncertainty/provenance); any mismatch blocks release                                                                                                                                                                                                                                                                                                    | Proposal 4.4.2                                                                    |
+| D-09 | Exhaustive recomputation mode stays permanently as the correctness oracle (baseline B1)                                                                                                                                                                                                                                                                                                                                    | Proposal                                                                          |
+| D-10 | Impact oracle expected sets are hand-written by someone other than the selector implementer (A) and committed before the selector code is run against them                                                                                                                                                                                                                                                                 | Proposal 4.7.2                                                                    |
+| D-11 | Review Copilot, triage, RBAC, and other change types are **mocked or deferred** for the mid-eval and listed in the implementation-boundary table                                                                                                                                                                                                                                                                           | Scope control                                                                     |
+| D-12 | Evaluator has two modes via one generic parameter: `interpretation_version = None` means **as-reported** (trust the submitted phenotype); otherwise S/I/R is **derived from the exact MIC using an interpretation table loaded as data**. Build order: (1) prove parity with frozen V1 in as-reported mode; (2) register an interpretation table as the baseline release; (3) a changed table is just another change event | Frozen V1 uses submitted phenotypes; interpretation must be data, not code        |
+| D-13 | **Generic engine:** no specific drug, organism, standard, edition, determinant, or scenario inside engine packages. Specifics live in data files and tests. Every change enters only as a **typed change event**; future monitoring/pulling will only produce such events                                                                                                                                                  | Core must not need modification later                                             |
+| D-14 | Change classification is a **registry of differs** (one per change type), each turning "old version vs new version" into declared changed entities                                                                                                                                                                                                                                                                         | Extension point for new change types and for the future monitor                   |
+| D-15 | Work is **sequential by default**, one active step at a time, with a gate per step (Section 10). **Amended 2026-10-04:** a task may start early if all its dependencies are DONE, it stays inside its owner's directories, and `docs/milestones.md` records it. First real gate: A-02 (golden test), after which strict order resumes                                                                                      | We have time; keeps everyone understanding everything while avoiding idle waiting |
+| D-16 | OD-1 resolved (G-02, 2026-10-04): the frozen files win. The report numbers are V1; the second set of numbers in the slides matches no frozen file and is superseded (evidence: `docs/data_facts.md`)                                                                                                                                                                                                                       | The files are the source of truth                                                 |
+| D-17 | Data layout: frozen files in `data/raw/` (contents gitignored), manifests committed in `data/manifest/frozen_v1/`, `data/manifest/sha256.txt` committed. Frozen column names are kept in the database; only `checksum` is renamed `source_checksum` (ADR-003)                                                                                                                                                              | Same layout on every machine; no renaming layer to maintain                       |
+| D-18 | Evaluator is staged: `evaluate_phenotype`, `evaluate_genotype`, `combine`, composed by `evaluate`. `refgene_db_version` is per case (ADR-004)                                                                                                                                                                                                                                                                              | Mirrors frozen V1; makes the golden test debuggable                               |
+| D-19 | Applicability is keyed on `(determinant_identity, candidate_antibiotic)`, not on mapping rule id (ADR-003 section 6)                                                                                                                                                                                                                                                                                                       | Rule ids change with each AMRFinderPlus database version                          |
+| D-20 | OD-10: use the old pipeline's outputs as data, port only evaluation logic, copy `M8_2_CASE_RULES_V1.md` to `docs/spec/`. Toolchain: Python 3.12 venv, `pandas==3.0.5`, `pyarrow==25.0.1`, PostgreSQL 16, plain numbered SQL migrations (ADR-003 section 8, ADR-004)                                                                                                                                                        | Reproducible and independent of the old repo                                      |
 
 ---
 
@@ -172,7 +177,7 @@ The engine only understands: a **case**, **evidence**, **versioned nodes**, a **
 
 ## 4. Repository structure and ownership
 
-Repository name and URL: **TBD (OD-5)**. Suggested name: `amrtrace-studio`.
+Repository: private GitHub repo `ZaraHEREhehe/amrtrace-studio` (OD-5 decided).
 
 ```
 amrtrace-studio/
@@ -188,8 +193,9 @@ amrtrace-studio/
   docker/                        # Dockerfiles (Z)
   .env.example                   # Z, no real secrets
   db/migrations/                 # schema owner: I (reviewed by Z)
-  data/                          # large files gitignored; manifests + small tables committed
-    manifest/                    # Z
+  data/
+    raw/                         # frozen V1 files (contents gitignored, folder tracked)
+    manifest/                    # Z: frozen_v1/ manifests and sha256.txt (committed)
     interpretation/              # I: breakpoint tables as YAML (data, not code)
   scripts/
     check_genericity.py          # Z (Z-15)
@@ -214,68 +220,88 @@ amrtrace-studio/
   docs/
     adr/                         # architecture decision records (I)
     design/                      # design-evolution notes
+    spec/                        # copied specs, e.g. M8_2_CASE_RULES_V1.md (ADR-003 OP-3)
     worksheet/                   # filled worksheet (I)
     milestones.md                # Z
 ```
 
-Python 3.11+, `pytest`, `ruff`, `psycopg` (or SQLAlchemy Core), FastAPI. Framework choices are infrastructure, not contribution; do not spend time debating them.
+Python 3.12 (ADR-003), `pytest`, `ruff`, `psycopg` (or SQLAlchemy Core), FastAPI, PostgreSQL 16. Framework choices are infrastructure, not contribution; do not spend time debating them.
 
 ---
 
-## 5. Design contracts (freeze these in step 3, G-01)
+## 5. Design contracts (frozen in step 3, G-01)
+
+**ADR-001 to ADR-004 in `docs/adr/` are authoritative. Where this section and an ADR disagree, the ADR wins.**
 
 ### 5.1 Core types and function signatures
 
 ```python
-# src/amrtrace/evaluator/types.py
+# src/amrtrace/evaluator/types.py  (generic: no dataset-specific names, ADR-001)
 from dataclasses import dataclass
 from typing import Optional
 
 @dataclass(frozen=True)
-class VersionVector:
+class VersionVector:                      # release-wide
     source_snapshot_id: str
-    curation_version: str
+    curation_rule_version: str
     amrfinderplus_version: str
-    refgene_db_version: str
     mapping_version: str
-    interpretation_version: Optional[str]   # None = "as-reported" mode (use submitted phenotype)
-    case_rules_version: str
-    panel_version: str
+    interpretation_version: Optional[str]  # None = as-reported mode (ADR-002)
+    case_rule_version: str
+    panel_id: str
     evaluator_version: str
 
 @dataclass(frozen=True)
 class CaseInputs:
-    case_id: str                  # "<isolate_target_acc>__<antibiotic>"
-    organism: str
+    case_id: str                           # opaque hash, never parsed
+    target_acc: str
     antibiotic: str
-    phenotype: Optional[str]      # as reported: susceptible/intermediate/resistant/not defined
-    mic: Optional[float]
-    measurement_sign: Optional[str]   # '==', '<', '<=', '>', '>='
-    testing_standard: Optional[str]
-    ast_evidence_ids: tuple[str, ...]
-    genotype_evidence: tuple[dict, ...]     # rows, deterministically ordered
-    applicable_mapping_rules: tuple[dict, ...]
-    interpretation_rules: tuple[dict, ...]  # rules from the loaded table matching this case (may be empty)
+    organism: str
+    refgene_db_version: str                # per case (3 values in V1)
+    ast_rows: tuple[dict, ...]             # deterministic order
+    genotype_rows: tuple[dict, ...]        # deterministic order
+    mapping_rules: tuple[dict, ...]        # rules for this case's db version and antibiotic
+    interpretation_rules: tuple[dict, ...] # matching rules from the loaded table, may be empty
 
 @dataclass(frozen=True)
 class DependencyRecord:
-    dep_type: str          # positive_support | applicability | provenance_version | ...
-    edge_type: str         # derived_from | evaluated_against | composed_of
+    dep_type: str      # input_evidence | positive_support | applicability | provenance_version | ...
+    edge_type: str     # derived_from | evaluated_against | composed_of
     node_type: str
-    node_id: str           # rule key for rule-level nodes
-    node_version: str
-    node_context: Optional[dict]   # e.g. {"mic": 4, "sign": "=="} used for region refinement
+    node_id: str       # evidence id, rule id, or rule key
+    node_version: Optional[str]
+    node_context: Optional[dict]   # e.g. {"mic": 4.0, "sign": "=="} for region refinement
+
+@dataclass(frozen=True)
+class PhenotypeResult:
+    phenotype_state: str              # PHENOTYPE_S | PHENOTYPE_R | PHENOTYPE_UNRESOLVED_NONBINARY | PHENOTYPE_CONFLICT
+    phenotype_values: tuple[str, ...]
+    dependency_records: tuple[DependencyRecord, ...]
+
+@dataclass(frozen=True)
+class GenotypeResult:
+    genotype_state: str               # GENOTYPE_NO_MAPPED_SUPPORT | GENOTYPE_DECISIVE_SUPPORT | GENOTYPE_CONTEXTUAL_SUPPORT
+    genotype_ids_evaluated: tuple[str, ...]
+    genotype_ids_supporting: tuple[str, ...]
+    mapping_rule_ids_evaluated: tuple[str, ...]
+    mapping_rule_ids_supporting: tuple[str, ...]
+    dependency_records: tuple[DependencyRecord, ...]
 
 @dataclass(frozen=True)
 class EvalResult:
-    state_code: str
-    uncertainty_reason: Optional[str]
-    explanation: dict               # canonical, JSON-serializable, sorted
+    phenotype_state: str
+    genotype_state: str
+    state_code: str                   # the five case states
+    uncertainty_reason: Optional[str] # NONBINARY_PHENOTYPE | CONTEXTUAL_GENOTYPE_EVIDENCE | PHENOTYPE_CONFLICT | CENSORED_MIC
+    explanation: dict                 # canonical, sorted, JSON-serialisable
     dependency_records: tuple[DependencyRecord, ...]
     input_hash: str
     output_hash: str
 
-def evaluate(inputs: CaseInputs, versions: VersionVector) -> EvalResult: ...
+def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> PhenotypeResult: ...
+def evaluate_genotype(inputs: CaseInputs, versions: VersionVector) -> GenotypeResult: ...
+def combine(p: PhenotypeResult, g: GenotypeResult, versions: VersionVector) -> tuple[str, Optional[str]]: ...
+def evaluate(inputs: CaseInputs, versions: VersionVector) -> EvalResult: ...   # composes the three
 ```
 
 ```python
@@ -329,7 +355,9 @@ def compare(conn, run_id: str, exhaustive_run_id: str) -> "EquivalenceReport": .
 
 Rule: **no change is activated without a typed event and declared affected entity IDs.** `changed_entities` may be supplied by a person or computed by the registered differ for that type. The future monitor will produce exactly this shape.
 
-### 5.3 Database schema (draft; the schema owner is I; final DDL goes in `db/migrations/`; adjust column names to the real frozen files in step 3)
+### 5.3 Database schema (draft; the schema owner is I; final DDL goes in `db/migrations/`)
+
+> **Superseded for source tables.** The DDL for `snapshot`, `isolate`, `ast_evidence`, `genotype_evidence`, `mapping_rule` and `case` below is superseded by ADR-003 (real column names, `target_acc` + `antibiotic` as the case key, opaque `case_id`). Engine tables stay as drafted, with these changes: `case_state` gains `phenotype_state` and `genotype_state`; `dependency.dep_type` gains `input_evidence`; add an `antibiotic` lookup table (8 rows, `in_panel`); `applicability` is keyed on `(determinant_identity, candidate_antibiotic)`.
 
 ```sql
 CREATE TABLE snapshot (snapshot_id text PRIMARY KEY, source text, extracted_at timestamptz,
@@ -503,27 +531,27 @@ CI uses a small **mini-cohort fixture** (the 154 CLSI cases + ~500 control cases
 - **Commit messages:** `<TASK-ID>: <imperative summary>` (for example `A-05: add reverse reachability CTE`). Commit small. The worksheet asks to explain large or late commits.
 - **Issues:** one GitHub Issue per task ID, titled `[<TASK-ID>] <title>`, assigned to the owner, labelled with the step number. PR description must contain `Closes #<issue>`.
 - **Reviewers (rotation):** Aabia's PRs -> **Insharah**; Insharah's PRs -> **Zara**; Zara's PRs -> **Aabia**. Group tasks: reviewer listed per task. Since work is sequential, the two non-drivers read along during each step and ask questions; the reviewer also confirms they can explain the code.
-- **CODEOWNERS** (`.github/CODEOWNERS`; replace with actual GitHub usernames):
+- **CODEOWNERS** (`.github/CODEOWNERS`):
 
 ```
-/src/amrtrace/evaluator/        @AABIA_GH
-/src/amrtrace/deps/             @AABIA_GH
-/src/amrtrace/interpretation/   @INSHARAH_GH
-/src/amrtrace/ledger/           @INSHARAH_GH
-/src/amrtrace/changes/          @INSHARAH_GH
-/src/amrtrace/reeval/           @INSHARAH_GH
-/data/interpretation/           @INSHARAH_GH
-/db/migrations/                 @INSHARAH_GH
-/tests/oracle/                  @INSHARAH_GH
-/src/amrtrace/ingest/           @ZARA_GH
-/src/amrtrace/api/              @ZARA_GH
-/web/                           @ZARA_GH
-/.github/                       @ZARA_GH
-/docker/                        @ZARA_GH
-/docker-compose.yml             @ZARA_GH
-/scripts/                       @ZARA_GH
-/docs/design/graph*             @AABIA_GH
-/docs/adr/                      @INSHARAH_GH
+/src/amrtrace/evaluator/        @AabiaAli
+/src/amrtrace/deps/             @AabiaAli
+/src/amrtrace/interpretation/   @insharahn
+/src/amrtrace/ledger/           @insharahn
+/src/amrtrace/changes/          @insharahn
+/src/amrtrace/reeval/           @insharahn
+/data/interpretation/           @insharahn
+/db/migrations/                 @insharahn
+/tests/oracle/                  @insharahn
+/src/amrtrace/ingest/           @ZaraHEREhehe
+/src/amrtrace/api/              @ZaraHEREhehe
+/web/                           @ZaraHEREhehe
+/.github/                       @ZaraHEREhehe
+/docker/                        @ZaraHEREhehe
+/docker-compose.yml             @ZaraHEREhehe
+/scripts/                       @ZaraHEREhehe
+/docs/design/graph*             @AabiaAli
+/docs/adr/                      @insharahn
 ```
 
 - **PR template** (`.github/pull_request_template.md`):
@@ -569,25 +597,25 @@ Closes #  | Task ID:
 
 ### 9.2 Track A: Aabia (evaluator and dependency graph)
 
-| ID   | Task                                                                                                                                                                                                                                               | Files                                                      | Depends on       | Acceptance / tests                                                                                  | Reviewer |
-| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------- | -------- |
-| A-01 | Port the V1 evaluator to a **pure generic function** `evaluate(CaseInputs, VersionVector) -> EvalResult` (as-reported mode first; interpretation branch calls only the generic rule data in `inputs`)                                              | `src/amrtrace/evaluator/`                                  | G-01             | Unit tests for each of the five states, missing/ambiguous inputs; `tests/unit/evaluator/`           | Insharah |
-| A-02 | **Golden regression test:** evaluator output equals the frozen V1 state for **all** cases (as-reported mode). Report any mismatch list                                                                                                             | `tests/integration/test_golden_v1.py`                      | A-01, Z-03       | 100% match, or a documented mismatch file explaining each divergence. **Gate for everything after** | Insharah |
-| A-03 | **Dependency materializer:** for each case emit realised edges (AST, genotype, mapping rule, interpretation rule key, rule-set, tool version) and applicability records (organism, antibiotic, determinant, evidence type) at the D-05 granularity | `src/amrtrace/deps/materialize.py`                         | A-02, I-02       | Edges/applicability stored for R1; idempotent re-run; `tests/unit/deps/`                            | Insharah |
-| A-04 | **Graph measurement script:** node count, edge count, table and index size, traversal latency                                                                                                                                                      | `scripts/graph_metrics.py`, `docs/design/graph_metrics.md` | A-03             | Numbers committed (replaces proposal estimates)                                                     | Insharah |
-| A-05 | **Impact selector, realised edges:** reverse reachability via an indexed **recursive CTE**, with Level 2 region refinement                                                                                                                         | `src/amrtrace/deps/selector.py`                            | A-03, I-07       | Oracle recall 100% for CLSI-REAL, C2, C6                                                            | Insharah |
-| A-06 | **Impact selector, applicability:** cases whose recorded rule space intersects a newly introduced rule                                                                                                                                             | `src/amrtrace/deps/selector.py`                            | A-05             | Oracle recall 100% for **C7** (a realised-edge-only selector must fail it; keep that as a test)     | Insharah |
-| A-07 | Selector performance: indexes, `EXPLAIN` evidence, per-scenario precision and reprocessing ratio                                                                                                                                                   | `db/migrations/`, `docs/design/`                           | A-05             | Latency numbers recorded; no sequential scans on the hot path                                       | Insharah |
-| A-08 | End-to-end runs through select -> re-evaluate -> compare for CLSI-REAL and C7                                                                                                                                                                      | `tests/e2e/`                                               | A-06, I-09, I-10 | Both green, equivalence = 100%                                                                      | Insharah |
-| A-09 | **Determinism test:** repeated identical runs give identical content hashes                                                                                                                                                                        | `tests/integration/test_determinism.py`                    | A-08             | Hash equality over N>=3 runs                                                                        | Insharah |
-| A-10 | Backend subgraph query for the dossier dependency path                                                                                                                                                                                             | `src/amrtrace/deps/subgraph.py`                            | A-03             | Typed nodes/edges for one case; unit test                                                           | Insharah |
-| A-11 | Design-evolution note for the graph (taxonomy, DAG layers, applicability rationale, changes since the proposal)                                                                                                                                    | `docs/design/graph_design.md`                              | A-06             | Merged; used in the report                                                                          | Insharah |
+| ID   | Task                                                                                                                                                                                                                                                                                                                                                                                                                 | Files                                                      | Depends on       | Acceptance / tests                                                                                  | Reviewer |
+| ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------- | -------- |
+| A-01 | Port the V1 evaluator as **pure generic functions** (`evaluate_phenotype`, `evaluate_genotype`, `combine`, composed by `evaluate`; ADR-004), as-reported mode first; the interpretation branch uses only the generic rule data in `inputs`                                                                                                                                                                           | `src/amrtrace/evaluator/`                                  | G-01             | Unit tests for each of the five states, missing/ambiguous inputs; `tests/unit/evaluator/`           | Insharah |
+| A-02 | **Golden regression test:** evaluator output equals the frozen V1 state for **all** cases (as-reported mode). Report any mismatch list                                                                                                                                                                                                                                                                               | `tests/integration/test_golden_v1.py`                      | A-01, Z-03       | 100% match, or a documented mismatch file explaining each divergence. **Gate for everything after** | Insharah |
+| A-03 | **Dependency materializer:** for each case emit realised edges (AST, genotype, mapping rule, interpretation rule key, rule-set, tool version) and applicability records (organism, antibiotic, determinant, evidence type) at the D-05 granularity; explode the five frozen id lists and add the seven version edges (ADR-003 section 5); key applicability on `(determinant_identity, candidate_antibiotic)` (D-19) | `src/amrtrace/deps/materialize.py`                         | A-02, I-02       | Edges/applicability stored for R1; idempotent re-run; `tests/unit/deps/`                            | Insharah |
+| A-04 | **Graph measurement script:** node count, edge count, table and index size, traversal latency                                                                                                                                                                                                                                                                                                                        | `scripts/graph_metrics.py`, `docs/design/graph_metrics.md` | A-03             | Numbers committed (replaces proposal estimates)                                                     | Insharah |
+| A-05 | **Impact selector, realised edges:** reverse reachability via an indexed **recursive CTE**, with Level 2 region refinement                                                                                                                                                                                                                                                                                           | `src/amrtrace/deps/selector.py`                            | A-03, I-07       | Oracle recall 100% for CLSI-REAL, C2, C6                                                            | Insharah |
+| A-06 | **Impact selector, applicability:** cases whose recorded rule space intersects a newly introduced rule                                                                                                                                                                                                                                                                                                               | `src/amrtrace/deps/selector.py`                            | A-05             | Oracle recall 100% for **C7** (a realised-edge-only selector must fail it; keep that as a test)     | Insharah |
+| A-07 | Selector performance: indexes, `EXPLAIN` evidence, per-scenario precision and reprocessing ratio                                                                                                                                                                                                                                                                                                                     | `db/migrations/`, `docs/design/`                           | A-05             | Latency numbers recorded; no sequential scans on the hot path                                       | Insharah |
+| A-08 | End-to-end runs through select -> re-evaluate -> compare for CLSI-REAL and C7                                                                                                                                                                                                                                                                                                                                        | `tests/e2e/`                                               | A-06, I-09, I-10 | Both green, equivalence = 100%                                                                      | Insharah |
+| A-09 | **Determinism test:** repeated identical runs give identical content hashes                                                                                                                                                                                                                                                                                                                                          | `tests/integration/test_determinism.py`                    | A-08             | Hash equality over N>=3 runs                                                                        | Insharah |
+| A-10 | Backend subgraph query for the dossier dependency path                                                                                                                                                                                                                                                                                                                                                               | `src/amrtrace/deps/subgraph.py`                            | A-03             | Typed nodes/edges for one case; unit test                                                           | Insharah |
+| A-11 | Design-evolution note for the graph (taxonomy, DAG layers, applicability rationale, changes since the proposal)                                                                                                                                                                                                                                                                                                      | `docs/design/graph_design.md`                              | A-06             | Merged; used in the report                                                                          | Insharah |
 
 ### 9.3 Track B: Insharah (ledger, interpretation, change registry, re-evaluation, oracle)
 
 | ID   | Task                                                                                                                                                                                                                                                                                                        | Files                                                                                       | Depends on       | Acceptance / tests                                                                                                         | Reviewer |
 | ---- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------- | -------- |
-| I-01 | Schema migrations from Section 5.3 (all tables, indexes, **append-only triggers**, role grants)                                                                                                                                                                                                             | `db/migrations/`                                                                            | G-01             | `docker compose up` applies cleanly                                                                                        | Zara     |
+| I-01 | Schema migrations from ADR-003 and the engine tables in Section 5.3 (all tables, indexes, **append-only triggers**, role grants)                                                                                                                                                                            | `db/migrations/`                                                                            | G-01             | `docker compose up` applies cleanly                                                                                        | Zara     |
 | I-02 | Ledger append service: `append_case_state(...)`, release lifecycle (`DRAFT`->`PUBLISHED`), as-of reads                                                                                                                                                                                                      | `src/amrtrace/ledger/`                                                                      | I-01             | Unit tests                                                                                                                 | Zara     |
 | I-03 | **Append-only tests:** direct `UPDATE`/`DELETE` on `case_state`, `review_event`, `change_event` rejected at the DB level                                                                                                                                                                                    | `tests/integration/test_append_only.py`                                                     | I-01             | Tests pass; shown in the demo (failure case)                                                                               | Zara     |
 | I-04 | Bulk-load V1 states as release **R1** (as-reported mode) with supersession links and hashes                                                                                                                                                                                                                 | `src/amrtrace/ledger/load_release.py`                                                       | A-02, I-02       | Row count = number of cases; history reconstruct test                                                                      | Zara     |
@@ -628,60 +656,60 @@ Closes #  | Task ID:
 
 **Rules for this section**
 
-- Exactly **one step is active**. The next step starts only when the current step's PR is merged and its gate is met.
+- Exactly **one step is active**. The next step starts only when the current step's PR is merged and its gate is met. **Early start (D-15, amended 2026-10-04):** a task may start early if all its dependencies are DONE, it stays inside its owner's directories, and `docs/milestones.md` records it.
 - The **driver** writes the code or doc. The other two **read along and ask questions**, and the **reviewer** approves the PR. Pairing at one screen is encouraged.
 - If a step uncovers a problem with an earlier step, stop, fix the earlier step (new PR), then continue.
 - After each step: update Section 14 and `docs/milestones.md`.
 
-| Step | Task                                                                                                          | Driver   | Reviewer         | Gate (done when)                                                                                         |
-| ---- | ------------------------------------------------------------------------------------------------------------- | -------- | ---------------- | -------------------------------------------------------------------------------------------------------- |
-| 1    | Z-01 Repo, protection, CODEOWNERS, templates, issues                                                          | Zara     | Aabia            | Repo exists; `main` protected; all three can push branches and open PRs; issues created                  |
-| 2    | G-02 Inspect frozen files; real columns; regenerate counts; resolve OD-1                                      | Zara     | Aabia            | `docs/data_facts.md` merged with a script that regenerates it                                            |
-| 3    | G-01 Design session and ADR-001..004 (generic engine, interpretation modes, schema/data contract, interfaces) | Insharah | Zara             | ADRs merged; Section 5 edited to match the real columns; open decisions OD-3..OD-7 answered in Section 2 |
-| 4    | Z-02 Docker Compose (db, api stub, web stub)                                                                  | Zara     | Aabia            | `docker compose up` runs; health endpoint responds                                                       |
-| 5    | I-01 Schema migrations with append-only triggers                                                              | Insharah | Zara             | Migrations apply to an empty DB; tables match ADR-003                                                    |
-| 6    | Z-04 CI skeleton (lint + build)                                                                               | Zara     | Aabia            | Green CI run on a PR                                                                                     |
-| 7    | Z-03 Ingest loaders with manifest/hash checks                                                                 | Zara     | Aabia            | Frozen cohort loaded; counts and hashes match the manifest                                               |
-| 8    | I-02 Ledger append service and release lifecycle                                                              | Insharah | Zara             | Unit tests green                                                                                         |
-| 9    | I-03 Append-only DB tests                                                                                     | Insharah | Zara             | Direct UPDATE/DELETE rejected by the DB; tests green                                                     |
-| 10   | Z-05 CI with Postgres service and unit tests                                                                  | Zara     | Aabia            | Tests run in CI on a PR                                                                                  |
-| 11   | A-01 Pure generic evaluator (as-reported)                                                                     | Aabia    | Insharah         | Unit tests green for all five states and edge inputs                                                     |
-| 12   | **A-02 Golden regression test vs frozen V1**                                                                  | Aabia    | Insharah         | 100% match or documented mismatch list. **Do not continue until resolved**                               |
-| 13   | I-05 Change registry, version registry, differ registry                                                       | Insharah | Zara             | Invalid event rejected; dummy differ registrable without editing registry code                           |
-| 14   | I-06 Interpretation layer (generic loader, lookup, differ; first data tables)                                 | Insharah | Zara             | Tests with invented names pass; real tables load; evaluator interpretation branch works                  |
-| 15   | I-04 Load R1 into the ledger                                                                                  | Insharah | Zara             | R1 PUBLISHED; row count equals cases; history reconstructs                                               |
-| 16   | A-03 Dependency materializer                                                                                  | Aabia    | Insharah         | Edges and applicability stored for R1; idempotent                                                        |
-| 17   | A-04 Graph measurement script                                                                                 | Aabia    | Insharah         | Node/edge counts, sizes, traversal latency committed                                                     |
-| 18   | Z-06 API read endpoints                                                                                       | Zara     | Aabia            | API tests green                                                                                          |
-| 19   | Z-14 Mini-cohort fixture for CI                                                                               | Zara     | Aabia            | CI loads it; deterministic                                                                               |
-| 20   | Z-15 Genericity guard in CI                                                                                   | Zara     | Aabia            | A deliberate violation fails CI; clean main passes                                                       |
-| 21   | **I-07 Oracle fixtures (before the selector exists)**                                                         | Insharah | Zara             | Fixtures merged with commit SHAs; author is not Aabia                                                    |
-| 22   | A-05 Selector: realised edges, region refinement                                                              | Aabia    | Insharah         | Oracle recall 100% for CLSI-REAL, C2, C6                                                                 |
-| 23   | A-06 Selector: applicability                                                                                  | Aabia    | Insharah         | Oracle recall 100% for C7; realised-only version fails C7 (test kept)                                    |
-| 24   | A-07 Selector performance evidence                                                                            | Aabia    | Insharah         | Latency and EXPLAIN notes committed                                                                      |
-| 25   | I-08 Change application service                                                                               | Insharah | Zara             | Event -> impact stored (integration test)                                                                |
-| 26   | Z-07 API: changes and impact                                                                                  | Zara     | Aabia            | API tests incl. invalid event                                                                            |
-| 27   | A-10 Dossier subgraph query                                                                                   | Aabia    | Insharah         | Unit test                                                                                                |
-| 28   | Z-08 UI: change events and dependency view                                                                    | Zara     | Aabia            | Works on real data                                                                                       |
-| 29   | I-09 Selective re-evaluation engine                                                                           | Insharah | Zara             | Tests green; mid-batch failure leaves no partial state                                                   |
-| 30   | I-10 Exhaustive comparator and equivalence report                                                             | Insharah | Zara             | Equivalence 100% for CLSI-REAL and C7; deliberate-bug test fails as expected                             |
-| 31   | I-11 Failure-case tests                                                                                       | Insharah | Zara             | All five failure cases green and documented                                                              |
-| 32   | A-08 End-to-end scenario runs                                                                                 | Aabia    | Insharah         | CLSI-REAL and C7 green end to end                                                                        |
-| 33   | A-09 Determinism test                                                                                         | Aabia    | Insharah         | Identical hashes across repeated runs                                                                    |
-| 34   | Z-09 UI: run page and equivalence report                                                                      | Zara     | Aabia            | Shows recall, precision, ratio, 3-axis diff, PASS/BLOCKED                                                |
-| 35   | Z-10 Full CI (integration, oracle, equivalence, build)                                                        | Zara     | Aabia            | All jobs green; one real failed run link kept                                                            |
-| 36   | I-12 Review events and as-of export                                                                           | Insharah | Zara             | Correction appends; old-release export matches                                                           |
-| 37   | I-13 Before/after diff data                                                                                   | Insharah | Zara             | Unit test                                                                                                |
-| 38   | Z-11 UI: case dossier, review form, export                                                                    | Zara     | Aabia            | Demonstrable end to end                                                                                  |
-| 39   | Z-12 CD and deployment                                                                                        | Zara     | Aabia            | Live URL; deploy run link; rollback documented                                                           |
-| 40   | Z-13 README final pass                                                                                        | Zara     | Aabia            | A teammate reproduces from scratch                                                                       |
-| 41   | G-03 Demo rehearsal on the deployed instance                                                                  | Zara     | Insharah         | Checklist complete                                                                                       |
-| 42   | A-11 Graph design-evolution note                                                                              | Aabia    | Insharah         | Merged                                                                                                   |
-| 43   | I-14 Ledger/re-eval design-evolution note                                                                     | Insharah | Zara             | Merged                                                                                                   |
-| 44   | G-04 Tag `v0.1-mid-eval`, CI links                                                                            | Insharah | Zara             | Tag exists                                                                                               |
-| 45   | G-05 Worksheet Sections 1 to 8                                                                                | Insharah | Aabia            | Completed                                                                                                |
-| 46   | G-06a/b/c Individual Section 9 entries                                                                        | each own | next in rotation | Written by each member                                                                                   |
-| 47   | G-07 Report update                                                                                            | Insharah | Aabia            | Committed                                                                                                |
+| Step | Task                                                                                                          | Driver   | Reviewer         | Gate (done when)                                                                                                                                                                                               |
+| ---- | ------------------------------------------------------------------------------------------------------------- | -------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1    | Z-01 Repo, protection, CODEOWNERS, templates, issues                                                          | Zara     | Aabia            | Repo exists; `main` protected; all three can push branches and open PRs; issues created                                                                                                                        |
+| 2    | G-02 Inspect frozen files; real columns; regenerate counts; resolve OD-1                                      | Zara     | Aabia            | `docs/data_facts.md` merged with a script that regenerates it                                                                                                                                                  |
+| 3    | G-01 Design session and ADR-001..004 (generic engine, interpretation modes, schema/data contract, interfaces) | Insharah | Zara             | ADRs merged; Section 5 matches the real columns; OD-1, OD-3, OD-5, OD-7, OD-10 decided (D-16 to D-20); OD-4 and OD-6 keep their defaults until steps 39 and 28; open points OP-1 to OP-3 have owners (ADR-003) |
+| 4    | Z-02 Docker Compose (db, api stub, web stub)                                                                  | Zara     | Aabia            | `docker compose up` runs; health endpoint responds                                                                                                                                                             |
+| 5    | I-01 Schema migrations with append-only triggers                                                              | Insharah | Zara             | Migrations apply to an empty DB; tables match ADR-003                                                                                                                                                          |
+| 6    | Z-04 CI skeleton (lint + build)                                                                               | Zara     | Aabia            | Green CI run on a PR                                                                                                                                                                                           |
+| 7    | Z-03 Ingest loaders with manifest/hash checks                                                                 | Zara     | Aabia            | Frozen cohort loaded; counts and hashes match the manifest                                                                                                                                                     |
+| 8    | I-02 Ledger append service and release lifecycle                                                              | Insharah | Zara             | Unit tests green                                                                                                                                                                                               |
+| 9    | I-03 Append-only DB tests                                                                                     | Insharah | Zara             | Direct UPDATE/DELETE rejected by the DB; tests green                                                                                                                                                           |
+| 10   | Z-05 CI with Postgres service and unit tests                                                                  | Zara     | Aabia            | Tests run in CI on a PR                                                                                                                                                                                        |
+| 11   | A-01 Pure generic evaluator (as-reported)                                                                     | Aabia    | Insharah         | Unit tests green for all five states and edge inputs                                                                                                                                                           |
+| 12   | **A-02 Golden regression test vs frozen V1**                                                                  | Aabia    | Insharah         | 100% match or documented mismatch list. **Do not continue until resolved**                                                                                                                                     |
+| 13   | I-05 Change registry, version registry, differ registry                                                       | Insharah | Zara             | Invalid event rejected; dummy differ registrable without editing registry code                                                                                                                                 |
+| 14   | I-06 Interpretation layer (generic loader, lookup, differ; first data tables)                                 | Insharah | Zara             | Tests with invented names pass; real tables load; evaluator interpretation branch works                                                                                                                        |
+| 15   | I-04 Load R1 into the ledger                                                                                  | Insharah | Zara             | R1 PUBLISHED; row count equals cases; history reconstructs                                                                                                                                                     |
+| 16   | A-03 Dependency materializer                                                                                  | Aabia    | Insharah         | Edges and applicability stored for R1; idempotent                                                                                                                                                              |
+| 17   | A-04 Graph measurement script                                                                                 | Aabia    | Insharah         | Node/edge counts, sizes, traversal latency committed                                                                                                                                                           |
+| 18   | Z-06 API read endpoints                                                                                       | Zara     | Aabia            | API tests green                                                                                                                                                                                                |
+| 19   | Z-14 Mini-cohort fixture for CI                                                                               | Zara     | Aabia            | CI loads it; deterministic                                                                                                                                                                                     |
+| 20   | Z-15 Genericity guard in CI                                                                                   | Zara     | Aabia            | A deliberate violation fails CI; clean main passes                                                                                                                                                             |
+| 21   | **I-07 Oracle fixtures (before the selector exists)**                                                         | Insharah | Zara             | Fixtures merged with commit SHAs; author is not Aabia                                                                                                                                                          |
+| 22   | A-05 Selector: realised edges, region refinement                                                              | Aabia    | Insharah         | Oracle recall 100% for CLSI-REAL, C2, C6                                                                                                                                                                       |
+| 23   | A-06 Selector: applicability                                                                                  | Aabia    | Insharah         | Oracle recall 100% for C7; realised-only version fails C7 (test kept)                                                                                                                                          |
+| 24   | A-07 Selector performance evidence                                                                            | Aabia    | Insharah         | Latency and EXPLAIN notes committed                                                                                                                                                                            |
+| 25   | I-08 Change application service                                                                               | Insharah | Zara             | Event -> impact stored (integration test)                                                                                                                                                                      |
+| 26   | Z-07 API: changes and impact                                                                                  | Zara     | Aabia            | API tests incl. invalid event                                                                                                                                                                                  |
+| 27   | A-10 Dossier subgraph query                                                                                   | Aabia    | Insharah         | Unit test                                                                                                                                                                                                      |
+| 28   | Z-08 UI: change events and dependency view                                                                    | Zara     | Aabia            | Works on real data                                                                                                                                                                                             |
+| 29   | I-09 Selective re-evaluation engine                                                                           | Insharah | Zara             | Tests green; mid-batch failure leaves no partial state                                                                                                                                                         |
+| 30   | I-10 Exhaustive comparator and equivalence report                                                             | Insharah | Zara             | Equivalence 100% for CLSI-REAL and C7; deliberate-bug test fails as expected                                                                                                                                   |
+| 31   | I-11 Failure-case tests                                                                                       | Insharah | Zara             | All five failure cases green and documented                                                                                                                                                                    |
+| 32   | A-08 End-to-end scenario runs                                                                                 | Aabia    | Insharah         | CLSI-REAL and C7 green end to end                                                                                                                                                                              |
+| 33   | A-09 Determinism test                                                                                         | Aabia    | Insharah         | Identical hashes across repeated runs                                                                                                                                                                          |
+| 34   | Z-09 UI: run page and equivalence report                                                                      | Zara     | Aabia            | Shows recall, precision, ratio, 3-axis diff, PASS/BLOCKED                                                                                                                                                      |
+| 35   | Z-10 Full CI (integration, oracle, equivalence, build)                                                        | Zara     | Aabia            | All jobs green; one real failed run link kept                                                                                                                                                                  |
+| 36   | I-12 Review events and as-of export                                                                           | Insharah | Zara             | Correction appends; old-release export matches                                                                                                                                                                 |
+| 37   | I-13 Before/after diff data                                                                                   | Insharah | Zara             | Unit test                                                                                                                                                                                                      |
+| 38   | Z-11 UI: case dossier, review form, export                                                                    | Zara     | Aabia            | Demonstrable end to end                                                                                                                                                                                        |
+| 39   | Z-12 CD and deployment                                                                                        | Zara     | Aabia            | Live URL; deploy run link; rollback documented                                                                                                                                                                 |
+| 40   | Z-13 README final pass                                                                                        | Zara     | Aabia            | A teammate reproduces from scratch                                                                                                                                                                             |
+| 41   | G-03 Demo rehearsal on the deployed instance                                                                  | Zara     | Insharah         | Checklist complete                                                                                                                                                                                             |
+| 42   | A-11 Graph design-evolution note                                                                              | Aabia    | Insharah         | Merged                                                                                                                                                                                                         |
+| 43   | I-14 Ledger/re-eval design-evolution note                                                                     | Insharah | Zara             | Merged                                                                                                                                                                                                         |
+| 44   | G-04 Tag `v0.1-mid-eval`, CI links                                                                            | Insharah | Zara             | Tag exists                                                                                                                                                                                                     |
+| 45   | G-05 Worksheet Sections 1 to 8                                                                                | Insharah | Aabia            | Completed                                                                                                                                                                                                      |
+| 46   | G-06a/b/c Individual Section 9 entries                                                                        | each own | next in rotation | Written by each member                                                                                                                                                                                         |
+| 47   | G-07 Report update                                                                                            | Insharah | Aabia            | Committed                                                                                                                                                                                                      |
 
 Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
@@ -691,18 +719,18 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 11. Open decisions (propose defaults; record the answer in Section 2)
 
-| ID    | Question                                                                                                                                                                                                                                                  | Default if undecided                                                                   | Decider  |
-| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | -------- |
-| OD-1  | Which per-drug splits are the true frozen V1? (Report and slides differ: for example ciprofloxacin 8,787 vs 8,885; gentamicin 9,715 vs 9,106; meropenem 7,105 vs 7,346; TMP-SMX 9,031 vs 9,301; G+/S 1,288 vs 1,463; unresolved 8,389 vs 16.25% overall.) | Regenerate from the frozen files (step 2); the files win                               | Zara     |
-| OD-2  | Interpretation approach                                                                                                                                                                                                                                   | **Decided: D-12 and D-13**                                                             | all      |
-| OD-3  | Exact string for the fourth state code                                                                                                                                                                                                                    | Use whatever the V1 pipeline emits; mirror it in the enum                              | Aabia    |
-| OD-4  | Deployment target (VM provider/host)                                                                                                                                                                                                                      | Small Linux VM running Docker Compose via SSH deploy                                   | Zara     |
-| OD-5  | Repo host/name/visibility                                                                                                                                                                                                                                 | GitHub, private, `amrtrace-studio`, supervisor invited                                 | Zara     |
-| OD-6  | Frontend stack                                                                                                                                                                                                                                            | Lightest option the team ships fastest (plain HTML + fetch or React)                   | Zara     |
-| OD-7  | ORM vs raw SQL                                                                                                                                                                                                                                            | Raw SQL / SQLAlchemy Core for the recursive CTE and migrations                         | Insharah |
-| OD-8  | Granularity ablation (B3 coarse model)                                                                                                                                                                                                                    | Deferred to FYP-1 final; keep a config flag                                            | Aabia    |
-| OD-9  | Panel comments to log (visual components; research contribution through data categorization and link discovery)                                                                                                                                           | Log both in the panel-actions table: "accepted, deferred to FYP-1 final" with a plan   | Insharah |
-| OD-10 | How the real V1 pipeline (M0-M11) is brought into the repo (copy the code, import as a module, or only use its outputs)                                                                                                                                   | Use its **outputs** as input data and port only the evaluation logic into `evaluator/` | Aabia    |
+| ID    | Question                                                                                                                                                                                                                                                  | Default if undecided                                                                                                                          | Decider  |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| OD-1  | Which per-drug splits are the true frozen V1? (Report and slides differ: for example ciprofloxacin 8,787 vs 8,885; gentamicin 9,715 vs 9,106; meropenem 7,105 vs 7,346; TMP-SMX 9,031 vs 9,301; G+/S 1,288 vs 1,463; unresolved 8,389 vs 16.25% overall.) | **Decided 2026-10-04 (D-16):** the frozen files win; the report numbers are V1. Evidence: `docs/data_facts.md`                                | Zara     |
+| OD-2  | Interpretation approach                                                                                                                                                                                                                                   | **Decided: D-12 and D-13**                                                                                                                    | all      |
+| OD-3  | Exact string for the fourth state code                                                                                                                                                                                                                    | **Decided 2026-10-04:** `DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE` (confirmed against the frozen files)                                      | Aabia    |
+| OD-4  | Deployment target (VM provider/host)                                                                                                                                                                                                                      | Open. Default stands (small Linux VM running Docker Compose via SSH deploy); revisit before step 39                                           | Zara     |
+| OD-5  | Repo host/name/visibility                                                                                                                                                                                                                                 | **Decided:** private GitHub repo `ZaraHEREhehe/amrtrace-studio`; supervisor invited later by Zara                                             | Zara     |
+| OD-6  | Frontend stack                                                                                                                                                                                                                                            | Open. Default stands (lightest option the team ships fastest); revisit before step 28                                                         | Zara     |
+| OD-7  | ORM vs raw SQL                                                                                                                                                                                                                                            | **Decided (D-20):** plain numbered SQL migrations; SQLAlchemy Core allowed for queries                                                        | Insharah |
+| OD-8  | Granularity ablation (B3 coarse model)                                                                                                                                                                                                                    | Deferred to FYP-1 final; keep a config flag                                                                                                   | Aabia    |
+| OD-9  | Panel comments to log (visual components; research contribution through data categorization and link discovery)                                                                                                                                           | Log both in the panel-actions table: "accepted, deferred to FYP-1 final" with a plan                                                          | Insharah |
+| OD-10 | How the real V1 pipeline (M0-M11) is brought into the repo (copy the code, import as a module, or only use its outputs)                                                                                                                                   | **Decided (D-20):** use its outputs as input data, port only the evaluation logic into `evaluator/`, copy the case-rules spec to `docs/spec/` | Aabia    |
 
 ---
 
@@ -745,60 +773,60 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 2 (DONE) | **Last updated by / when:** Aabia, 2026-10-04 | **Blockers:** none logged
+**Current step:** 3 (IN-REVIEW) | **Last updated by / when:** Insharah, 2026-10-04 | **Blockers:** none logged
 
-| Step | Task      | Driver   | Status | PR / evidence | Notes                                                                                      |
-| ---- | --------- | -------- | ------ | ------------- | ------------------------------------------------------------------------------------------ |
-| 1    | Z-01      | Zara     | DONE   | PR #2         | Step 1 gate completed                                                                      |
-| 2    | G-02      | Zara     | DONE   | PR #52        | Facts generated by Aabia from the frozen files; OD-1 resolved (D-16); reviewed by Insharah |
-| 3    | G-01      | Insharah | TODO   |               |                                                                                            |
-| 4    | Z-02      | Zara     | TODO   |               |                                                                                            |
-| 5    | I-01      | Insharah | TODO   |               |                                                                                            |
-| 6    | Z-04      | Zara     | TODO   |               |                                                                                            |
-| 7    | Z-03      | Zara     | TODO   |               |                                                                                            |
-| 8    | I-02      | Insharah | TODO   |               |                                                                                            |
-| 9    | I-03      | Insharah | TODO   |               |                                                                                            |
-| 10   | Z-05      | Zara     | TODO   |               |                                                                                            |
-| 11   | A-01      | Aabia    | TODO   |               |                                                                                            |
-| 12   | A-02      | Aabia    | TODO   |               | gate for everything after                                                                  |
-| 13   | I-05      | Insharah | TODO   |               |                                                                                            |
-| 14   | I-06      | Insharah | TODO   |               |                                                                                            |
-| 15   | I-04      | Insharah | TODO   |               |                                                                                            |
-| 16   | A-03      | Aabia    | TODO   |               |                                                                                            |
-| 17   | A-04      | Aabia    | TODO   |               |                                                                                            |
-| 18   | Z-06      | Zara     | TODO   |               |                                                                                            |
-| 19   | Z-14      | Zara     | TODO   |               |                                                                                            |
-| 20   | Z-15      | Zara     | TODO   |               |                                                                                            |
-| 21   | I-07      | Insharah | TODO   |               | must be committed before step 22                                                           |
-| 22   | A-05      | Aabia    | TODO   |               |                                                                                            |
-| 23   | A-06      | Aabia    | TODO   |               |                                                                                            |
-| 24   | A-07      | Aabia    | TODO   |               |                                                                                            |
-| 25   | I-08      | Insharah | TODO   |               |                                                                                            |
-| 26   | Z-07      | Zara     | TODO   |               |                                                                                            |
-| 27   | A-10      | Aabia    | TODO   |               |                                                                                            |
-| 28   | Z-08      | Zara     | TODO   |               |                                                                                            |
-| 29   | I-09      | Insharah | TODO   |               |                                                                                            |
-| 30   | I-10      | Insharah | TODO   |               |                                                                                            |
-| 31   | I-11      | Insharah | TODO   |               |                                                                                            |
-| 32   | A-08      | Aabia    | TODO   |               |                                                                                            |
-| 33   | A-09      | Aabia    | TODO   |               |                                                                                            |
-| 34   | Z-09      | Zara     | TODO   |               |                                                                                            |
-| 35   | Z-10      | Zara     | TODO   |               |                                                                                            |
-| 36   | I-12      | Insharah | TODO   |               |                                                                                            |
-| 37   | I-13      | Insharah | TODO   |               |                                                                                            |
-| 38   | Z-11      | Zara     | TODO   |               |                                                                                            |
-| 39   | Z-12      | Zara     | TODO   |               |                                                                                            |
-| 40   | Z-13      | Zara     | TODO   |               |                                                                                            |
-| 41   | G-03      | Zara     | TODO   |               |                                                                                            |
-| 42   | A-11      | Aabia    | TODO   |               |                                                                                            |
-| 43   | I-14      | Insharah | TODO   |               |                                                                                            |
-| 44   | G-04      | Insharah | TODO   |               |                                                                                            |
-| 45   | G-05      | Insharah | TODO   |               |                                                                                            |
-| 46   | G-06a/b/c | each own | TODO   |               |                                                                                            |
-| 47   | G-07      | Insharah | TODO   |               |                                                                                            |
-| -    | G-08      | Zara     | TODO   |               | continuous                                                                                 |
+| Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
+| ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1    | Z-01      | Zara     | DONE      | PR #2                               | Step 1 gate completed                                                                           |
+| 2    | G-02      | Zara     | DONE      | PR #52 (+ #53, #54)                 | Facts generated by Aabia from the frozen files; OD-1 resolved (D-16); reviewed by Insharah      |
+| 3    | G-01      | Insharah | IN-REVIEW | G-01 PR (`docs/G-01-design-freeze`) | ADR-001..004; D-15 amended, D-16 to D-20 added; open points OP-1 to OP-3 with owners in ADR-003 |
+| 4    | Z-02      | Zara     | TODO      |                                     |                                                                                                 |
+| 5    | I-01      | Insharah | TODO      |                                     |                                                                                                 |
+| 6    | Z-04      | Zara     | TODO      |                                     |                                                                                                 |
+| 7    | Z-03      | Zara     | TODO      |                                     |                                                                                                 |
+| 8    | I-02      | Insharah | TODO      |                                     |                                                                                                 |
+| 9    | I-03      | Insharah | TODO      |                                     |                                                                                                 |
+| 10   | Z-05      | Zara     | TODO      |                                     |                                                                                                 |
+| 11   | A-01      | Aabia    | TODO      |                                     |                                                                                                 |
+| 12   | A-02      | Aabia    | TODO      |                                     | gate for everything after                                                                       |
+| 13   | I-05      | Insharah | TODO      |                                     |                                                                                                 |
+| 14   | I-06      | Insharah | TODO      |                                     |                                                                                                 |
+| 15   | I-04      | Insharah | TODO      |                                     |                                                                                                 |
+| 16   | A-03      | Aabia    | TODO      |                                     |                                                                                                 |
+| 17   | A-04      | Aabia    | TODO      |                                     |                                                                                                 |
+| 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
+| 19   | Z-14      | Zara     | TODO      |                                     |                                                                                                 |
+| 20   | Z-15      | Zara     | TODO      |                                     |                                                                                                 |
+| 21   | I-07      | Insharah | TODO      |                                     | must be committed before step 22                                                                |
+| 22   | A-05      | Aabia    | TODO      |                                     |                                                                                                 |
+| 23   | A-06      | Aabia    | TODO      |                                     |                                                                                                 |
+| 24   | A-07      | Aabia    | TODO      |                                     |                                                                                                 |
+| 25   | I-08      | Insharah | TODO      |                                     |                                                                                                 |
+| 26   | Z-07      | Zara     | TODO      |                                     |                                                                                                 |
+| 27   | A-10      | Aabia    | TODO      |                                     |                                                                                                 |
+| 28   | Z-08      | Zara     | TODO      |                                     |                                                                                                 |
+| 29   | I-09      | Insharah | TODO      |                                     |                                                                                                 |
+| 30   | I-10      | Insharah | TODO      |                                     |                                                                                                 |
+| 31   | I-11      | Insharah | TODO      |                                     |                                                                                                 |
+| 32   | A-08      | Aabia    | TODO      |                                     |                                                                                                 |
+| 33   | A-09      | Aabia    | TODO      |                                     |                                                                                                 |
+| 34   | Z-09      | Zara     | TODO      |                                     |                                                                                                 |
+| 35   | Z-10      | Zara     | TODO      |                                     |                                                                                                 |
+| 36   | I-12      | Insharah | TODO      |                                     |                                                                                                 |
+| 37   | I-13      | Insharah | TODO      |                                     |                                                                                                 |
+| 38   | Z-11      | Zara     | TODO      |                                     |                                                                                                 |
+| 39   | Z-12      | Zara     | TODO      |                                     |                                                                                                 |
+| 40   | Z-13      | Zara     | TODO      |                                     |                                                                                                 |
+| 41   | G-03      | Zara     | TODO      |                                     |                                                                                                 |
+| 42   | A-11      | Aabia    | TODO      |                                     |                                                                                                 |
+| 43   | I-14      | Insharah | TODO      |                                     |                                                                                                 |
+| 44   | G-04      | Insharah | TODO      |                                     |                                                                                                 |
+| 45   | G-05      | Insharah | TODO      |                                     |                                                                                                 |
+| 46   | G-06a/b/c | each own | TODO      |                                     |                                                                                                 |
+| 47   | G-07      | Insharah | TODO      |                                     |                                                                                                 |
+| -    | G-08      | Zara     | TODO      |                                     | continuous                                                                                      |
 
-**Reassignments log (step, from, to, reason, date):** none
+**Reassignments log (step, from, to, reason, date):** step 2 (G-02): driver of record Zara; script and data facts written by Aabia; reviewed and merged by Insharah instead of Aabia (the rotation names Aabia as reviewer), 2026-10-04
 
 ---
 
