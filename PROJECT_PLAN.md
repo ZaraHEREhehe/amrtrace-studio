@@ -708,11 +708,11 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 1 (IN-REVIEW)  |  **Last updated by / when:** Zara, 2026-10-04  |  **Blockers:** none logged
+**Current step:** 1 (DONE)  |  **Last updated by / when:** Zara, 2026-10-04  |  **Blockers:** none logged
 
 | Step | Task | Driver | Status | PR / evidence | Notes |
 |---|---|---|---|---|---|
-| 1 | Z-01 | Zara | IN-REVIEW | | |
+| 1 | Z-01 | Zara | DONE | PR #2 | Step 1 gate completed |
 | 2 | G-02 | Zara | TODO | | |
 | 3 | G-01 | Insharah | TODO | | |
 | 4 | Z-02 | Zara | TODO | | |
