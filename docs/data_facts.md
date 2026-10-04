@@ -6,48 +6,17 @@
 Do not edit this block by hand; rerun `scripts/regen_data_facts.py`. Text outside the markers is kept.
 
 - data folder scanned: `data`
-- excluded by pattern: `^data/(real_isolates_raw|synthetic_isolates_raw|cases_v1|manifest_v1|real_extraction_manifest)\.json$`
 - python 3.12.10, pandas 3.0.5, pyarrow 25.0.1
 
 ### File inventory
 
 | file | size (MB) | rows | columns | sha256 (first 16) |
 | --- | --- | --- | --- | --- |
-| data/analysis_v1/final_case_states_v1.parquet | 38.9 | 41,858 | 27 | bccfa970be376b2c |
-| data/analysis_v1/m11_v1/candidate_observations_v1.csv | 0.0 | 9 | 9 | 038962c4d86a13c9 |
-| data/analysis_v1/m11_v1/case_state_by_drug_v1.csv | 0.0 | 25 | 7 | 3262509a7c646622 |
-| data/analysis_v1/m11_v1/discordance_by_drug_v1.csv | 0.0 | 5 | 15 | 9c3641ff1b2608ae |
-| data/analysis_v1/m11_v1/genotype_by_drug_v1.csv | 0.0 | 14 | 5 | 8ef4f3dd7ad784d7 |
-| data/analysis_v1/m11_v1/gps_supporting_combinations_v1.csv | 0.0 | 166 | 5 | 5b287b5fb8e22f72 |
-| data/analysis_v1/m11_v1/gps_supporting_determinants_v1.csv | 0.0 | 166 | 5 | da781b99a08d1f95 |
-| data/analysis_v1/m11_v1/phenotype_by_drug_v1.csv | 0.0 | 17 | 5 | 9adbb18999fbde95 |
-| data/analysis_v1/m11_v1/r_no_mapped_profile_v1.csv | 0.0 | 219 | 6 | 4a56a218703887af |
-| data/analysis_v1/m11_v1/unresolved_by_drug_reason_v1.csv | 0.0 | 19 | 8 | 11d9d53269bdbf34 |
-| data/analysis_v1/m11_v1_1/candidate_observations_v1_1.csv | 0.0 | 9 | 9 | 63de8c51c181c05b |
-| data/analysis_v1/m11_v1_1/gps_supporting_combinations_v1_1.csv | 0.0 | 166 | 5 | f37a18b1a8e974a5 |
-| data/analysis_v1/m11_v1_1/gps_supporting_determinants_v1_1.csv | 0.0 | 122 | 5 | 68cfe715fc736cbd |
-| data/curated_v1/ast_evidence_curated.parquet | 3.3 | 57,228 | 33 | dda9567ad91865fa |
-| data/curated_v1/genotype_evidence_curated.parquet | 27.8 | 413,116 | 21 | ea4bbf14ce1a321e |
-| data/curated_v1/isolates_curated.parquet | 1.3 | 10,584 | 81 | 438c3834d3c5f15b |
-| data/mapping_v1/determinant_drug_mapping_v1.parquet | 1.6 | 43,536 | 21 | 5b91c1c47b13e678 |
-| data/analysis_v1/analysis_ready_v1.lock.json | 0.0 | - | - | 5fdb054776e6812e |
-| data/analysis_v1/m11_v1/m11_input_schema_v1.json | 0.0 | - | - | 2849827873e42bad |
-| data/analysis_v1/m11_v1_1/support_parser_audit_v1_1.json | 0.0 | - | - | ec130a78ea0f98ab |
-| manifests/analysis_ready_v1.json | 0.0 | - | - | 5fd240c581804406 |
-| manifests/antibiotic_panel_v1.json | 0.0 | - | - | 236233d7e66c05b2 |
-| manifests/case_states_v1.json | 0.0 | - | - | b71c69d284547ebf |
-| manifests/curated_v1.json | 0.0 | - | - | 2234d6f44cda8176 |
-| manifests/determinant_drug_mapping_v1.json | 0.0 | - | - | f1a7f6612855d890 |
-| manifests/m11_analysis_v1.json | 0.0 | - | - | 0484d5a6240bb1d0 |
-| manifests/m11_analysis_v1_1.json | 0.0 | - | - | 26a584a99f62a129 |
-| manifests/m9_qa_completion_v1.json | 0.0 | - | - | 113e316a154138fb |
-| manifests/manual_qa_batch_blind_v1.json | 0.0 | - | - | 715a09c3d32bffd4 |
-| manifests/manual_qa_batch_comparison_v1.json | 0.0 | - | - | 1768a3cce0d1ca7a |
-| manifests/manual_qa_review_packet_v1.json | 0.0 | - | - | 8d8c01487ce9bc8e |
-| manifests/manual_qa_review_packet_v1_1.json | 0.0 | - | - | ecb0339bc46ef9a1 |
-| manifests/manual_qa_sample_v1.json | 0.0 | - | - | 4f9f48b90a128d97 |
-| manifests/mapping_reference_v1.json | 0.0 | - | - | 37280280816cd3e2 |
-| manifests/raw_snapshot_v1.json | 0.0 | - | - | baa0ce704bede3b4 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | 38.9 | 41,858 | 27 | bccfa970be376b2c |
+| data/raw/curated_v1/ast_evidence_curated.parquet | 3.3 | 57,228 | 33 | dda9567ad91865fa |
+| data/raw/curated_v1/genotype_evidence_curated.parquet | 27.8 | 413,116 | 21 | ea4bbf14ce1a321e |
+| data/raw/curated_v1/isolates_curated.parquet | 1.3 | 10,584 | 81 | 438c3834d3c5f15b |
+| data/raw/mapping_v1/determinant_drug_mapping_v1.parquet | 1.6 | 43,536 | 21 | 5b91c1c47b13e678 |
 
 ### Regenerated counts and checks
 
@@ -55,43 +24,43 @@ Do not edit this block by hand; rerun `scripts/regen_data_facts.py`. Text outsid
 
 | check | expected | actual | status |
 | --- | --- | --- | --- |
-| data/analysis_v1/final_case_states_v1.parquet: row count | 41858 | 41858 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: sha256 | bccfa970be376b2cb0cab600345451a70906f133a65f9f698e4aea7239cdf886 | bccfa970be376b2cb0cab600345451a70906f133a65f9f698e4aea7239cdf886 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: rows in CONCORDANT_SUSCEPTIBLE | 26532 | 26532 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: rows in UNRESOLVED | 8389 | 8389 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: rows in CONCORDANT_RESISTANT | 5223 | 5223 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: rows in DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S | 1288 | 1288 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: rows in DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE | 426 | 426 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: duplicated case_id values | 0 | 0 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: total cases for ceftriaxone | 7220 | 7220 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: ceftriaxone genotype-positive/phenotype-S | 702 | 702 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: ceftriaxone phenotype-R/no mapped genotype | 50 | 50 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: ceftriaxone unresolved | 91 | 91 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: total cases for ciprofloxacin | 8787 | 8787 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: ciprofloxacin genotype-positive/phenotype-S | 229 | 229 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: ciprofloxacin phenotype-R/no mapped genotype | 34 | 34 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: ciprofloxacin unresolved | 2436 | 2436 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: total cases for gentamicin | 9715 | 9715 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: gentamicin genotype-positive/phenotype-S | 94 | 94 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: gentamicin phenotype-R/no mapped genotype | 177 | 177 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: gentamicin unresolved | 2149 | 2149 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: total cases for meropenem | 7105 | 7105 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: meropenem genotype-positive/phenotype-S | 118 | 118 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: meropenem phenotype-R/no mapped genotype | 121 | 121 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: meropenem unresolved | 698 | 698 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: total cases for tmp-smx | 9031 | 9031 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: tmp-smx genotype-positive/phenotype-S | 145 | 145 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: tmp-smx phenotype-R/no mapped genotype | 44 | 44 | PASS |
-| data/analysis_v1/final_case_states_v1.parquet: tmp-smx unresolved | 3015 | 3015 | PASS |
-| data/curated_v1/ast_evidence_curated.parquet: row count | 57228 | 57228 | PASS |
-| data/curated_v1/ast_evidence_curated.parquet: isolate+antibiotic groups with more than one AST test | 21 | 21 | PASS |
-| data/curated_v1/ast_evidence_curated.parquet: groups whose tests disagree on phenotype | 3 | 3 | PASS |
-| data/curated_v1/ast_evidence_curated.parquet: AST rows with a non-null mic | 56675 | 56675 | PASS |
-| data/curated_v1/genotype_evidence_curated.parquet: row count | 413116 | 413116 | PASS |
-| data/curated_v1/genotype_evidence_curated.parquet: rows with representation_source MICROBIGGE | 325265 | 325265 | PASS |
-| data/curated_v1/genotype_evidence_curated.parquet: rows with representation_source ISOLATE_AMR_SUMMARY | 87851 | 87851 | PASS |
-| data/curated_v1/isolates_curated.parquet: row count | 10584 | 10584 | PASS |
-| data/mapping_v1/determinant_drug_mapping_v1.parquet: row count | 43536 | 43536 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: row count | 41858 | 41858 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: sha256 | bccfa970be376b2cb0cab600345451a70906f133a65f9f698e4aea7239cdf886 | bccfa970be376b2cb0cab600345451a70906f133a65f9f698e4aea7239cdf886 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: rows in CONCORDANT_SUSCEPTIBLE | 26532 | 26532 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: rows in UNRESOLVED | 8389 | 8389 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: rows in CONCORDANT_RESISTANT | 5223 | 5223 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: rows in DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S | 1288 | 1288 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: rows in DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE | 426 | 426 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: duplicated case_id values | 0 | 0 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: total cases for ceftriaxone | 7220 | 7220 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: ceftriaxone genotype-positive/phenotype-S | 702 | 702 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: ceftriaxone phenotype-R/no mapped genotype | 50 | 50 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: ceftriaxone unresolved | 91 | 91 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: total cases for ciprofloxacin | 8787 | 8787 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: ciprofloxacin genotype-positive/phenotype-S | 229 | 229 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: ciprofloxacin phenotype-R/no mapped genotype | 34 | 34 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: ciprofloxacin unresolved | 2436 | 2436 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: total cases for gentamicin | 9715 | 9715 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: gentamicin genotype-positive/phenotype-S | 94 | 94 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: gentamicin phenotype-R/no mapped genotype | 177 | 177 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: gentamicin unresolved | 2149 | 2149 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: total cases for meropenem | 7105 | 7105 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: meropenem genotype-positive/phenotype-S | 118 | 118 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: meropenem phenotype-R/no mapped genotype | 121 | 121 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: meropenem unresolved | 698 | 698 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: total cases for tmp-smx | 9031 | 9031 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: tmp-smx genotype-positive/phenotype-S | 145 | 145 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: tmp-smx phenotype-R/no mapped genotype | 44 | 44 | PASS |
+| data/raw/analysis_v1/final_case_states_v1.parquet: tmp-smx unresolved | 3015 | 3015 | PASS |
+| data/raw/curated_v1/ast_evidence_curated.parquet: row count | 57228 | 57228 | PASS |
+| data/raw/curated_v1/ast_evidence_curated.parquet: isolate+antibiotic groups with more than one AST test | 21 | 21 | PASS |
+| data/raw/curated_v1/ast_evidence_curated.parquet: groups whose tests disagree on phenotype | 3 | 3 | PASS |
+| data/raw/curated_v1/ast_evidence_curated.parquet: AST rows with a non-null mic | 56675 | 56675 | PASS |
+| data/raw/curated_v1/genotype_evidence_curated.parquet: row count | 413116 | 413116 | PASS |
+| data/raw/curated_v1/genotype_evidence_curated.parquet: rows with representation_source MICROBIGGE | 325265 | 325265 | PASS |
+| data/raw/curated_v1/genotype_evidence_curated.parquet: rows with representation_source ISOLATE_AMR_SUMMARY | 87851 | 87851 | PASS |
+| data/raw/curated_v1/isolates_curated.parquet: row count | 10584 | 10584 | PASS |
+| data/raw/mapping_v1/determinant_drug_mapping_v1.parquet: row count | 43536 | 43536 | PASS |
 
 ### OD-1 mismatch list
 
@@ -189,21 +158,9 @@ Use this to decide the antibiotic lookup table and to catch naming mismatches be
 
 | file | column | values |
 | --- | --- | --- |
-| data/analysis_v1/final_case_states_v1.parquet | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/candidate_observations_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/case_state_by_drug_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/discordance_by_drug_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/genotype_by_drug_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/gps_supporting_combinations_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/gps_supporting_determinants_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/phenotype_by_drug_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/r_no_mapped_profile_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1/unresolved_by_drug_reason_v1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1_1/candidate_observations_v1_1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1_1/gps_supporting_combinations_v1_1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/analysis_v1/m11_v1_1/gps_supporting_determinants_v1_1.csv | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
-| data/curated_v1/ast_evidence_curated.parquet | antibiotic | cefepime, ceftazidime, ceftriaxone, ciprofloxacin, gentamicin, imipenem, meropenem, trimethoprim-sulfamethoxazole |
-| data/curated_v1/ast_evidence_curated.parquet | antibiotic_normalized | cefepime, ceftazidime, ceftriaxone, ciprofloxacin, gentamicin, imipenem, meropenem, trimethoprim-sulfamethoxazole |
+| data/raw/analysis_v1/final_case_states_v1.parquet | antibiotic | ceftriaxone, ciprofloxacin, gentamicin, meropenem, trimethoprim-sulfamethoxazole |
+| data/raw/curated_v1/ast_evidence_curated.parquet | antibiotic | cefepime, ceftazidime, ceftriaxone, ciprofloxacin, gentamicin, imipenem, meropenem, trimethoprim-sulfamethoxazole |
+| data/raw/curated_v1/ast_evidence_curated.parquet | antibiotic_normalized | cefepime, ceftazidime, ceftriaxone, ciprofloxacin, gentamicin, imipenem, meropenem, trimethoprim-sulfamethoxazole |
 
 ### Cross-table key overlap
 
@@ -211,44 +168,30 @@ Shows which columns can act as foreign keys. A child value missing from the pare
 
 | column | child file | parent file | child distinct | parent distinct | % of child values found in parent |
 | --- | --- | --- | --- | --- | --- |
-| antibiotic | data/analysis_v1/final_case_states_v1.parquet | data/curated_v1/ast_evidence_curated.parquet | 5 | 8 | 100.0% |
-| antibiotic | data/analysis_v1/m11_v1/gps_supporting_combinations_v1.csv | data/curated_v1/ast_evidence_curated.parquet | 5 | 8 | 100.0% |
-| antibiotic | data/analysis_v1/m11_v1/gps_supporting_determinants_v1.csv | data/curated_v1/ast_evidence_curated.parquet | 5 | 8 | 100.0% |
-| antibiotic | data/analysis_v1/m11_v1/r_no_mapped_profile_v1.csv | data/curated_v1/ast_evidence_curated.parquet | 5 | 8 | 100.0% |
-| antibiotic | data/analysis_v1/m11_v1_1/gps_supporting_combinations_v1_1.csv | data/curated_v1/ast_evidence_curated.parquet | 5 | 8 | 100.0% |
-| antibiotic | data/analysis_v1/m11_v1_1/gps_supporting_determinants_v1_1.csv | data/curated_v1/ast_evidence_curated.parquet | 5 | 8 | 100.0% |
-| antibiotic | data/curated_v1/ast_evidence_curated.parquet | data/analysis_v1/final_case_states_v1.parquet | 8 | 5 | 62.5% |
-| antibiotic | data/curated_v1/ast_evidence_curated.parquet | data/analysis_v1/m11_v1/gps_supporting_combinations_v1.csv | 8 | 5 | 62.5% |
-| antibiotic | data/curated_v1/ast_evidence_curated.parquet | data/analysis_v1/m11_v1/gps_supporting_determinants_v1.csv | 8 | 5 | 62.5% |
-| antibiotic | data/curated_v1/ast_evidence_curated.parquet | data/analysis_v1/m11_v1/r_no_mapped_profile_v1.csv | 8 | 5 | 62.5% |
-| antibiotic | data/curated_v1/ast_evidence_curated.parquet | data/analysis_v1/m11_v1_1/gps_supporting_combinations_v1_1.csv | 8 | 5 | 62.5% |
-| antibiotic | data/curated_v1/ast_evidence_curated.parquet | data/analysis_v1/m11_v1_1/gps_supporting_determinants_v1_1.csv | 8 | 5 | 62.5% |
-| asm_acc | data/curated_v1/genotype_evidence_curated.parquet | data/curated_v1/isolates_curated.parquet | 10369 | 10369 | 100.0% |
-| asm_acc | data/curated_v1/isolates_curated.parquet | data/curated_v1/genotype_evidence_curated.parquet | 10369 | 10369 | 100.0% |
-| bioproject_acc | data/curated_v1/ast_evidence_curated.parquet | data/curated_v1/isolates_curated.parquet | 74 | 74 | 100.0% |
-| bioproject_acc | data/curated_v1/isolates_curated.parquet | data/curated_v1/ast_evidence_curated.parquet | 74 | 74 | 100.0% |
-| biosample_acc | data/curated_v1/ast_evidence_curated.parquet | data/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
-| biosample_acc | data/curated_v1/ast_evidence_curated.parquet | data/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
-| biosample_acc | data/curated_v1/genotype_evidence_curated.parquet | data/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
-| biosample_acc | data/curated_v1/genotype_evidence_curated.parquet | data/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
-| biosample_acc | data/curated_v1/isolates_curated.parquet | data/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
-| biosample_acc | data/curated_v1/isolates_curated.parquet | data/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
-| determinant | data/analysis_v1/m11_v1/gps_supporting_determinants_v1.csv | data/analysis_v1/m11_v1_1/gps_supporting_determinants_v1_1.csv | 166 | 122 | 1.2% |
-| determinant | data/analysis_v1/m11_v1_1/gps_supporting_determinants_v1_1.csv | data/analysis_v1/m11_v1/gps_supporting_determinants_v1.csv | 122 | 166 | 1.6% |
-| supporting_determinant_combination | data/analysis_v1/m11_v1/gps_supporting_combinations_v1.csv | data/analysis_v1/m11_v1_1/gps_supporting_combinations_v1_1.csv | 166 | 166 | 1.2% |
-| supporting_determinant_combination | data/analysis_v1/m11_v1_1/gps_supporting_combinations_v1_1.csv | data/analysis_v1/m11_v1/gps_supporting_combinations_v1.csv | 166 | 166 | 1.2% |
-| target_acc | data/analysis_v1/final_case_states_v1.parquet | data/curated_v1/ast_evidence_curated.parquet | 10396 | 10584 | 100.0% |
-| target_acc | data/analysis_v1/final_case_states_v1.parquet | data/curated_v1/genotype_evidence_curated.parquet | 10396 | 10584 | 100.0% |
-| target_acc | data/analysis_v1/final_case_states_v1.parquet | data/curated_v1/isolates_curated.parquet | 10396 | 10584 | 100.0% |
-| target_acc | data/curated_v1/ast_evidence_curated.parquet | data/analysis_v1/final_case_states_v1.parquet | 10584 | 10396 | 98.2% |
-| target_acc | data/curated_v1/ast_evidence_curated.parquet | data/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
-| target_acc | data/curated_v1/ast_evidence_curated.parquet | data/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
-| target_acc | data/curated_v1/genotype_evidence_curated.parquet | data/analysis_v1/final_case_states_v1.parquet | 10584 | 10396 | 98.2% |
-| target_acc | data/curated_v1/genotype_evidence_curated.parquet | data/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
-| target_acc | data/curated_v1/genotype_evidence_curated.parquet | data/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
-| target_acc | data/curated_v1/isolates_curated.parquet | data/analysis_v1/final_case_states_v1.parquet | 10584 | 10396 | 98.2% |
-| target_acc | data/curated_v1/isolates_curated.parquet | data/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
-| target_acc | data/curated_v1/isolates_curated.parquet | data/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| antibiotic | data/raw/analysis_v1/final_case_states_v1.parquet | data/raw/curated_v1/ast_evidence_curated.parquet | 5 | 8 | 100.0% |
+| antibiotic | data/raw/curated_v1/ast_evidence_curated.parquet | data/raw/analysis_v1/final_case_states_v1.parquet | 8 | 5 | 62.5% |
+| asm_acc | data/raw/curated_v1/genotype_evidence_curated.parquet | data/raw/curated_v1/isolates_curated.parquet | 10369 | 10369 | 100.0% |
+| asm_acc | data/raw/curated_v1/isolates_curated.parquet | data/raw/curated_v1/genotype_evidence_curated.parquet | 10369 | 10369 | 100.0% |
+| bioproject_acc | data/raw/curated_v1/ast_evidence_curated.parquet | data/raw/curated_v1/isolates_curated.parquet | 74 | 74 | 100.0% |
+| bioproject_acc | data/raw/curated_v1/isolates_curated.parquet | data/raw/curated_v1/ast_evidence_curated.parquet | 74 | 74 | 100.0% |
+| biosample_acc | data/raw/curated_v1/ast_evidence_curated.parquet | data/raw/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| biosample_acc | data/raw/curated_v1/ast_evidence_curated.parquet | data/raw/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
+| biosample_acc | data/raw/curated_v1/genotype_evidence_curated.parquet | data/raw/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| biosample_acc | data/raw/curated_v1/genotype_evidence_curated.parquet | data/raw/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
+| biosample_acc | data/raw/curated_v1/isolates_curated.parquet | data/raw/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| biosample_acc | data/raw/curated_v1/isolates_curated.parquet | data/raw/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| target_acc | data/raw/analysis_v1/final_case_states_v1.parquet | data/raw/curated_v1/ast_evidence_curated.parquet | 10396 | 10584 | 100.0% |
+| target_acc | data/raw/analysis_v1/final_case_states_v1.parquet | data/raw/curated_v1/genotype_evidence_curated.parquet | 10396 | 10584 | 100.0% |
+| target_acc | data/raw/analysis_v1/final_case_states_v1.parquet | data/raw/curated_v1/isolates_curated.parquet | 10396 | 10584 | 100.0% |
+| target_acc | data/raw/curated_v1/ast_evidence_curated.parquet | data/raw/analysis_v1/final_case_states_v1.parquet | 10584 | 10396 | 98.2% |
+| target_acc | data/raw/curated_v1/ast_evidence_curated.parquet | data/raw/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| target_acc | data/raw/curated_v1/ast_evidence_curated.parquet | data/raw/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
+| target_acc | data/raw/curated_v1/genotype_evidence_curated.parquet | data/raw/analysis_v1/final_case_states_v1.parquet | 10584 | 10396 | 98.2% |
+| target_acc | data/raw/curated_v1/genotype_evidence_curated.parquet | data/raw/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| target_acc | data/raw/curated_v1/genotype_evidence_curated.parquet | data/raw/curated_v1/isolates_curated.parquet | 10584 | 10584 | 100.0% |
+| target_acc | data/raw/curated_v1/isolates_curated.parquet | data/raw/analysis_v1/final_case_states_v1.parquet | 10584 | 10396 | 98.2% |
+| target_acc | data/raw/curated_v1/isolates_curated.parquet | data/raw/curated_v1/ast_evidence_curated.parquet | 10584 | 10584 | 100.0% |
+| target_acc | data/raw/curated_v1/isolates_curated.parquet | data/raw/curated_v1/genotype_evidence_curated.parquet | 10584 | 10584 | 100.0% |
 
 ### List columns (possible dependency edges)
 
@@ -256,24 +199,24 @@ Total items is the number of rows you get by exploding a list column into a chil
 
 | file | column | rows with items | total items | distinct items | max per row |
 | --- | --- | --- | --- | --- | --- |
-| data/analysis_v1/final_case_states_v1.parquet | phenotype_values | 41858 | 41860 | 5 | 2 |
-| data/analysis_v1/final_case_states_v1.parquet | ast_evidence_ids | 41858 | 41880 | 41880 | 3 |
-| data/analysis_v1/final_case_states_v1.parquet | genotype_evidence_ids_evaluated | 41858 | 469755 | 117677 | 104 |
-| data/analysis_v1/final_case_states_v1.parquet | genotype_evidence_ids_supporting | 11006 | 26972 | 26972 | 13 |
-| data/analysis_v1/final_case_states_v1.parquet | mapping_rule_ids_evaluated | 41858 | 344526 | 6227 | 50 |
-| data/analysis_v1/final_case_states_v1.parquet | mapping_rule_ids_supporting | 11006 | 20009 | 456 | 5 |
-| data/analysis_v1/final_case_states_v1.parquet | determinants_evaluated | 41858 | 344526 | 871 | 50 |
-| data/analysis_v1/final_case_states_v1.parquet | determinants_supporting | 11006 | 20009 | 250 | 5 |
-| data/curated_v1/isolates_curated.parquet | isolate_identifiers | 10584 | 25380 | 25223 | 6 |
-| data/curated_v1/isolates_curated.parquet | AMR_genotypes | 10584 | 87851 | - | 52 |
-| data/curated_v1/isolates_curated.parquet | AMR_genotypes_core | 8705 | 56745 | 1013 | 46 |
-| data/curated_v1/isolates_curated.parquet | virulence_genotypes | 10553 | 148383 | - | 38 |
-| data/curated_v1/isolates_curated.parquet | stress_genotypes | 10490 | 53596 | - | 40 |
-| data/curated_v1/isolates_curated.parquet | AST_phenotypes | 10584 | 166487 | - | 36 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | phenotype_values | 41858 | 41860 | 5 | 2 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | ast_evidence_ids | 41858 | 41880 | 41880 | 3 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | genotype_evidence_ids_evaluated | 41858 | 469755 | 117677 | 104 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | genotype_evidence_ids_supporting | 11006 | 26972 | 26972 | 13 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | mapping_rule_ids_evaluated | 41858 | 344526 | 6227 | 50 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | mapping_rule_ids_supporting | 11006 | 20009 | 456 | 5 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | determinants_evaluated | 41858 | 344526 | 871 | 50 |
+| data/raw/analysis_v1/final_case_states_v1.parquet | determinants_supporting | 11006 | 20009 | 250 | 5 |
+| data/raw/curated_v1/isolates_curated.parquet | isolate_identifiers | 10584 | 25380 | 25223 | 6 |
+| data/raw/curated_v1/isolates_curated.parquet | AMR_genotypes | 10584 | 87851 | - | 52 |
+| data/raw/curated_v1/isolates_curated.parquet | AMR_genotypes_core | 8705 | 56745 | 1013 | 46 |
+| data/raw/curated_v1/isolates_curated.parquet | virulence_genotypes | 10553 | 148383 | - | 38 |
+| data/raw/curated_v1/isolates_curated.parquet | stress_genotypes | 10490 | 53596 | - | 40 |
+| data/raw/curated_v1/isolates_curated.parquet | AST_phenotypes | 10584 | 166487 | - | 36 |
 
 ### Table schemas
 
-### `data/analysis_v1/final_case_states_v1.parquet`
+### `data/raw/analysis_v1/final_case_states_v1.parquet`
 
 41,858 rows x 27 columns, sha256 `bccfa970be376b2c...`
 
@@ -337,201 +280,7 @@ Case states by `antibiotic` (TMP-SMX names are merged):
 | meropenem | 93 | 6075 | 118 | 121 | 698 | 7105 |
 | tmp-smx | 1347 | 4480 | 145 | 44 | 3015 | 9031 |
 
-### `data/analysis_v1/m11_v1/candidate_observations_v1.csv`
-
-9 rows x 9 columns, sha256 `038962c4d86a13c9...`
-
-Candidate keys (no nulls, no duplicates): `candidate_id`, `value`, `numerator`, `observation`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | candidate_id | large_string | TEXT | 0 | 0.0% | 9 | M11CAND_01 (1); M11CAND_02 (1); M11CAND_03 (1); M11CAND_04 (1); M11CAND_05 (1); M11CAND_06 (1); M11CAND_07 (1); M11CAND_08 (1); M11CAND_09 (1) |
-| 2 | category | large_string | TEXT | 0 | 0.0% | 5 | top_gps_supporting_determinant (5); highest_resolved_discordanc... (1); largest_genotype_positive_s... (1); largest_r_no_mapped_burden (1); highest_unresolved_burden (1) |
-| 3 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | ceftriaxone (3); gentamicin (2); trimethoprim-sulfamethoxazole (2); ciprofloxacin (1); meropenem (1) |
-| 4 | metric | large_string | TEXT | 0 | 0.0% | 5 | case_count (5); resolved_discordance_rate_pct (1); genotype_positive_phenotype_s (1); phenotype_r_no_mapped_genotype (1); unresolved_all_case_pct (1) |
-| 5 | value | double | DOUBLE PRECISION | 0 | 0.0% | 9 | 10.5485 (1); 702.0 (1); 177.0 (1); 33.385 (1); 428.0 (1); 75.0 (1); 39.0 (1); 11.0 (1); 44.0 (1) [min 10.5485, max 702.0] |
-| 6 | numerator | int64 | BIGINT | 0 | 0.0% | 9 | 752 (1); 702 (1); 177 (1); 3015 (1); 428 (1); 75 (1); 39 (1); 11 (1); 44 (1) [min 11, max 3015] |
-| 7 | denominator | int64 | BIGINT | 0 | 0.0% | 8 | 7129 (2); 7566 (1); 9031 (1); 702 (1); 229 (1); 94 (1); 118 (1); 145 (1) [min 94, max 9031] |
-| 8 | observation | large_string | TEXT | 0 | 0.0% | 9 | ceftriaxone has the highest... (1); ceftriaxone contributes the... (1); gentamicin contributes the ... (1); trimethoprim-sulfamethoxazo... (1); ['blaEC-5'] is the most rec... (1); ['gyrA_S83L' 'parE_I529L'] ... (1); [... |
-| 9 | caveat | large_string | TEXT | 0 | 0.0% | 5 | Frequency inside a discorda... (5); Descriptive V1 rule-system ... (1); Genotype-positive/S is an i... (1); No mapped determinant under... (1); Unresolved categories must ... (1) |
-
-### `data/analysis_v1/m11_v1/case_state_by_drug_v1.csv`
-
-25 rows x 7 columns, sha256 `3262509a7c646622...`
-
-Candidate keys (no nulls, no duplicates): `count`, `all_case_pct`
-
-Composite candidates: `antibiotic` + `case_state`, `case_state` + `total_cases_for_drug`, `case_state` + `resolved_cases_for_drug`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | ceftriaxone (5); ciprofloxacin (5); gentamicin (5); meropenem (5); trimethoprim-sulfamethoxazole (5) |
-| 2 | case_state | large_string | TEXT | 0 | 0.0% | 5 | CONCORDANT_RESISTANT (5); CONCORDANT_SUSCEPTIBLE (5); DISCORDANT_GENOTYPE_POSITIV... (5); DISCORDANT_PHENOTYPE_R_NO_M... (5); UNRESOLVED (5) |
-| 3 | count | int64 | BIGINT | 0 | 0.0% | 25 | e.g. 1516, 4861, 702 [min 34, max 6193] |
-| 4 | total_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 7220 (5); 8787 (5); 9715 (5); 7105 (5); 9031 (5) [min 7105, max 9715] |
-| 5 | all_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 25 | e.g. 20.9972, 67.3269, 9.723 [min 0.3869, max 85.5032] |
-| 6 | resolved_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 7129 (5); 6351 (5); 7566 (5); 6407 (5); 6016 (5) [min 6016, max 7566] |
-| 7 | resolved_case_pct | double | DOUBLE PRECISION | 5 | 20.0% | 20 | e.g. 21.2653, 68.1863, 9.8471 [min 0.5353, max 94.8182] |
-
-### `data/analysis_v1/m11_v1/discordance_by_drug_v1.csv`
-
-5 rows x 15 columns, sha256 `9c3641ff1b2608ae...`
-
-Candidate keys (no nulls, no duplicates): `antibiotic`, `total_cases`, `resolved_cases`, `concordant_resistant`, `concordant_susceptible`, `genotype_positive_phenotype_s`, `phenotype_r_no_mapped_genotype`, `resolved_discordant_total`, `unresolved`, `gps_all_case_pct`, `gps_resolved_case_pct`, `r_no_mapped_all_case_pct`, `r_no_mapped_resolved_case_pct`, `resolved_discordance_rate_pct`, `unresolved_all_case_pct`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | ceftriaxone (1); ciprofloxacin (1); gentamicin (1); meropenem (1); trimethoprim-sulfamethoxazole (1) |
-| 2 | total_cases | int64 | BIGINT | 0 | 0.0% | 5 | 7220 (1); 8787 (1); 9715 (1); 7105 (1); 9031 (1) [min 7105, max 9715] |
-| 3 | resolved_cases | int64 | BIGINT | 0 | 0.0% | 5 | 7129 (1); 6351 (1); 7566 (1); 6407 (1); 6016 (1) [min 6016, max 7566] |
-| 4 | concordant_resistant | int64 | BIGINT | 0 | 0.0% | 5 | 1516 (1); 1165 (1); 1102 (1); 93 (1); 1347 (1) [min 93, max 1516] |
-| 5 | concordant_susceptible | int64 | BIGINT | 0 | 0.0% | 5 | 4861 (1); 4923 (1); 6193 (1); 6075 (1); 4480 (1) [min 4480, max 6193] |
-| 6 | genotype_positive_phenotype_s | int64 | BIGINT | 0 | 0.0% | 5 | 702 (1); 229 (1); 94 (1); 118 (1); 145 (1) [min 94, max 702] |
-| 7 | phenotype_r_no_mapped_genotype | int64 | BIGINT | 0 | 0.0% | 5 | 50 (1); 34 (1); 177 (1); 121 (1); 44 (1) [min 34, max 177] |
-| 8 | resolved_discordant_total | int64 | BIGINT | 0 | 0.0% | 5 | 752 (1); 263 (1); 271 (1); 239 (1); 189 (1) [min 189, max 752] |
-| 9 | unresolved | int64 | BIGINT | 0 | 0.0% | 5 | 91 (1); 2436 (1); 2149 (1); 698 (1); 3015 (1) [min 91, max 3015] |
-| 10 | gps_all_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 5 | 9.723 (1); 2.6061 (1); 0.9676 (1); 1.6608 (1); 1.6056 (1) [min 0.9676, max 9.723] |
-| 11 | gps_resolved_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 5 | 9.8471 (1); 3.6057 (1); 1.2424 (1); 1.8417 (1); 2.4102 (1) [min 1.2424, max 9.8471] |
-| 12 | r_no_mapped_all_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 5 | 0.6925 (1); 0.3869 (1); 1.8219 (1); 1.703 (1); 0.4872 (1) [min 0.3869, max 1.8219] |
-| 13 | r_no_mapped_resolved_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 5 | 0.7014 (1); 0.5353 (1); 2.3394 (1); 1.8886 (1); 0.7314 (1) [min 0.5353, max 2.3394] |
-| 14 | resolved_discordance_rate_pct | double | DOUBLE PRECISION | 0 | 0.0% | 5 | 10.5485 (1); 4.1411 (1); 3.5818 (1); 3.7303 (1); 3.1416 (1) [min 3.1416, max 10.5485] |
-| 15 | unresolved_all_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 5 | 1.2604 (1); 27.7228 (1); 22.1204 (1); 9.8241 (1); 33.385 (1) [min 1.2604, max 33.385] |
-
-### `data/analysis_v1/m11_v1/genotype_by_drug_v1.csv`
-
-14 rows x 5 columns, sha256 `8ef4f3dd7ad784d7...`
-
-Candidate keys (no nulls, no duplicates): `count`, `all_case_pct`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | ceftriaxone (3); ciprofloxacin (3); gentamicin (3); trimethoprim-sulfamethoxazole (3); meropenem (2) |
-| 2 | genotype_state | large_string | TEXT | 0 | 0.0% | 3 | GENOTYPE_DECISIVE_SUPPORT (5); GENOTYPE_NO_MAPPED_SUPPORT (5); GENOTYPE_CONTEXTUAL_SUPPORT (4) |
-| 3 | count | int64 | BIGINT | 0 | 0.0% | 14 | e.g. 80, 2228, 4912 [min 6, max 8225] |
-| 4 | total_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 7220 (3); 8787 (3); 9715 (3); 9031 (3); 7105 (2) [min 7105, max 9715] |
-| 5 | all_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 14 | e.g. 1.108, 30.8587, 68.0332 [min 0.0618, max 94.4546] |
-
-### `data/analysis_v1/m11_v1/gps_supporting_combinations_v1.csv`
-
-166 rows x 5 columns, sha256 `5b287b5fb8e22f72...`
-
-Candidate keys (no nulls, no duplicates): `supporting_determinant_combination`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | meropenem (61); ceftriaxone (40); trimethoprim-sulfamethoxazole (29); ciprofloxacin (27); gentamicin (9) |
-| 2 | supporting_determinant_combination | large_string | TEXT | 0 | 0.0% | 166 | e.g. ['blaEC-5'], ['ampC_T-32A'], ['ampC_C-42T'] |
-| 3 | case_count | int64 | BIGINT | 0 | 0.0% | 26 | e.g. 428, 46, 33 [min 1, max 428] |
-| 4 | gps_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 118 (61); 702 (40); 145 (29); 229 (27); 94 (9) [min 94, max 702] |
-| 5 | pct_of_gps_cases_for_drug | double | DOUBLE PRECISION | 0 | 0.0% | 50 | e.g. 60.9687, 6.5527, 4.7009 [min 0.1425, max 60.9687] |
-
-### `data/analysis_v1/m11_v1/gps_supporting_determinants_v1.csv`
-
-166 rows x 5 columns, sha256 `da781b99a08d1f95...`
-
-Candidate keys (no nulls, no duplicates): `determinant`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | meropenem (61); ceftriaxone (40); trimethoprim-sulfamethoxazole (29); ciprofloxacin (27); gentamicin (9) |
-| 2 | determinant | large_string | TEXT | 0 | 0.0% | 166 | e.g. ['blaEC-5'], ['ampC_T-32A'], ['ampC_C-42T'] |
-| 3 | case_count | int64 | BIGINT | 0 | 0.0% | 26 | e.g. 428, 46, 33 [min 1, max 428] |
-| 4 | gps_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 118 (61); 702 (40); 145 (29); 229 (27); 94 (9) [min 94, max 702] |
-| 5 | pct_of_gps_cases_for_drug | double | DOUBLE PRECISION | 0 | 0.0% | 50 | e.g. 60.9687, 6.5527, 4.7009 [min 0.1425, max 60.9687] |
-
-### `data/analysis_v1/m11_v1/phenotype_by_drug_v1.csv`
-
-17 rows x 5 columns, sha256 `9adbb18999fbde95...`
-
-Candidate keys (no nulls, no duplicates): `all_case_pct`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | ciprofloxacin (4); meropenem (4); ceftriaxone (3); gentamicin (3); trimethoprim-sulfamethoxazole (3) |
-| 2 | phenotype_state | large_string | TEXT | 0 | 0.0% | 4 | PHENOTYPE_R (5); PHENOTYPE_S (5); PHENOTYPE_UNRESOLVED_NONBINARY (5); PHENOTYPE_CONFLICT (2) |
-| 3 | count | int64 | BIGINT | 0 | 0.0% | 16 | e.g. 1574, 5635, 11 [min 1, max 6495] |
-| 4 | total_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 8787 (4); 7105 (4); 7220 (3); 9715 (3); 9031 (3) [min 7105, max 9715] |
-| 5 | all_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 17 | e.g. 21.8006, 78.0471, 0.1524 [min 0.0114, max 87.164] |
-
-### `data/analysis_v1/m11_v1/r_no_mapped_profile_v1.csv`
-
-219 rows x 6 columns, sha256 `4a56a218703887af...`
-
-Candidate keys (no nulls, no duplicates): no single column
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | gentamicin (100); meropenem (35); ceftriaxone (32); trimethoprim-sulfamethoxazole (31); ciprofloxacin (21) |
-| 2 | authoritative_representation | large_string | TEXT | 0 | 0.0% | 2 | MICROBIGGE (213); ISOLATE_AMR_SUMMARY (6) |
-| 3 | refgene_db_version | large_string | TEXT | 0 | 0.0% | 3 | 2026-03-24.1 (125); 2026-08-07.1 (73); 2026-05-15.1 (21) |
-| 4 | authoritative_evidence_rows | int64 | BIGINT | 0 | 0.0% | 40 | e.g. 10, 11, 3 [min 2, max 46] |
-| 5 | authoritative_unique_determinants | int64 | BIGINT | 0 | 0.0% | 29 | e.g. 10, 11, 3 [min 2, max 32] |
-| 6 | case_count | int64 | BIGINT | 0 | 0.0% | 9 | 1 (143); 2 (25); 3 (18); 4 (14); 6 (8); 7 (5); 5 (3); 8 (2); 9 (1) [min 1, max 9] |
-
-### `data/analysis_v1/m11_v1/unresolved_by_drug_reason_v1.csv`
-
-19 rows x 8 columns, sha256 `11d9d53269bdbf34...`
-
-Candidate keys (no nulls, no duplicates): `pct_of_unresolved_for_drug`, `all_case_pct`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | ciprofloxacin (5); gentamicin (4); trimethoprim-sulfamethoxazole (4); ceftriaxone (3); meropenem (3) |
-| 2 | unresolved_reason | large_string | TEXT | 0 | 0.0% | 3 | NONBINARY_PHENOTYPE (13); CONTEXTUAL_GENOTYPE_EVIDENCE (4); PHENOTYPE_CONFLICT (2) |
-| 3 | genotype_state | large_string | TEXT | 0 | 0.0% | 3 | GENOTYPE_CONTEXTUAL_SUPPORT (8); GENOTYPE_DECISIVE_SUPPORT (6); GENOTYPE_NO_MAPPED_SUPPORT (5) |
-| 4 | count | int64 | BIGINT | 0 | 0.0% | 17 | e.g. 80, 10, 1 [min 1, max 1855] |
-| 5 | unresolved_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 2436 (5); 2149 (4); 3015 (4); 91 (3); 698 (3) [min 91, max 3015] |
-| 6 | pct_of_unresolved_for_drug | double | DOUBLE PRECISION | 0 | 0.0% | 19 | e.g. 87.9121, 10.989, 1.0989 [min 0.0411, max 87.9121] |
-| 7 | total_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 8787 (5); 9715 (4); 9031 (4); 7220 (3); 7105 (3) [min 7105, max 9715] |
-| 8 | all_case_pct | double | DOUBLE PRECISION | 0 | 0.0% | 19 | e.g. 1.108, 0.1385, 0.0139 [min 0.0114, max 19.0942] |
-
-### `data/analysis_v1/m11_v1_1/candidate_observations_v1_1.csv`
-
-9 rows x 9 columns, sha256 `63de8c51c181c05b...`
-
-Candidate keys (no nulls, no duplicates): `candidate_id`, `value`, `numerator`, `observation`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | candidate_id | large_string | TEXT | 0 | 0.0% | 9 | M11CAND_01 (1); M11CAND_02 (1); M11CAND_03 (1); M11CAND_04 (1); M11CAND_05 (1); M11CAND_06 (1); M11CAND_07 (1); M11CAND_08 (1); M11CAND_09 (1) |
-| 2 | category | large_string | TEXT | 0 | 0.0% | 5 | top_gps_supporting_determinant (5); highest_resolved_discordanc... (1); largest_genotype_positive_s... (1); largest_r_no_mapped_burden (1); highest_unresolved_burden (1) |
-| 3 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | ceftriaxone (3); gentamicin (2); trimethoprim-sulfamethoxazole (2); ciprofloxacin (1); meropenem (1) |
-| 4 | metric | large_string | TEXT | 0 | 0.0% | 5 | case_count (5); resolved_discordance_rate_pct (1); genotype_positive_phenotype_s (1); phenotype_r_no_mapped_genotype (1); unresolved_all_case_pct (1) |
-| 5 | value | double | DOUBLE PRECISION | 0 | 0.0% | 9 | 10.5485 (1); 702.0 (1); 177.0 (1); 33.385 (1); 437.0 (1); 223.0 (1); 42.0 (1); 12.0 (1); 102.0 (1) [min 10.5485, max 702.0] |
-| 6 | numerator | int64 | BIGINT | 0 | 0.0% | 9 | 752 (1); 702 (1); 177 (1); 3015 (1); 437 (1); 223 (1); 42 (1); 12 (1); 102 (1) [min 12, max 3015] |
-| 7 | denominator | int64 | BIGINT | 0 | 0.0% | 8 | 7129 (2); 7566 (1); 9031 (1); 702 (1); 229 (1); 94 (1); 118 (1); 145 (1) [min 94, max 9031] |
-| 8 | observation | large_string | TEXT | 0 | 0.0% | 9 | ceftriaxone has the highest... (1); ceftriaxone contributes the... (1); gentamicin contributes the ... (1); trimethoprim-sulfamethoxazo... (1); blaEC-5 is the most recurre... (1); gyrA_S83L is the most recur... (1); a... |
-| 9 | caveat | large_string | TEXT | 0 | 0.0% | 5 | Frequency inside a discorda... (5); Descriptive V1 rule-system ... (1); Genotype-positive/S is an i... (1); No mapped determinant under... (1); Unresolved categories must ... (1) |
-
-### `data/analysis_v1/m11_v1_1/gps_supporting_combinations_v1_1.csv`
-
-166 rows x 5 columns, sha256 `f37a18b1a8e974a5...`
-
-Candidate keys (no nulls, no duplicates): `supporting_determinant_combination`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | meropenem (61); ceftriaxone (40); trimethoprim-sulfamethoxazole (29); ciprofloxacin (27); gentamicin (9) |
-| 2 | supporting_determinant_combination | large_string | TEXT | 0 | 0.0% | 166 | e.g. blaEC-5, ampC_T-32A, ampC_C-42T |
-| 3 | case_count | int64 | BIGINT | 0 | 0.0% | 26 | e.g. 428, 46, 33 [min 1, max 428] |
-| 4 | gps_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 118 (61); 702 (40); 145 (29); 229 (27); 94 (9) [min 94, max 702] |
-| 5 | pct_of_gps_cases_for_drug | double | DOUBLE PRECISION | 0 | 0.0% | 50 | e.g. 60.9687, 6.5527, 4.7009 [min 0.1425, max 60.9687] |
-
-### `data/analysis_v1/m11_v1_1/gps_supporting_determinants_v1_1.csv`
-
-122 rows x 5 columns, sha256 `68cfe715fc736cbd...`
-
-Candidate keys (no nulls, no duplicates): `determinant`
-
-| # | column | arrow type | suggested postgres type | nulls | null % | distinct | values |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | antibiotic | large_string | TEXT | 0 | 0.0% | 5 | meropenem (60); ceftriaxone (24); ciprofloxacin (20); trimethoprim-sulfamethoxazole (11); gentamicin (7) |
-| 2 | determinant | large_string | TEXT | 0 | 0.0% | 122 | e.g. blaEC-5, blaCTX-M-15, blaOXA-1 |
-| 3 | case_count | int64 | BIGINT | 0 | 0.0% | 34 | e.g. 437, 87, 67 [min 1, max 437] |
-| 4 | gps_cases_for_drug | int64 | BIGINT | 0 | 0.0% | 5 | 118 (60); 702 (24); 229 (20); 145 (11); 94 (7) [min 94, max 702] |
-| 5 | pct_of_gps_cases_for_drug | double | DOUBLE PRECISION | 0 | 0.0% | 55 | e.g. 62.2507, 12.3932, 9.5442 [min 0.1425, max 97.3799] |
-
-### `data/curated_v1/ast_evidence_curated.parquet`
+### `data/raw/curated_v1/ast_evidence_curated.parquet`
 
 57,228 rows x 33 columns, sha256 `dda9567ad91865fa...`
 
@@ -577,7 +326,7 @@ Candidate keys (no nulls, no duplicates): `id`, `checksum`, `ast_evidence_id`
 | 32 | source_snapshot_id | string | TEXT | 0 | 0.0% | 1 | AMRTRACE_RAW_V1 (57228) |
 | 33 | curation_rule_version | string | TEXT | 0 | 0.0% | 1 | CURATION_RULES_V1 (57228) |
 
-### `data/curated_v1/genotype_evidence_curated.parquet`
+### `data/raw/curated_v1/genotype_evidence_curated.parquet`
 
 413,116 rows x 21 columns, sha256 `ea4bbf14ce1a321e...`
 
@@ -607,7 +356,7 @@ Candidate keys (no nulls, no duplicates): `genotype_evidence_id`, `source_row_si
 | 20 | source_snapshot_id | string | TEXT | 0 | 0.0% | 1 | AMRTRACE_RAW_V1 (413116) |
 | 21 | curation_rule_version | string | TEXT | 0 | 0.0% | 1 | CURATION_RULES_V1 (413116) |
 
-### `data/curated_v1/isolates_curated.parquet`
+### `data/raw/curated_v1/isolates_curated.parquet`
 
 10,584 rows x 81 columns, sha256 `438c3834d3c5f15b...`
 
@@ -719,7 +468,7 @@ Candidate keys (no nulls, no duplicates): `target_acc`, `biosample_acc`, `checks
 | 80 | source_snapshot_id | string | TEXT | 0 | 0.0% | 1 | AMRTRACE_RAW_V1 (10584) |
 | 81 | curation_rule_version | string | TEXT | 0 | 0.0% | 1 | CURATION_RULES_V1 (10584) |
 
-### `data/mapping_v1/determinant_drug_mapping_v1.parquet`
+### `data/raw/mapping_v1/determinant_drug_mapping_v1.parquet`
 
 43,536 rows x 21 columns, sha256 `5b91c1c47b13e678...`
 
@@ -750,367 +499,6 @@ Composite candidates: `source_classification_id` + `candidate_antibiotic`
 | 19 | mapping_reason | string | TEXT | 0 | 0.0% | 16 | e.g. No exact candidate or CEPHA..., No exact candidate or CEPHA..., No exact candidate or CEPHA... |
 | 20 | ambiguity_policy_id | string | TEXT | 0 | 0.0% | 1 | DETERMINANT_REFERENCE_AMBIG... (43536) |
 | 21 | rule_status | string | TEXT | 0 | 0.0% | 1 | ACTIVE (43536) |
-
-### Manifests and other json files
-
-### `data/analysis_v1/analysis_ready_v1.lock.json`
-
-0.0 MB, sha256 `5fdb054776e6812e...`
-
-- `release_id`: AMRTRACE_ANALYSIS_READY_V1
-- `status`: FROZEN
-- `created_utc`: 2026-08-30T18:06:40.880743+00:00
-- `source_case_state_file`: data/cases_v1/case_states_v1.parquet
-- `source_case_state_sha256`: bccfa970be376b2cb0cab600345451a70906f133a65f9f698e4aea7239cdf886
-- `release_case_state_file`: data/analysis_v1/final_case_states_v1.parquet
-- `release_case_state_sha256`: bccfa970be376b2cb0cab600345451a70906f133a65f9f698e4aea7239cdf886
-- `case_count`: 41858
-- `panel`: list with 5 items
-- `case_state_counts`: dict with 5 items
-
-### `data/analysis_v1/m11_v1/m11_input_schema_v1.json`
-
-0.0 MB, sha256 `2849827873e42bad...`
-
-- `analysis_id`: AMRTRACE_M11_ANALYSIS_V1
-- `case_columns`: list with 27 items
-- `detected_columns`: dict with 12 items
-- `representation_profile_source`: case-state column `genotype_representation_used`
-- `genotype_columns_loaded`: list with 7 items
-- `mapping_columns_loaded`: list with 7 items
-
-### `data/analysis_v1/m11_v1_1/support_parser_audit_v1_1.json`
-
-0.0 MB, sha256 `ec130a78ea0f98ab...`
-
-- `analysis_id`: AMRTRACE_M11_ANALYSIS_V1_1
-- `erratum_id`: M11_3_SUPPORTING_DETERMINANT_ERRATUM_V1
-- `gps_case_count`: 1288
-- `raw_support_container_types`: dict with 1 items
-- `minimum_supporting_determinants_per_case`: 1
-- `maximum_supporting_determinants_per_case`: 5
-- `original_v1_serialized_array_labels_detected`: 164
-- `corrected_serialized_array_labels_detected`: 0
-- `candidate_01_04_unchanged`: True
-- `corrected_single_determinant_candidates_regenerated`: 5
-
-### `manifests/analysis_ready_v1.json`
-
-0.0 MB, sha256 `5fd240c581804406...`
-
-- `release_id`: AMRTRACE_ANALYSIS_READY_V1
-- `protocol_id`: M10_1_ANALYSIS_READY_FREEZE_PROTOCOL_V1
-- `status`: PASS_M10_COMPLETE
-- `created_utc`: 2026-08-30T18:06:40.880743+00:00
-- `build_git_commit`: d2b46838de15ee7d96b5afedf3a5377017701bda
-- `primary_analysis_table`: dict with 6 items
-- `panel`: list with 5 items
-- `case_state_counts`: dict with 5 items
-- `verified_upstream_counts`: dict with 6 items
-- `dependencies`: list with 19 items
-- `four_question_record`: dict with 4 items
-
-### `manifests/antibiotic_panel_v1.json`
-
-0.0 MB, sha256 `236233d7e66c05b2...`
-
-- `panel_id`: ANTIBIOTIC_PANEL_V1
-- `status`: FROZEN
-- `created_utc`: 2026-08-30T06:57:30.222016+00:00
-- `freeze_git_commit`: 8c6862c5150fc0ff8d24156472b5a0c550ac9034
-- `selected_antibiotics`: list with 5 items
-- `selected_count`: 5
-- `excluded_candidates`: list with 3 items
-- `excluded_count`: 3
-- `curated_dataset_id`: AMRTRACE_CURATED_V1
-- `curated_manifest_sha256`: 2234d6f44cda8176f1fcfe6fc678d266af247294df0b62fdbba6bb247d01185c
-- `mapping_id`: AMRTRACE_DETERMINANT_DRUG_MAPPING_V1
-- `mapping_version`: DETERMINANT_DRUG_MAPPING_V1
-- `mapping_manifest_sha256`: f1a7f6612855d8909646ea3668dd99eff53fc9c5501d4a2419b86164c3261ed4
-- `selection_policy_id`: ANTIBIOTIC_PANEL_SELECTION_POLICY_V1
-- `selection_policy_sha256`: 245ff2c89424dfc12192257defbcb2a7837ac803593a376b6aff680131f551ed
-- `panel_profile_document`: docs/mapping/M7_2_PANEL_PROFILE.md
-- `panel_profile_sha256`: 59f6309aa44fbdb46f8fa13d5611da3dcbc78dc4e96d346539956a0fc0f19c21
-- `panel_decision_document`: docs/mapping/M7_3_FINAL_PANEL_DECISION_V1.md
-- `panel_decision_sha256`: a5324c9c1405e6f6b62dad71d92b9cb1363baddce176188038194462da7300c1
-- `selection_boundary`: dict with 7 items
-- `next_stage`: M8_CASE_RULE_DEFINITION
-
-### `manifests/case_states_v1.json`
-
-0.0 MB, sha256 `b71c69d284547ebf...`
-
-- `case_dataset_id`: AMRTRACE_CASE_STATES_V1
-- `case_rule_version`: CASE_RULES_V1
-- `status`: FROZEN
-- `created_utc`: 2026-08-30T15:25:31.359998+00:00
-- `build_git_commit`: 31177703c575dbf4c177a59867f9b4e97c462031
-- `curated_dataset_id`: AMRTRACE_CURATED_V1
-- `curated_manifest_sha256`: 2234d6f44cda8176f1fcfe6fc678d266af247294df0b62fdbba6bb247d01185c
-- `mapping_id`: AMRTRACE_DETERMINANT_DRUG_MAPPING_V1
-- `mapping_version`: DETERMINANT_DRUG_MAPPING_V1
-- `mapping_manifest_sha256`: f1a7f6612855d8909646ea3668dd99eff53fc9c5501d4a2419b86164c3261ed4
-- `panel_id`: ANTIBIOTIC_PANEL_V1
-- `panel_manifest_sha256`: 236233d7e66c05b27c9c400162c318a1309d046119e0cfab5b4768c88da0c74b
-- `case_rules_document`: docs/cases/M8_2_CASE_RULES_V1.md
-- `case_rules_sha256`: c4338fc4c50fdadb2c62a92c7bf3c8c3100d467b2d3aaa7a9a00c8ba573406f2
-- `selected_antibiotics`: list with 5 items
-- `output`: dict with 6 items
-- `phenotype_state_counts`: dict with 4 items
-- `genotype_state_counts`: dict with 3 items
-- `case_state_counts`: dict with 5 items
-- `unresolved_reason_counts`: dict with 3 items
-- `per_antibiotic`: dict with 5 items
-- `freeze`: dict with 8 items
-
-### `manifests/curated_v1.json`
-
-0.0 MB, sha256 `2234d6f44cda8176...`
-
-- `dataset_id`: AMRTRACE_CURATED_V1
-- `status`: FROZEN
-- `source_snapshot_id`: AMRTRACE_RAW_V1
-- `source_snapshot_manifest_sha256`: baa0ce704bede3b45684624ae1effc11c9a780e84aee5068013e0b739e9a11b6
-- `source_extraction_git_commit`: 34d8c99c703d5b4d9bb33095c9969346c4133319
-- `curation_rule_version`: CURATION_RULES_V1
-- `curation_rules_file`: docs\curation\M5_3_CURATION_RULES_V1.md
-- `curation_rules_sha256`: 63afc18fef3bf1ff439442cf13790266402dd6690a7e6b39476df7336410f266
-- `builder_script`: scripts/build_curated_dataset_v1.py
-- `build_git_commit`: 2fa7353203636c97f7886814428e8d14ccc41fc2
-- `build_started_utc`: 2026-08-29T19:38:02.042385+00:00
-- `build_completed_utc`: 2026-08-29T19:38:39.766424+00:00
-- `environment`: dict with 2 items
-- `policies`: list with 24 items
-- `outputs`: list with 3 items
-- `four_question_record`: dict with 4 items
-- `excluded_operations`: list with 5 items
-- `validation_result`: PASS
-- `validated_utc`: 2026-08-29T19:44:32.495247+00:00
-- `validator`: scripts/validate_curated_dataset_v1.py
-- `validation_document`: docs/curation/M5_5_CURATED_VALIDATION.md
-
-### `manifests/determinant_drug_mapping_v1.json`
-
-0.0 MB, sha256 `f1a7f6612855d890...`
-
-- `mapping_id`: AMRTRACE_DETERMINANT_DRUG_MAPPING_V1
-- `mapping_version`: DETERMINANT_DRUG_MAPPING_V1
-- `status`: FROZEN
-- `created_utc`: 2026-08-29T20:25:59.064455+00:00
-- `build_git_commit`: 32497828ee32d44e49f745eafac5bfae1e1dcfd5
-- `input_curated_dataset_id`: AMRTRACE_CURATED_V1
-- `input_curated_manifest_sha256`: 2234d6f44cda8176f1fcfe6fc678d266af247294df0b62fdbba6bb247d01185c
-- `source_reference_id`: AMRTRACE_MAPPING_REFERENCE_V1
-- `source_reference_manifest_sha256`: 37280280816cd3e25e300d2b1c3f9b015adc195ad6dc6a88dbc6a3a87ec5ebfd
-- `ambiguity_policy_id`: DETERMINANT_REFERENCE_AMBIGUITY_POLICY_V1
-- `ambiguity_policy_sha256`: cf1f61941c0cfeadf2cce3d62c9633433becb20acd51754566c2838a2536976b
-- `database_versions`: list with 3 items
-- `candidate_antibiotics`: list with 8 items
-- `observed_determinant_identities`: 892
-- `output`: dict with 6 items
-- `summary_symbol_mapping_changes_across_versions`: 0
-- `interpretation_boundary`: Mapping indicates evidence relevance under versioned NCBI classification rules. It does not itself establish clinical...
-- `four_question_record`: dict with 4 items
-- `validation_result`: PASS
-- `validated_utc`: 2026-08-29T20:32:06.401224+00:00
-- `validator`: scripts/validate_determinant_drug_mapping_v1.py
-- `validation_document`: docs/mapping/M6_6_MAPPING_VALIDATION.md
-
-### `manifests/m11_analysis_v1.json`
-
-0.0 MB, sha256 `0484d5a6240bb1d0...`
-
-- `analysis_id`: AMRTRACE_M11_ANALYSIS_V1
-- `protocol_id`: M11_1_BIOLOGICAL_ANALYSIS_PROTOCOL_V1
-- `status`: PASS_M11_COMPLETE
-- `created_utc`: 2026-08-30T18:12:40.206764+00:00
-- `build_git_commit`: 70568dd6962339cd5422f793919ef733f05d1fe9
-- `input_release`: dict with 4 items
-- `frozen_counts`: dict with 5 items
-- `detected_case_columns`: dict with 12 items
-- `supporting_determinant_method`: case-state column `determinants_supporting`
-- `representation_profile_source`: case-state column `genotype_representation_used`
-- `candidate_observation_count`: 9
-- `outputs`: dict with 11 items
-- `four_question_record`: dict with 4 items
-
-### `manifests/m11_analysis_v1_1.json`
-
-0.0 MB, sha256 `26a584a99f62a129...`
-
-- `analysis_id`: AMRTRACE_M11_ANALYSIS_V1_1
-- `supersedes_for_determinant_analysis`: AMRTRACE_M11_ANALYSIS_V1
-- `erratum_id`: M11_3_SUPPORTING_DETERMINANT_ERRATUM_V1
-- `status`: PASS_M11_V1_1_COMPLETE
-- `created_utc`: 2026-08-30T18:17:46.906102+00:00
-- `build_git_commit`: 77dc168a994eb2996f4646f493e6769d13e890c7
-- `input_release`: dict with 3 items
-- `preserved_v1`: dict with 4 items
-- `correction`: dict with 10 items
-- `outputs`: dict with 5 items
-- `four_question_record`: dict with 4 items
-
-### `manifests/m9_qa_completion_v1.json`
-
-0.0 MB, sha256 `113e316a154138fb...`
-
-- `completion_id`: M9_QA_COMPLETION_V1
-- `validator_erratum_id`: M9_6_TMP_SMX_QA_VALIDATOR_ERRATUM_V1
-- `reconciler_fix_id`: M9_6_1_QA_RECONCILER_FIX_V1
-- `status`: PASS_M9_COMPLETE
-- `created_utc`: 2026-08-30T18:00:53.749524+00:00
-- `build_git_commit`: dcbf4cf723972ef73f3e4a65f171a564feaa53f3
-- `audit_history`: dict with 6 items
-- `root_cause`: M9 validator incorrectly required SUPPORTS_RESISTANCE on each TMP-SMX COMPONENT_SUPPORT row. For SUMMARY_SYMBOL rows,...
-- `evidence_backed_correction_count`: 10
-- `corrected_regression_exact_match_count`: 114
-- `corrected_regression_mismatch_count`: 0
-- `preserved_interactive_manual_spot_checks`: 3
-- `inputs`: dict with 7 items
-- `outputs`: dict with 4 items
-- `four_question_record`: dict with 4 items
-
-### `manifests/manual_qa_batch_blind_v1.json`
-
-0.0 MB, sha256 `715a09c3d32bffd4...`
-
-- `batch_id`: MANUAL_QA_BATCH_BLIND_V1
-- `workflow_addendum_id`: M9_4_BATCH_QA_WORKFLOW_ADDENDUM_V1
-- `status`: BLIND_DERIVATION_COMPLETE_NOT_COMPARED
-- `created_utc`: 2026-08-30T17:36:32.521512+00:00
-- `build_git_commit`: c9caf58ada3caaa32f5a2742159adceaad9ad6fd
-- `case_count`: 114
-- `unique_case_count`: 114
-- `previously_finalized_manual_reviews`: 3
-- `recommended_human_review_count`: 84
-- `pending_human_review_count`: 84
-- `unique_decision_signature_count`: 29
-- `blinding`: dict with 4 items
-- `outputs`: dict with 4 items
-- `counts`: dict with 4 items
-- `four_question_record`: dict with 4 items
-
-### `manifests/manual_qa_batch_comparison_v1.json`
-
-0.0 MB, sha256 `1768a3cce0d1ca7a...`
-
-- `comparison_id`: MANUAL_QA_BATCH_COMPARISON_V1
-- `status`: COMPARISON_COMPLETE_REVIEW_PENDING
-- `created_utc`: 2026-08-30T17:49:56.316200+00:00
-- `build_git_commit`: 1ffd29d5c8872b042b95c088ac2b966f329e7b95
-- `inputs`: dict with 4 items
-- `results`: dict with 5 items
-- `outputs`: dict with 4 items
-- `four_question_record`: dict with 4 items
-
-### `manifests/manual_qa_review_packet_v1.json`
-
-0.0 MB, sha256 `8d8c01487ce9bc8e...`
-
-- `review_packet_id`: MANUAL_QA_REVIEW_PACKET_V1
-- `qa_plan_id`: MANUAL_QA_PLAN_V1
-- `qa_sample_id`: MANUAL_QA_SAMPLE_V1
-- `status`: GENERATED_NOT_REVIEWED
-- `created_utc`: 2026-08-30T16:32:34.345944+00:00
-- `build_git_commit`: 358a1da59fa4edbf40b123814e5d7a02327f8cd3
-- `source_case_dataset_id`: AMRTRACE_CASE_STATES_V1
-- `source_qa_sample_manifest_sha256`: 4f9f48b90a128d970774cbb96f39cde3a0d960eb9e4cd2061927b5ab787400d1
-- `source_qa_sample_parquet_sha256`: 3db374bacb925da0eeee55c4d69d88c1ed73d505e56cafafcd0406bc90586638
-- `qa_plan_sha256`: dc9f9fe6691c5ecaaedb5bb051574de1e5f30c0f8dba96aa57016522a65ab444
-- `sample_case_count`: 114
-- `source_evidence_counts`: dict with 5 items
-- `sample_counts`: dict with 2 items
-- `outputs`: dict with 2 items
-- `blinding`: dict with 6 items
-
-### `manifests/manual_qa_review_packet_v1_1.json`
-
-0.0 MB, sha256 `ecb0339bc46ef9a1...`
-
-- `review_packet_id`: MANUAL_QA_REVIEW_PACKET_V1_1
-- `supersedes_review_packet_id`: MANUAL_QA_REVIEW_PACKET_V1
-- `supersession_reason`: V1 blinded packet exposed sampling-reason strings containing case-state stratum labels. V1.1 removes sampling reasons...
-- `manual_review_started_under_superseded_v1`: False
-- `qa_plan_id`: MANUAL_QA_PLAN_V1
-- `qa_sample_id`: MANUAL_QA_SAMPLE_V1
-- `status`: GENERATED_NOT_REVIEWED
-- `created_utc`: 2026-08-30T16:56:26.516687+00:00
-- `build_git_commit`: 4a1f6afde1bc692b0f39e29b228d745c5db9aea1
-- `source_case_dataset_id`: AMRTRACE_CASE_STATES_V1
-- `source_qa_sample_manifest_sha256`: 4f9f48b90a128d970774cbb96f39cde3a0d960eb9e4cd2061927b5ab787400d1
-- `source_qa_sample_parquet_sha256`: 3db374bacb925da0eeee55c4d69d88c1ed73d505e56cafafcd0406bc90586638
-- `qa_plan_sha256`: dc9f9fe6691c5ecaaedb5bb051574de1e5f30c0f8dba96aa57016522a65ab444
-- `sample_case_count`: 114
-- `source_evidence_counts`: dict with 5 items
-- `sample_counts`: dict with 2 items
-- `outputs`: dict with 2 items
-- `blinding`: dict with 9 items
-- `four_question_record`: dict with 4 items
-
-### `manifests/manual_qa_sample_v1.json`
-
-0.0 MB, sha256 `4f9f48b90a128d97...`
-
-- `qa_sample_id`: MANUAL_QA_SAMPLE_V1
-- `qa_plan_id`: MANUAL_QA_PLAN_V1
-- `status`: SAMPLED_NOT_REVIEWED
-- `created_utc`: 2026-08-30T16:14:24.552317+00:00
-- `sampling_seed`: 20260830
-- `selection_algorithm`: SHA256 deterministic ranking over seed, purpose, and case_id
-- `build_git_commit`: acc120e8abaf95d8bfebca837fda433d74799ba1
-- `source_case_dataset_id`: AMRTRACE_CASE_STATES_V1
-- `source_case_manifest_sha256`: b71c69d284547ebfb0c0f4c55f0c77e1c72dcc2ead7983568b446ce0fd3e35d0
-- `source_case_parquet_sha256`: bccfa970be376b2cb0cab600345451a70906f133a65f9f698e4aea7239cdf886
-- `qa_plan_sha256`: dc9f9fe6691c5ecaaedb5bb051574de1e5f30c0f8dba96aa57016522a65ab444
-- `primary_design`: dict with 6 items
-- `mandatory_coverage`: dict with 4 items
-- `output`: dict with 5 items
-- `counts`: dict with 4 items
-
-### `manifests/mapping_reference_v1.json`
-
-0.0 MB, sha256 `37280280816cd3e2...`
-
-- `reference_id`: AMRTRACE_MAPPING_REFERENCE_V1
-- `status`: FROZEN
-- `capture_started_utc`: 2026-08-29T19:55:26.747221+00:00
-- `capture_completed_utc`: 2026-08-29T19:56:17.592048+00:00
-- `capture_git_commit`: 418951f5d71a7fec59a7be86cb7a52f99ed0b596
-- `source`: NCBI AMRFinderPlus database
-- `database_format`: 4.2
-- `database_versions`: list with 3 items
-- `versions`: list with 3 items
-- `purpose`: Version-aware source evidence for DETERMINANT_DRUG_MAPPING_V1.
-- `four_question_record`: dict with 4 items
-- `audit_result`: PASS
-- `audited_utc`: 2026-08-29T20:00:19.892396+00:00
-- `audit_script`: scripts/audit_mapping_references_v1.py
-- `audit_document`: docs/mapping/M6_3_REFERENCE_AUDIT.md
-
-### `manifests/raw_snapshot_v1.json`
-
-0.0 MB, sha256 `baa0ce704bede3b4...`
-
-- `snapshot_id`: AMRTRACE_RAW_V1
-- `status`: FROZEN
-- `validation_result`: PASS
-- `validated_utc`: 2026-08-29T18:48:40.691337+00:00
-- `validator`: scripts/validate_raw_snapshot_v1.py
-- `validation_document`: docs/RAW_SNAPSHOT_V1_VALIDATION.md
-- `extraction_started_utc`: 2026-08-29T17:50:04.348572+00:00
-- `extraction_completed_utc`: 2026-08-29T18:17:59.576398+00:00
-- `query_project`: ncbi-pathogen-detect-506409
-- `source_dataset`: ncbi-pathogen-detect.pdbrowser
-- `source_tables`: list with 3 items
-- `species_inclusion_rule`: scientific_name = 'Escherichia coli'
-- `candidate_antibiotics`: list with 8 items
-- `primary_join_key`: target_acc
-- `git_commit`: 34d8c99c703d5b4d9bb33095c9969346c4133319
-- `git_worktree_clean_at_start`: True
-- `extractor`: dict with 4 items
-- `source_schemas`: list with 3 items
-- `outputs`: list with 5 items
-- `known_source_limitation`: NCBI Pathogen Detection BigQuery tables are live resources. The preserved Parquet files and hashes constitute the imm...
 
 <!-- END GENERATED -->
 
