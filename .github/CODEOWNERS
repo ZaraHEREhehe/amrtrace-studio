@@ -1,0 +1,19 @@
+# Replace the placeholders with real GitHub usernames (e.g. @zara-noor)
+/src/amrtrace/evaluator/        @AABIA_GH
+/src/amrtrace/deps/             @AABIA_GH
+/src/amrtrace/interpretation/   @INSHARAH_GH
+/src/amrtrace/ledger/           @INSHARAH_GH
+/src/amrtrace/changes/          @INSHARAH_GH
+/src/amrtrace/reeval/           @INSHARAH_GH
+/data/interpretation/           @INSHARAH_GH
+/db/migrations/                 @INSHARAH_GH
+/tests/oracle/                  @INSHARAH_GH
+/src/amrtrace/ingest/           @ZARA_GH
+/src/amrtrace/api/              @ZARA_GH
+/web/                           @ZARA_GH
+/.github/                       @ZARA_GH
+/docker/                        @ZARA_GH
+/docker-compose.yml             @ZARA_GH
+/scripts/                       @ZARA_GH
+/docs/design/graph*             @AABIA_GH
+/docs/adr/                      @INSHARAH_GH

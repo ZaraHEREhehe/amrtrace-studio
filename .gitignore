@@ -1,0 +1,44 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.egg-info/
+
+# ---- Secrets / env (only .env.example is committed) ----
+.env
+.env.*
+!.env.example
+
+# ---- Node / web ----
+node_modules/
+web/dist/
+web/build/
+
+# ---- Docker / local DB volumes ----
+pgdata/
+
+# ---- OS / editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# ---- DATA: folders are committed (via .gitkeep), file contents are NOT ----
+# Put the frozen V1 files in data/raw/, derived files in data/processed/,
+# downloaded standards/PDFs in data/external/.
+# data/manifest/ and data/interpretation/ ARE committed (small, shared).
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/README.md
+data/processed/*
+!data/processed/.gitkeep
+!data/processed/README.md
+data/external/*
+!data/external/.gitkeep
+!data/external/README.md
