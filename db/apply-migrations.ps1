@@ -22,9 +22,19 @@ $ErrorActionPreference = 'Stop'
 $migrations = Join-Path $PSScriptRoot 'migrations'
 
 function Invoke-Psql([string]$Db, [string[]]$PsqlArgs, [string]$InputText = $null) {
-  $all = @('exec', '-i', $Container, 'psql', '-U', $User, '-d', $Db, '-v', 'ON_ERROR_STOP=1', '-X', '-q') + $PsqlArgs
-  if ($InputText) { $out = $InputText | & docker @all 2>&1 } else { $out = & docker @all 2>&1 }
-  if ($LASTEXITCODE -ne 0) { throw ("psql failed:`n" + ($out | Out-String)) }
+  $all = @('exec', '-i', '-e', 'PGOPTIONS=-c client_min_messages=warning', $Container, 'psql', '-U', $User, '-d', $Db, '-v', 'ON_ERROR_STOP=1', '-X', '-q') + $PsqlArgs
+  # Windows PowerShell 5.1 turns ANY text a native command writes to stderr (even a harmless Postgres NOTICE
+  # such as "relation already exists, skipping") into a terminating error while $ErrorActionPreference is 'Stop'.
+  # So relax it for the call only, and judge success by the exit code instead.
+  $prev = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    if ($InputText) { $out = $InputText | & docker @all 2>&1 } else { $out = & docker @all 2>&1 }
+    $code = $LASTEXITCODE
+  } finally {
+    $ErrorActionPreference = $prev
+  }
+  if ($code -ne 0) { throw ("psql failed:`n" + ($out | Out-String)) }
   return ($out | Out-String)
 }
 
