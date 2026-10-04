@@ -34,6 +34,7 @@ Keep `target_acc`, `source_snapshot_id`, `standard`, `determinant_identity`, `ca
 `testing_standard`, `determinant`, `antibiotic`, `relation`, `status`, `panel_version`) are retired.
 The only rename: every table's `checksum` column becomes `source_checksum` (the name collides across tables and
 would be mistaken for a key).
+six isolate columns are lowercased (IFSAC_category, LibraryLayout, Platform, Run, PFGE_PrimaryEnzyme_pattern, PFGE_SecondaryEnzyme_pattern) and new is loaded as new_flag.
 
 ### 3. Tables loaded from the frozen files (immutable after load)
 
