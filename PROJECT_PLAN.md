@@ -94,7 +94,7 @@ A version-aware evidence lifecycle: a **versioned dependency graph + append-only
   - **Source S1->S2:** 821 isolates with metadata/provenance changes touching 2,219 case dossiers; 0 AST changes; 0 semantic genotype changes; 0 re-evaluations required (the "locality" result).
   - **AMRFinderPlus reference evolution:** 10 semantic transitions, 8 intersect historical cases (495 case IDs). 108 blaCMY/ceftriaxone cases kept the same state while the explanation/provenance changed.
   - **CLSI Ed32->Ed33 gentamicin:** 154 real cases with exact MIC (50 at MIC=4, 104 at MIC=8). V1 states of these: 116 UNRESOLVED, 25 CONCORDANT_SUSCEPTIBLE, 12 G+/S, 1 CONCORDANT_RESISTANT. (MIC=4: 25 conc-S, 12 G+/S, 13 unresolved. MIC=8: 1 conc-R, 103 unresolved.)
-  - 56,675 of 57,228 AST rows (99.0%) carry a non-null MIC. Censored values (`<`, `<=`, `>`, `>=`) are never reclassified deterministically; they route to an uncertainty-preserving path.
+  - 56,675 of 57,228 AST rows (99.0%) carry a non-null MIC. Censored values (<, <=, >, >=) are never forced to a label. Under an interpretation table a censored MIC resolves only when its range touches a single category; otherwise it routes to UNRESOLVED (CENSORED_MIC) (ADR-002 amendment 1).
 
 ---
 
@@ -472,8 +472,7 @@ rules:
 
 1. `None` -> as-reported mode: use the submitted phenotype; no interpretation dependency.
 2. Otherwise look up the case's matching rule by (standard, organism, antibiotic, method).
-   - **Rule found, exact MIC (`==`):** derive S/I/R from the categories. Record a `derived_from` dependency on that `rule_key` at that version, with `node_context = {mic, sign}`.
-   - **Rule found, censored MIC (`<`, `<=`, `>`, `>=`):** state `UNRESOLVED`, reason `CENSORED_MIC`. Never force a label. Still record the dependency (with context).
+   - **Rule found and a usable MIC (exact or censored):** derive S/I/R when the MIC range touches exactly one category; otherwise `UNRESOLVED`, reason `CENSORED_MIC`. Record a `derived_from` dependency on that rule_key at that version, with `node_context` = `{mic, sign}` (ADR-002 amendment 1).
    - **No rule found:** fall back to the submitted phenotype and record an **applicability** record (evaluated against the interpretation rule space, no match). This is what lets a later table that _adds_ a rule discover these cases.
 3. Intermediate -> `UNRESOLVED` (per the state model).
 
