@@ -1,0 +1,4 @@
+# Test and ledger dependencies (pinned, ADR-003 section 8). Install in the project venv:
+#   pip install -r requirements-dev.txt
+psycopg[binary]==3.3.6
+pytest==9.1.1

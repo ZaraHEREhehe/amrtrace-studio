@@ -36,14 +36,25 @@ BEGIN
         RAISE EXCEPTION 'antibiotic lookup should have 8 rows with 5 in the panel';
     END IF;
 
-    -- 4. append-only triggers exist and are enabled on the three ledger tables (a row trigger and a truncate trigger each)
-    FOREACH t IN ARRAY ARRAY['case_state', 'review_event', 'change_event'] LOOP
+    -- 4. append-only triggers (forbid_mutation) exist and are enabled: a row trigger and a truncate trigger each.
+    --    release also has its delete/truncate protection, plus the lifecycle guards from migration 0004.
+    FOREACH t IN ARRAY ARRAY['case_state', 'review_event', 'change_event', 'release'] LOOP
         SELECT count(*) INTO n FROM pg_trigger
-            WHERE tgrelid = ('public.' || t)::regclass AND NOT tgisinternal AND tgenabled = 'O';
+            WHERE tgrelid = ('public.' || t)::regclass AND NOT tgisinternal AND tgenabled = 'O'
+              AND tgfoid = 'forbid_mutation'::regproc;
         IF n <> 2 THEN
             RAISE EXCEPTION 'table % should have 2 enabled append-only triggers, found %', t, n;
         END IF;
     END LOOP;
+    IF (SELECT count(*) FROM pg_trigger
+        WHERE NOT tgisinternal AND tgenabled = 'O'
+          AND tgfoid IN ('guard_release_update'::regproc, 'guard_case_state_insert'::regproc)) <> 2 THEN
+        RAISE EXCEPTION 'release lifecycle guards from migration 0004 are missing';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'release' AND column_name = 'release_seq') THEN
+        RAISE EXCEPTION 'release.release_seq is missing';
+    END IF;
 
     -- 5. application role: can insert into the ledger, cannot update or delete it
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'amrtrace_app') THEN
