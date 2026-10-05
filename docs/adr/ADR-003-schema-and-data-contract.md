@@ -120,3 +120,13 @@ Release gains release_seq and its lifecycle guards (migration 0004, I-02)
 |---|---|---|
 | F-1 | Point `scripts/regen_data_facts.py` defaults at `data/raw/` and `data/manifest/frozen_v1/`, copy the manifests, generate `data/manifest/sha256.txt`, rerun the script | Zara (G-02 owner) |
 | F-2 | Each member moves their local frozen files into `data/raw/` and runs `scripts/data-hash.ps1 -Mode verify` | Insharah, Zara, Aabia |
+
+## Amendment 1 (2026-10-05)
+
+Raised and written by Aabia (A-01, PR #61). Closes OP-1 and OP-3.
+
+1. **OP-1 is closed, confirmed with one clarification.** Source: the legacy implementation `scripts/build_case_states_v1.py`. The spec itself only speaks of ids "used"; the split into two lists comes from the implementation.
+   - `*_evaluated` is every genotype evidence row of the isolate's authoritative representation, paired with the mapping rule consulted for that antibiotic. Rules that map to nothing (`UNMAPPED`) are included.
+   - `*_supporting` is the subset of items that decided the genotype state. For a decisive state these are the decisive items. For a contextual state these are the contextual items, so the lists are not limited to resistance support. The counts agree: 7,472 decisive plus 3,534 contextual cases equals the 11,006 cases with a non-empty supporting list.
+   - The edge mapping in section 5 stands. Read `positive_support` on the two supporting lists as "evidence that decided the state", which includes contextual evidence.
+2. **OP-3 is closed.** The spec is in the repository as `docs/spec/CASE_RULES_V1.md`, renamed from `M8_2_CASE_RULES_V1.md` to match its rule ID. Its sha256 is `c4338fc4c50fdadb2c62a92c7bf3c8c3100d467b2d3aaa7a9a00c8ba573406f2`, as recorded above. The file is marked `-text` in `.gitattributes` so the hash is the same on every machine. Provenance is in `docs/spec/README.md`.
