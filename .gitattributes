@@ -4,3 +4,4 @@
 Dockerfile  text eol=lf
 *.yml       text eol=lf
 *.yaml      text eol=lf
+docs/spec/CASE_RULES_V1.md -text
