@@ -133,3 +133,16 @@ names and the V1 `phenotype_normalized` / `binary_state_eligible` vocabulary. Th
 
 - A-01: unit tests for each stage and for the combine table, including the empty and conflicting inputs.
 - A-02: the golden test reproduces all stage outputs and the five id lists for every case.
+
+## Amendment 2 (2026-10-05)
+
+Raised and written by Aabia while porting the evaluator (A-01, PR #61). Agreed by all three members. The spec is the authority, as section 2 states.
+
+1. **Genotype rules are a versioned policy, not engine code.** Sections 8 to 12 of the spec are specific to each drug, which ADR-001 does not allow inside the engine. They live in `src/amrtrace/policies/case_rules_v1.py` and register under their rule version. `evaluate_genotype` looks the policy up with `versions.case_rule_version`. A new rule version is a new module, with no engine edits. Alternative rejected: a rule file read by a generic interpreter, because it is a small rule language, which the plan cut.
+2. **`CaseInputs` gains `genotype_analysis_valid: bool`.** The adapter computes it, because the check needs dataset vocabulary.
+3. **Row contract for the adapter.** AST rows carry `ast_evidence_id` and `phenotype`. Genotype rows carry `genotype_evidence_id`, `determinant` and `link_key`. Mapping rules carry `mapping_rule_id` and `link_key`; their other fields pass through to the policy. The adapter chooses the authoritative genotype representation and builds the link keys. The evaluator joins on `link_key` only.
+4. **`GenotypeResult` gains `determinants_evaluated` and `determinants_supporting`,** which the explanation needs.
+5. **Two states from the spec are added:** `PHENOTYPE_MISSING` (reason `MISSING_PHENOTYPE`) and `GENOTYPE_INVALID_ANALYSIS` (reason `INVALID_GENOTYPE_ANALYSIS`). No frozen case uses them. Combine precedence is: unresolved phenotype, invalid genotype analysis, contextual genotype, then the four binary combinations.
+6. **Interpretation mode is not implemented in A-01.** `evaluate_phenotype` raises `NotImplementedError` when `interpretation_version` is set. I-06 adds that branch (ADR-002, amendment 1).
+7. **The spec file is `docs/spec/CASE_RULES_V1.md`.** References above to `M8_2_CASE_RULES_V1.md` mean this file. Contents and sha256 are unchanged.
+8. **`Optional[X]` is written as `X | None`** in the code. The meaning is the same.
