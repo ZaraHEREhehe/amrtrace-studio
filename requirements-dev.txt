@@ -2,3 +2,4 @@
 #   pip install -r requirements-dev.txt
 psycopg[binary]==3.3.6
 pytest==9.1.1
+pyarrow==25.0.1
