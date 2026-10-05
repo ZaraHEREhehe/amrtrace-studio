@@ -42,3 +42,6 @@ data/processed/*
 data/external/*
 !data/external/.gitkeep
 !data/external/README.md
+
+# written by the golden test only when it fails
+golden_v1_mismatches.json
