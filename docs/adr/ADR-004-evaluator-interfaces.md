@@ -105,7 +105,7 @@ Taken from the frozen counts, which reconcile exactly on all 41,858 cases:
    `PHENOTYPE_R` + `GENOTYPE_DECISIVE_SUPPORT` gives `CONCORDANT_RESISTANT`;
    `PHENOTYPE_R` + `GENOTYPE_NO_MAPPED_SUPPORT` gives `DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE`.
 
-`CENSORED_MIC` is new (ADR-002) and only arises in interpretation mode. The authority for these rules is
+`CENSORED_MIC` is new (ADR-002, amendment 1) and only arises in interpretation mode, when a censored MIC range touches two or more categories. The authority for these rules is
 `docs/spec/M8_2_CASE_RULES_V1.md`; where it disagrees with this list, the spec wins and this ADR is amended.
 
 ### 3. Other engine interfaces
