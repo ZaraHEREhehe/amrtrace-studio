@@ -192,7 +192,13 @@ amrtrace-studio/
   docker-compose.yml             # Z
   docker/                        # Dockerfiles (Z)
   .env.example                   # Z, no real secrets
-  db/migrations/                 # schema owner: I (reviewed by Z)
+  db/
+    migrations/                  # schema owner: I (reviewed by Z)
+    apply-migrations.ps1         # I: applies the migrations to a Docker Postgres
+    verify_schema.sql            # I: structural check, prints SCHEMA OK
+    demo_append_only.sql         # I: rolled-back live demo of the failure case
+  pytest.ini                     # I: test configuration
+  requirements-dev.txt           # I: pinned test dependencies
   data/
     raw/                         # frozen V1 files (contents gitignored, folder tracked)
     manifest/                    # Z: frozen_v1/ manifests and sha256.txt (committed)
@@ -214,6 +220,7 @@ amrtrace-studio/
     api/                         # Z: FastAPI routes
   web/                           # Z: client (display + input only)
   tests/
+    conftest.py                  # I: throwaway database with every migration, per-test rollback
     unit/ integration/ e2e/
     oracle/fixtures/             # I authors expected impact sets (YAML)
     fixtures/                    # Z: mini-cohort data
@@ -772,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** Current step: 8 (IN-REVIEW; early start under D-15). | **Last updated by / when:** Insharah, 2026-10-05 | **Blockers:** none logged
+**Current step:** 9 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-05 | **Blockers:** none logged
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -783,8 +790,8 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 5    | I-01      | Insharah | DONE      | PR #56                                    |                                                                                                 |
 | 6    | Z-04      | Zara     | TODO      |                                     |                                                                                                 |
 | 7    | Z-03      | Zara     | TODO      |                                     |                                                                                                 |
-| 8    | I-02      | Insharah | IN-REVIEW      |  I-02 PR (feat/I-02-ledger-service)                                   |                                                                                                 |
-| 9    | I-03      | Insharah | TODO      |                                     |                                                                                                 |
+| 8    | I-02      | Insharah | DONE      |  PR #59                                   |                                                                                                 |
+| 9 | I-03 | Insharah | IN-REVIEW | feat/I-03-append-only-tests | Stacked on the I-02 PR; 65 tests pass; db/demo_append_only.sql is the live failure-case demo |
 | 10   | Z-05      | Zara     | TODO      |                                     |                                                                                                 |
 | 11   | A-01      | Aabia    | TODO      |                                     |                                                                                                 |
 | 12   | A-02      | Aabia    | TODO      |                                     | gate for everything after                                                                       |
