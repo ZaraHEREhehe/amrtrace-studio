@@ -34,7 +34,7 @@ Keep `target_acc`, `source_snapshot_id`, `standard`, `determinant_identity`, `ca
 `testing_standard`, `determinant`, `antibiotic`, `relation`, `status`, `panel_version`) are retired.
 The only rename: every table's `checksum` column becomes `source_checksum` (the name collides across tables and
 would be mistaken for a key).
-six isolate columns are lowercased (IFSAC_category, LibraryLayout, Platform, Run, PFGE_PrimaryEnzyme_pattern, PFGE_SecondaryEnzyme_pattern) and new is loaded as new_flag.
+Six isolate columns are lowercased (IFSAC_category, LibraryLayout, Platform, Run, PFGE_PrimaryEnzyme_pattern, PFGE_SecondaryEnzyme_pattern) and new is loaded as new_flag.
 
 ### 3. Tables loaded from the frozen files (immutable after load)
 
@@ -87,6 +87,7 @@ table is therefore keyed on `(determinant_identity, candidate_antibiotic)`, deri
 Unchanged from plan section 5.3 (`version_node`, `interpretation_rule`, `release`, `case_state`, `dependency`,
 `applicability`, `change_event`, `reeval_run`, `review_event`, append-only triggers), apart from the
 additions above. Section 5.3's source-table DDL is superseded by this ADR.
+Release gains release_seq and its lifecycle guards (migration 0004, I-02)
 
 ### 8. Toolchain
 
