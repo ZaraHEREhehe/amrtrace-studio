@@ -39,11 +39,12 @@ from .states import (
     get_state,
     get_state_as_of,
 )
+from .load_release import BaselineState, LoadReport, load_baseline_release
 from .models import CaseStateRecord, Release
 
 __all__ = [
     "ALLOWED_TRANSITIONS", "VERIFICATION_STATUSES",
-    "CaseStateRecord", "Release",
+    "CaseStateRecord", "Release", "BaselineState", "LoadReport", "load_baseline_release",
     "LedgerError", "ReleaseNotFound", "ReleaseNotDraft", "InvalidReleaseTransition",
     "EmptyRelease", "DuplicateState", "UnknownReference",
     "create_release", "get_release", "list_releases", "validate_release", "publish_release",

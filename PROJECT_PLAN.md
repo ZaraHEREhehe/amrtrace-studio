@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 13 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-06 | **Blockers:** none logged.
+**Current step:** 15 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-06 | **Blockers:** none logged.
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -795,9 +795,9 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 10   | Z-05      | Zara     | TODO      |                                     |                                                                                                 |
 | 11   | A-01      | Aabia    | DONE      | PR #61                              | 91 unit tests; drug-specific genotype rules moved to a versioned policy (ADR-004 amendment 2); OP-1 and OP-3 closed (ADR-003 amendment 1) |
 | 12   | A-02      | Aabia    | DONE      | PR #63                              | Gate passed: 41,858 cases, 15 fields each, 0 mismatches against frozen V1 |
-| 13   | I-05      | Insharah | IN-REVIEW      |  I-05 PR (feat/I-05-change-registry)                                   |                                                                                                 |
+| 13   | I-05      | Insharah | DONE      |  PR #66                                   |                                                                                                 |
 | 14   | I-06      | Insharah | TODO      |                                     |                                                                                                 |
-| 15   | I-04      | Insharah | TODO      |                                     |                                                                                                 |
+| 15   | I-04      | Insharah | IN-REVIEW      |  I-04 PR (feat/I-04-load-r1)                              |                                                                                                 |
 | 16   | A-03      | Aabia    | IN-REVIEW | feat/A-03-dependency-materializer   | Materializer and tests done (18 tests, PostgreSQL 16). R1 run still to do: needs the case table (Z-03) and the R1 release (I-04) |
 | 17   | A-04      | Aabia    | TODO      |                                     |                                                                                                 |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
