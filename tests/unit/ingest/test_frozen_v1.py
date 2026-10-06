@@ -276,3 +276,13 @@ def test_version_vector_refuses_mixed_values(tables):
     )
     with pytest.raises(ValueError, match="expected one value"):
         build_version_vector(mixed, "RULES_X", "PANEL_X", "0.1.0")
+
+
+def test_each_evidence_row_says_which_representation_it_came_from(tables):
+    cases = by_key(tables)
+    assert {
+        row["evidence_type"] for row in cases[("ISO_1", "druga")].genotype_rows
+    } == {"MICROBIGGE"}
+    assert {
+        row["evidence_type"] for row in cases[("ISO_2", "druga")].genotype_rows
+    } == {"ISOLATE_AMR_SUMMARY"}

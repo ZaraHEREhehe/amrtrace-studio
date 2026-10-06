@@ -794,11 +794,11 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 9 | I-03 | Insharah | IN-REVIEW | feat/I-03-append-only-tests | Stacked on the I-02 PR; 65 tests pass; db/demo_append_only.sql is the live failure-case demo |
 | 10   | Z-05      | Zara     | TODO      |                                     |                                                                                                 |
 | 11   | A-01      | Aabia    | DONE      | PR #61                              | 91 unit tests; drug-specific genotype rules moved to a versioned policy (ADR-004 amendment 2); OP-1 and OP-3 closed (ADR-003 amendment 1) |
-| 12   | A-02      | Aabia    | IN-REVIEW | feat/A-02-golden-regression-test-vs-frozen-v1 | Gate passed: 41,858 cases, 15 fields each, 0 mismatches against frozen V1; started before Z-03 by reading the frozen files directly through the new ingest adapter |
+| 12   | A-02      | Aabia    | DONE      | PR #63                              | Gate passed: 41,858 cases, 15 fields each, 0 mismatches against frozen V1 |
 | 13   | I-05      | Insharah | TODO      |                                     |                                                                                                 |
 | 14   | I-06      | Insharah | TODO      |                                     |                                                                                                 |
 | 15   | I-04      | Insharah | TODO      |                                     |                                                                                                 |
-| 16   | A-03      | Aabia    | TODO      |                                     |                                                                                                 |
+| 16   | A-03      | Aabia    | IN-REVIEW | feat/A-03-dependency-materializer   | Materializer and tests done (18 tests, PostgreSQL 16). R1 run still to do: needs the case table (Z-03) and the R1 release (I-04) |
 | 17   | A-04      | Aabia    | TODO      |                                     |                                                                                                 |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
 | 19   | Z-14      | Zara     | TODO      |                                     |                                                                                                 |
