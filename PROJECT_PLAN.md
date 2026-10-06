@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 9 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-05 | **Blockers:** none logged
+**Current step:** 15 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-06 | **Blockers:** none logged.
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -791,14 +791,13 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 6    | Z-04      | Zara     | TODO      |                                     |                                                                                                 |
 | 7    | Z-03      | Aabia    | DONE      | PR #65                              | Taken over from Zara by agreement; Zara reviewed. Frozen cohort loaded: 10,584 / 57,228 / 413,116 / 43,536 / 41,858 rows, all matching ADR-003. OP-2 confirmed (188) |
 | 8    | I-02      | Insharah | DONE      |  PR #59                                   |                                                                                                 |
-| 9 | I-03 | Insharah | IN-REVIEW | feat/I-03-append-only-tests | Stacked on the I-02 PR; 65 tests pass; db/demo_append_only.sql is the live failure-case demo |
+| 9 | I-03 | Insharah | DONE | PR #60 | Stacked on the I-02 PR; 65 tests pass; db/demo_append_only.sql is the live failure-case demo |
 | 10   | Z-05      | Zara     | TODO      |                                     |                                                                                                 |
 | 11   | A-01      | Aabia    | DONE      | PR #61                              | 91 unit tests; drug-specific genotype rules moved to a versioned policy (ADR-004 amendment 2); OP-1 and OP-3 closed (ADR-003 amendment 1) |
 | 12   | A-02      | Aabia    | DONE      | PR #63                              | Gate passed: 41,858 cases, 15 fields each, 0 mismatches against frozen V1 |
-| 13   | I-05      | Insharah | TODO      |                                     |                                                                                                 |
+| 13   | I-05      | Insharah | DONE      |  PR #66                             |                                                                                                 |
 | 14   | I-06      | Insharah | TODO      |                                     |                                                                                                 |
-| 15   | I-04      | Insharah | TODO      |                                     |                                                                                                 |
-| 16   | A-03      | Aabia    | IN-PROGRESS | PR #64 (code and tests)           | Materializer merged. Not done: the R1 run, which waits for the R1 release (I-04). The case table is now loaded (Z-03) |
+| 15   | I-04      | Insharah | IN-REVIEW |  I-04 PR (feat/I-04-load-r1)        |                                                                                                 || 16   | A-03      | Aabia    | IN-PROGRESS | PR #64 (code and tests)           | Materializer merged. Not done: the R1 run, which waits for the R1 release (I-04). The case table is now loaded (Z-03) |
 | 17   | A-04      | Aabia    | TODO      |                                     |                                                                                                 |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
 | 19   | Z-14      | Zara     | TODO      |                                     |                                                                                                 |
