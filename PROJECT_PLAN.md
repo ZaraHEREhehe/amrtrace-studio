@@ -789,7 +789,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 4    | Z-02      | Zara     | TODO      |                                     |                                                                                                 |
 | 5    | I-01      | Insharah | DONE      | PR #56                                    |                                                                                                 |
 | 6    | Z-04      | Zara     | TODO      |                                     |                                                                                                 |
-| 7    | Z-03      | Zara     | TODO      |                                     |                                                                                                 |
+| 7    | Z-03      | Aabia    | IN-REVIEW | feat/Z-03-ingest-loaders-with-manifest-and-hash-ch | Taken over from Zara by agreement; Zara reviews. Frozen cohort loaded: 10,584 / 57,228 / 413,116 / 43,536 / 41,858 rows, all matching ADR-003. OP-2 confirmed (188) |
 | 8    | I-02      | Insharah | DONE      |  PR #59                                   |                                                                                                 |
 | 9 | I-03 | Insharah | IN-REVIEW | feat/I-03-append-only-tests | Stacked on the I-02 PR; 65 tests pass; db/demo_append_only.sql is the live failure-case demo |
 | 10   | Z-05      | Zara     | TODO      |                                     |                                                                                                 |
