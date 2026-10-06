@@ -438,7 +438,7 @@ def main() -> None:
     parser.add_argument("--data-dir", default="data/raw")
     parser.add_argument("--manifest", default="data/manifest/sha256.txt")
     parser.add_argument(
-        "--database", default=os.environ.get("AMRTRACE_PG_DATABASE", "amrtrace")
+        "--database", default=os.environ.get("AMRTRACE_PG_DBNAME", "amrtrace")
     )
     arguments = parser.parse_args()
 
