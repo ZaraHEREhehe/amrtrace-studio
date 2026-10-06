@@ -188,6 +188,7 @@ def _authoritative_rows(genotype: list[dict]) -> dict:
             {
                 "genotype_evidence_id": str(row["genotype_evidence_id"]),
                 "determinant": str(row["element_raw"]),
+                "evidence_type": DETAILED_SOURCE,
                 "link_key": _detailed_key(
                     row["element_raw"],
                     row["refgene_db_version"],
@@ -209,6 +210,7 @@ def _authoritative_rows(genotype: list[dict]) -> dict:
             {
                 "genotype_evidence_id": str(row["genotype_evidence_id"]),
                 "determinant": str(row["element_raw"]),
+                "evidence_type": SUMMARY_SOURCE,
                 "link_key": _summary_key(row["element_raw"], row["refgene_db_version"]),
             }
         )
