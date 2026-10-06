@@ -789,22 +789,21 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 4    | Z-02      | Zara     | TODO      |                                     |                                                                                                 |
 | 5    | I-01      | Insharah | DONE      | PR #56                                    |                                                                                                 |
 | 6    | Z-04      | Zara     | TODO      |                                     |                                                                                                 |
-| 7    | Z-03      | Aabia    | IN-REVIEW | feat/Z-03-ingest-loaders-with-manifest-and-hash-ch | Taken over from Zara by agreement; Zara reviews. Frozen cohort loaded: 10,584 / 57,228 / 413,116 / 43,536 / 41,858 rows, all matching ADR-003. OP-2 confirmed (188) |
+| 7    | Z-03      | Aabia    | DONE      | PR #65                              | Taken over from Zara by agreement; Zara reviewed. Frozen cohort loaded: 10,584 / 57,228 / 413,116 / 43,536 / 41,858 rows, all matching ADR-003. OP-2 confirmed (188) |
 | 8    | I-02      | Insharah | DONE      |  PR #59                                   |                                                                                                 |
 | 9 | I-03 | Insharah | DONE | PR #60 | Stacked on the I-02 PR; 65 tests pass; db/demo_append_only.sql is the live failure-case demo |
 | 10   | Z-05      | Zara     | TODO      |                                     |                                                                                                 |
 | 11   | A-01      | Aabia    | DONE      | PR #61                              | 91 unit tests; drug-specific genotype rules moved to a versioned policy (ADR-004 amendment 2); OP-1 and OP-3 closed (ADR-003 amendment 1) |
 | 12   | A-02      | Aabia    | DONE      | PR #63                              | Gate passed: 41,858 cases, 15 fields each, 0 mismatches against frozen V1 |
-| 13   | I-05      | Insharah | DONE      |  PR #66                                   |                                                                                                 |
+| 13   | I-05      | Insharah | DONE      |  PR #66                             |                                                                                                 |
 | 14   | I-06      | Insharah | TODO      |                                     |                                                                                                 |
-| 15   | I-04      | Insharah | IN-REVIEW      |  I-04 PR (feat/I-04-load-r1)                              |                                                                                                 |
-| 16   | A-03      | Aabia    | IN-REVIEW | feat/A-03-dependency-materializer   | Materializer and tests done (18 tests, PostgreSQL 16). R1 run still to do: needs the case table (Z-03) and the R1 release (I-04) |
+| 15   | I-04      | Insharah | IN-REVIEW |  I-04 PR (feat/I-04-load-r1)        |                                                                                                 || 16   | A-03      | Aabia    | IN-PROGRESS | PR #64 (code and tests)           | Materializer merged. Not done: the R1 run, which waits for the R1 release (I-04). The case table is now loaded (Z-03) |
 | 17   | A-04      | Aabia    | TODO      |                                     |                                                                                                 |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
 | 19   | Z-14      | Zara     | TODO      |                                     |                                                                                                 |
 | 20   | Z-15      | Zara     | TODO      |                                     |                                                                                                 |
 | 21   | I-07      | Insharah | TODO      |                                     | must be committed before step 22                                                                |
-| 22   | A-05      | Aabia    | TODO      |                                     |                                                                                                 |
+| 22   | A-05      | Aabia    | IN-REVIEW | feat/A-05-impact-selector-realised-edges-with-regi | Selector and tests done (40 tests, PostgreSQL 16). Not done: oracle recall check, which needs the fixtures (I-07) and R1. One indexed lookup instead of a recursive query, see PR |
 | 23   | A-06      | Aabia    | TODO      |                                     |                                                                                                 |
 | 24   | A-07      | Aabia    | TODO      |                                     |                                                                                                 |
 | 25   | I-08      | Insharah | TODO      |                                     |                                                                                                 |
