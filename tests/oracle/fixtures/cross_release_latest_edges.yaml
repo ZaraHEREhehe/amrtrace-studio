@@ -11,7 +11,9 @@ author_note: >
   Expected sets are written from plan section 6, the over-selection principle (rule 6) and the agreed rule that
   a case's latest edges decide, not from running the selector. The author had read the A-05 selector source
   (it looks only at the latest published release) before writing; no expected set was changed to fit it.
-pending: until the selector uses each case's latest edges across releases
+pending:
+  until: the selector uses each case's latest edges across releases
+  reason: the selector looks only at the latest published release
 world:
   cases: [XR_A_R1_ONLY, XR_B_REEVAL_STILL, XR_C_REEVAL_DROPPED, XR_D_REEVAL_NEW, XR_E_OTHER]
   later_releases:
