@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 21 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-07 | **Blockers:** none logged.
+**Current step:** 22 (A-05 IN-PROGRESS: oracle run pending) | **Last updated by / when:** Insharah, 2026-10-07 | **Blockers:** none logged. CLSI-REAL waits for the Ed32 baseline release (A-03b, I-04b).
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -803,8 +803,8 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
 | 19   | Z-14      | Zara     | IN-REVIEW | feat/Z-14-mini-cohort-fixture-for-ci | 660-case deterministic mini-cohort: 154 CLSI-REAL + 500 controls + 6 synthetic C2/C6/C7. Generator/check/load-db commands added; 318 non-integration tests pass. PostgreSQL load verification pending reviewer. |
 | 20   | Z-15      | Zara     | TODO      |                                     |                                                                                                 |
-  | 21   | I-07      | Insharah | IN-REVIEW | I-07 PR (feat/I-07-oracle-fixtures) | Five synthetic scenarios plus CLSI-REAL (154 cases, derived from the raw evidence files). C7 is strict-xfail until A-06. CLSI-REAL is pending an interpretation-mode baseline release. Started before Z-14 (see milestones) |
-  | 22   | A-05      | Aabia    | IN-PROGRESS | PR #67 (code and tests)           | Selector merged. Not done: the oracle recall check, which needs the fixtures (I-07). R1 and its graph now exist |
+| 21   | I-07      | Insharah | DONE | PR #73 | Five synthetic scenarios plus CLSI-REAL (154 cases, derived from the raw evidence files). C7 is strict-xfail until A-06. CLSI-REAL is pending the Ed32 baseline release (A-03b, I-04b). Started before Z-14 (see milestones) |
+| 22   | A-05      | Aabia    | IN-PROGRESS | PR #67 (code and tests)           | Selector merged. Not done: the oracle recall check, which needs the fixtures (I-07). R1 and its graph now exist |
 | 23   | A-06      | Aabia    | TODO      |                                     |                                                                                                 |
 | 24   | A-07      | Aabia    | DONE      | PR #72                              | EXPLAIN plans and latency recorded in docs/design/selector_performance.md; no sequential scan on the hot path; no new index needed for R1 |
 | 25   | I-08      | Insharah | TODO      |                                     |                                                                                                 |
@@ -831,6 +831,14 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 46   | G-06a/b/c | each own | TODO      |                                     |                                                                                                 |
 | 47   | G-07      | Insharah | TODO      |                                     |                                                                                                 |
 | -    | G-08      | Zara     | TODO      |                                     | continuous                                                                                      |
+
+**Unplanned work (no step number; found while building the CLSI scenario, 2026-10-07):**
+
+| Task  | Driver   | Status      | PR / evidence                              | Notes |
+| ----- | -------- | ----------- | ------------------------------------------ | ----- |
+| A-01b | Aabia    | DONE        | PR #74                                     | Evaluator interpretation mode (ADR-004 amendment 3). Closes the I-06 gate item "evaluator interpretation branch works" |
+| A-03b | Aabia    | IN-PROGRESS | PR #75 (dry run merged)                    | Interpretation baseline release with the Ed32 table. Dry run done; storing the release, the 1,529 question and the cross-release selector fix are still to do |
+| I-04b | Insharah | IN-REVIEW   | I-04b PR (feat/I-04b-load-later-release)   | load_later_release in the ledger: a later full or partial release whose states supersede the latest published state. 13 new tests; full suite 491 passed, 1 skipped, 1 xfailed. Unblocks A-03b storing the Ed32 release |
 
 **Reassignments log (step, from, to, reason, date):** step 2 (G-02): driver of record Zara; script and data facts written by Aabia; reviewed and merged by Insharah instead of Aabia (the rotation names Aabia as reviewer), 2026-10-04
 
