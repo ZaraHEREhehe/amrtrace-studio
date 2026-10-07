@@ -77,8 +77,28 @@ Summary: 7,073 cases keep their state and 1,541 change. Of the changes, 1,529 mo
 
 The exact values at MIC 4 (50 rows) and MIC 8 (104 rows) agree with the 154 cases of the CLSI-REAL oracle fixture, which were counted independently from the raw AST files.
 
+## Why 1,529 cases were unresolved in R1
+
+Checked on 2026-10-07 with a read-only script over the same evaluation. Every one of the 1,529 cases has a single AST row to which a rule applied.
+
+| Label the laboratory reported | New state | Cases |
+|---|---|---|
+| NOT_DEFINED | CONCORDANT_SUSCEPTIBLE | 1,452 |
+| NOT_DEFINED | CONCORDANT_RESISTANT | 63 |
+| NOT_DEFINED | DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE | 4 |
+| NOT_DEFINED | DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S | 4 |
+| I | DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S | 4 |
+| I | CONCORDANT_SUSCEPTIBLE | 2 |
+
+- **1,523 cases** were submitted with a MIC and a stated standard but with the label `NOT_DEFINED`. In as-reported mode a label that is neither S nor R is non-binary, so R1 leaves the case unresolved. In interpretation mode the label is ignored and the MIC is read against the table, so the case gets a category. Example: reported `NOT_DEFINED`, MIC `<= 1`, which the table reads as susceptible.
+- **6 cases** were reported as `I` with a MIC of 4 or `<= 4`, which the Ed32 table reads as susceptible. This is the same boundary the Ed32 to Ed33 revision moves.
+
+This is the intended behaviour of interpretation mode, not a defect. It does mean the interpretation baseline is not a relabelled copy of R1: it resolves cases that R1 could not.
+
+**Point for the supervisor.** Whether a result the laboratory left as `NOT_DEFINED` should be given a category from its MIC is a domain decision. The engine does it because the row states its standard and a rule for that standard applies. If the decision is that such rows must stay unresolved, that belongs in the adapter, which can decline to give those rows a rule key.
+
 ## Open points
 
-1. **Why 1,529 cases were unresolved in R1.** They have a MIC that the table can place, but R1 could not resolve them from the reported label. The cause has not been checked yet and should be confirmed before the release is stored.
-2. **Storing the release.** The ledger loader needs a path for a full release that is not the first one. This is Insharah's part.
-3. **The selector uses the latest published release only.** This must be fixed before a second release with edges exists.
+1. **Storing the release.** The ledger loader needs a path for a full release that is not the first one. This is Insharah's part.
+2. **The selector uses the latest published release only.** This must be fixed before a second release with edges exists.
+3. **The `NOT_DEFINED` decision above** should be confirmed with the supervisor before the release is stored.

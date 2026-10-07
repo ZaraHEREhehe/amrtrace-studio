@@ -5,6 +5,10 @@ from dataclasses import dataclass
 from psycopg.rows import dict_row
 
 MECHANISM_REALISED_EDGE = "realised_edge"
+MECHANISM_APPLICABILITY = "applicability"
+
+# the node type whose new members are found through the recorded rule space
+NODE_MAPPING_RULE = "mapping_rule"
 
 # how a censored measurement is written, and the open range each sign stands for
 SIGN_EXACT = "=="
@@ -99,8 +103,43 @@ def _reason(edge: dict) -> str:
     return f"{edge['dep_type']} ({edge['edge_type']}) on {edge['node_type']} {edge['node_id']}"
 
 
+# a rule that did not exist before has no old version to compare edges with
+def _is_introduced_rule(entity: dict) -> bool:
+    return (
+        entity.get("node_type") == NODE_MAPPING_RULE
+        and entity.get("old_version") is None
+    )
+
+
+# the cases whose recorded rule space contains the pair a newly introduced rule speaks about
+def _applicable_cases(cursor, release_id: str, entity: dict) -> list[tuple[str, str]]:
+    cursor.execute(
+        "SELECT determinant_identity, candidate_antibiotic FROM mapping_rule WHERE mapping_rule_id = %s",
+        (entity["node_id"],),
+    )
+    rule = cursor.fetchone()
+    # a rule that is not stored yet describes no pair, so there is nothing to look up
+    if rule is None:
+        return []
+    # no stored edge can point at a rule that did not exist, so the lookup goes through the pair instead
+    cursor.execute(
+        "SELECT DISTINCT case_id FROM applicability "
+        "WHERE candidate_antibiotic = %s AND determinant_identity = %s AND release_id = %s",
+        (rule["candidate_antibiotic"], rule["determinant_identity"], release_id),
+    )
+    reason = (
+        f"applicability ({rule['determinant_identity']}, {rule['candidate_antibiotic']}) "
+        f"for new {entity['node_type']} {entity['node_id']}"
+    )
+    return [(row["case_id"], reason) for row in cursor.fetchall()]
+
+
+# use_applicability=False gives the realised-edge-only selector, kept so its blind spot stays testable
 def select_impact_detailed(
-    conn, change_event_id: str, release_id: str | None = None
+    conn,
+    change_event_id: str,
+    release_id: str | None = None,
+    use_applicability: bool = True,
 ) -> ImpactSelection:
     event = conn.execute(
         "SELECT changed_entities FROM change_event WHERE change_id = %s",
@@ -134,13 +173,29 @@ def select_impact_detailed(
                 ):
                     reasons.setdefault(edge["case_id"], set()).add(_reason(edge))
 
+        applicable = {}
+        if use_applicability:
+            for entity in changed_entities:
+                if not _is_introduced_rule(entity):
+                    continue
+                for case_id, reason in _applicable_cases(cursor, release_id, entity):
+                    level1_cases.add(case_id)
+                    applicable.setdefault(case_id, set()).add(reason)
+
     items = tuple(
         ImpactItem(
             case_id=case_id,
-            reason="; ".join(sorted(reasons[case_id])),
-            mechanism=MECHANISM_REALISED_EDGE,
+            reason="; ".join(
+                sorted(reasons.get(case_id, set()) | applicable.get(case_id, set()))
+            ),
+            # a stored edge is the stronger evidence, so it names the mechanism when both paths agree
+            mechanism=(
+                MECHANISM_REALISED_EDGE
+                if case_id in reasons
+                else MECHANISM_APPLICABILITY
+            ),
         )
-        for case_id in sorted(reasons)
+        for case_id in sorted(set(reasons) | set(applicable))
     )
     return ImpactSelection(
         change_id=change_event_id,

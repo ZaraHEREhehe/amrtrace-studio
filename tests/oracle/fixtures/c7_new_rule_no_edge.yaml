@@ -10,9 +10,6 @@ authored_on_base_commit: b6c9e1b38eea2e67e870549aba11427391c9ce48      # filled 
 author_note: >
   Expected sets are written from plan section 6 and the over-selection principle (rule 6), not produced by running the selector.
   The author had read the A-05 selector source before writing; no expected set was changed to fit it.
-pending:
-  until: A-06
-  reason: applicability-based selection is not implemented yet (A-05 follows realised edges only)
 world:
   cases: [C7_A_DETN_GENT, C7_B_DETN_GENT, C7_C_DETN_MERO, C7_D_DETM_GENT, C7_E_NO_RECORD]
   versions:
