@@ -159,3 +159,12 @@ Raised by Insharah (I-06 gate item), written by Aabia. Closes the gap left by am
 6. **No applicable rule.** The reported label stands, and the row is recorded as `applicability` / `evaluated_against` on the same node type, with the rule key it looked for and the interpretation version, and no context. A rule added later for that key can then find the case. A row with no rule key leaves no rule edge.
 7. **As-reported mode is unchanged.** With `interpretation_version = None`, `mic`, `sign`, `rule_key` and `interpretation_rules` are ignored.
 8. **Not yet done.** The frozen V1 adapter does not pass `mic`, `sign` and `rule_key` yet. Until it does, real cases are unaffected by an interpretation version.
+
+## Amendment 3, additions after review (2026-10-07)
+
+Agreed with Insharah in the review of PR #74. Written by Aabia.
+
+9. **Gap values stay unresolved.** A measured value that touches no category of the applicable rule gives `NO_CATEGORY`, and the case is `UNRESOLVED` with reason `NONBINARY_PHENOTYPE`. A label is never forced (ADR-002, amendment 1). To tell this apart from Intermediate, the explanation carries `"phenotype_sub_reason": "no_category"`. The key is present only when it applies, so the output hash of every other case is unchanged.
+10. **No-match edges live in `dependency`.** The `applicability` table is keyed on determinant and antibiotic (D-19), so it cannot hold a lookup for an interpretation rule. The edge of item 6 is therefore a `dependency` row. Its `node_version` is the interpretation version in force when the case looked for the rule. It is not null.
+11. **Selector behaviour for a rule that is introduced.** When a change names a node with `old_version = None`, the selector keeps every edge to that node, whatever version the edge carries. A case that looked for a rule and found none is therefore selected when the rule first appears. The check is `deps.selector.edge_version_matches`, covered by `tests/unit/deps/test_selector_versions.py`.
+12. **Item 8 is done.** The frozen V1 adapter passes `mic`, `sign` and `rule_key` when it is given interpretation rules, and passes nothing extra otherwise, so as-reported inputs and their hashes are unchanged.

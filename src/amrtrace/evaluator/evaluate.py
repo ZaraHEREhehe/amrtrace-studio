@@ -68,6 +68,9 @@ def evaluate(inputs: CaseInputs, versions: VersionVector) -> EvalResult:
         "determinants_evaluated": list(genotype.determinants_evaluated),
         "determinants_supporting": list(genotype.determinants_supporting),
     }
+    # only added when it applies, so every other case keeps the hash it already has
+    if c.CATEGORY_NO_CATEGORY in phenotype.phenotype_values:
+        explanation["phenotype_sub_reason"] = c.SUB_REASON_NO_CATEGORY
 
     input_hash = sha256_of({"inputs": asdict(inputs), "versions": asdict(versions)})
     output_hash = sha256_of(

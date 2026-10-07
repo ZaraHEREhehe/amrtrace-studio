@@ -806,7 +806,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
   | 21   | I-07      | Insharah | IN-REVIEW | I-07 PR (feat/I-07-oracle-fixtures) | Five synthetic scenarios plus CLSI-REAL (154 cases, derived from the raw evidence files). C7 is strict-xfail until A-06. CLSI-REAL is pending an interpretation-mode baseline release. Started before Z-14 (see milestones) |
   | 22   | A-05      | Aabia    | IN-PROGRESS | PR #67 (code and tests)           | Selector merged. Not done: the oracle recall check, which needs the fixtures (I-07). R1 and its graph now exist |
 | 23   | A-06      | Aabia    | TODO      |                                     |                                                                                                 |
-| 24   | A-07      | Aabia    | IN-REVIEW | feat/A-07-selector-performance-evidence | EXPLAIN plans and latency recorded in docs/design/selector_performance.md; no sequential scan on the hot path; no new index needed for R1 |
+| 24   | A-07      | Aabia    | DONE      | PR #72                              | EXPLAIN plans and latency recorded in docs/design/selector_performance.md; no sequential scan on the hot path; no new index needed for R1 |
 | 25   | I-08      | Insharah | TODO      |                                     |                                                                                                 |
 | 26   | Z-07      | Zara     | TODO      |                                     |                                                                                                 |
 | 27   | A-10      | Aabia    | TODO      |                                     |                                                                                                 |

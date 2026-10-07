@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from amrtrace.evaluator.types import CaseInputs, VersionVector
+from amrtrace.interpretation.models import make_rule_key
 
 # vocabulary of the frozen files, kept here so the engine never sees it
 DETAILED_SOURCE = "MICROBIGGE"
@@ -15,6 +16,9 @@ DETAILED_CONTEXT = "SOURCE_CLASSIFICATION"
 SUMMARY_CONTEXT = "SUMMARY_SYMBOL"
 RESISTANCE_SUBTYPES = frozenset({"AMR", "POINT", "POINT_DISRUPT"})
 VALID_ANALYSIS_TYPES = frozenset({"COMBINED", "NUCLEOTIDE"})
+# how a result was measured, as interpretation tables name it
+METHOD_MIC = "MIC"
+METHOD_DISK_DIFFUSION = "disk diffusion"
 
 # a control character that cannot appear in the data, used to glue key parts together
 KEY_SEPARATOR = "\x1f"
@@ -39,6 +43,10 @@ AST_COLUMNS = [
     "target_acc",
     "antibiotic_normalized",
     "phenotype_normalized",
+    "measurement_sign",
+    "mic",
+    "disk_diffusion",
+    "standard",
 ]
 GENOTYPE_COLUMNS = [
     "genotype_evidence_id",
@@ -239,10 +247,49 @@ def _analysis_valid(isolate: dict, available_versions: set) -> bool:
     )
 
 
+# the method is read from which value the row carries
+def _method(row: dict) -> str | None:
+    if row.get("mic") is not None:
+        return METHOD_MIC
+    if row.get("disk_diffusion") is not None:
+        return METHOD_DISK_DIFFUSION
+    return None
+
+
+# the key of the rule this result would be read by, or None when it cannot name one
+def _rule_key(row: dict, organism: str, antibiotic: str) -> str | None:
+    method = _method(row)
+    if _is_blank(row.get("standard")) or method is None:
+        return None
+    return make_rule_key(row["standard"], organism, antibiotic, method)
+
+
+def _ast_row(row: dict, organism: str, antibiotic: str, with_measurement: bool) -> dict:
+    neutral = {
+        "ast_evidence_id": str(row["ast_evidence_id"]),
+        "phenotype": row["phenotype_normalized"],
+    }
+    # as-reported inputs stay exactly as they were, so their hashes do not move
+    if with_measurement:
+        neutral["mic"] = row.get("mic")
+        neutral["sign"] = row.get("measurement_sign")
+        neutral["rule_key"] = _rule_key(row, organism, antibiotic)
+    return neutral
+
+
 def build_case_inputs(
-    tables: FrozenTables, panel: tuple[str, ...], organism: str
+    tables: FrozenTables,
+    panel: tuple[str, ...],
+    organism: str,
+    interpretation_rules: tuple[dict, ...] | None = None,
 ) -> Iterator[CaseInputs]:
     panel_set = frozenset(panel)
+    # None means as-reported mode: no measurements and no rules are handed over
+    with_measurement = interpretation_rules is not None
+    rules_by_key = defaultdict(list)
+    for rule in interpretation_rules or ():
+        rules_by_key[rule["rule_key"]].append(rule)
+
     panel_order = {antibiotic: index for index, antibiotic in enumerate(panel)}
 
     isolates = {}
@@ -270,10 +317,7 @@ def build_case_inputs(
             raise ValueError(f"AST rows exist for {target} but there is no isolate row")
 
         ast_rows = tuple(
-            {
-                "ast_evidence_id": str(row["ast_evidence_id"]),
-                "phenotype": row["phenotype_normalized"],
-            }
+            _ast_row(row, organism, antibiotic, with_measurement)
             for row in sorted(
                 ast_groups[(target, antibiotic)],
                 key=lambda row: str(row["ast_evidence_id"]),
@@ -296,6 +340,14 @@ def build_case_inputs(
                 )
             mapping_rules.append(rule)
 
+        # only the interpretation rules this case's results can be read by
+        case_rule_keys = sorted(
+            {row["rule_key"] for row in ast_rows if row.get("rule_key")}
+        )
+        case_interpretation_rules = tuple(
+            rule for key in case_rule_keys for rule in rules_by_key.get(key, ())
+        )
+
         yield CaseInputs(
             case_id=stable_case_id(target, antibiotic),
             target_acc=target,
@@ -306,7 +358,7 @@ def build_case_inputs(
             ast_rows=ast_rows,
             genotype_rows=genotype_rows,
             mapping_rules=tuple(mapping_rules),
-            interpretation_rules=(),
+            interpretation_rules=case_interpretation_rules,
         )
 
 
@@ -319,14 +371,18 @@ def _single_value(rows: list[dict], column: str) -> str:
 
 
 def build_version_vector(
-    tables: FrozenTables, case_rule_version: str, panel_id: str, evaluator_version: str
+    tables: FrozenTables,
+    case_rule_version: str,
+    panel_id: str,
+    evaluator_version: str,
+    interpretation_version: str | None = None,
 ) -> VersionVector:
     return VersionVector(
         source_snapshot_id=_single_value(tables.isolates, "source_snapshot_id"),
         curation_rule_version=_single_value(tables.isolates, "curation_rule_version"),
         amrfinderplus_version=_single_value(tables.isolates, "amrfinderplus_version"),
         mapping_version=_single_value(tables.mapping, "mapping_version"),
-        interpretation_version=None,
+        interpretation_version=interpretation_version,
         case_rule_version=case_rule_version,
         panel_id=panel_id,
         evaluator_version=evaluator_version,

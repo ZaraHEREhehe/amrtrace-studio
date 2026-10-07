@@ -87,10 +87,40 @@ def test_the_reported_label_is_ignored_when_a_rule_applies(interpret):
     assert result.phenotype_values == ("R",)
 
 
-def test_a_value_in_a_gap_of_the_table_stays_unresolved(interpret):
-    result = interpret([row(6)], "TABLE_V1")
+# each version of the table has its own gaps, and neither forces a label onto a value inside one
+@pytest.mark.parametrize(
+    "version, mic",
+    [("TABLE_V1", 6), ("TABLE_V1", 12), ("TABLE_V2", 3), ("TABLE_V2", 6)],
+)
+def test_a_value_in_a_gap_of_the_table_stays_unresolved(interpret, version, mic):
+    result = interpret([row(mic)], version)
     assert result.phenotype_values == (c.CATEGORY_NO_CATEGORY,)
     assert result.phenotype_state == c.PHENOTYPE_UNRESOLVED_NONBINARY
+
+
+@pytest.mark.parametrize("version, mic", [("TABLE_V1", 6), ("TABLE_V2", 3)])
+def test_a_gap_value_is_told_apart_from_intermediate_in_the_explanation(
+    make_inputs, versions, version, mic
+):
+    inputs = replace(
+        make_inputs(), ast_rows=(row(mic),), interpretation_rules=(OLD, NEW)
+    )
+    result = evaluate(inputs, replace(versions, interpretation_version=version))
+    assert result.state_code == c.UNRESOLVED
+    assert result.uncertainty_reason == c.REASON_NONBINARY_PHENOTYPE
+    assert result.explanation["phenotype_sub_reason"] == c.SUB_REASON_NO_CATEGORY
+
+
+@pytest.mark.parametrize("version, mic", [("TABLE_V1", 8), ("TABLE_V2", 4)])
+def test_an_intermediate_value_carries_no_sub_reason(
+    make_inputs, versions, version, mic
+):
+    inputs = replace(
+        make_inputs(), ast_rows=(row(mic),), interpretation_rules=(OLD, NEW)
+    )
+    result = evaluate(inputs, replace(versions, interpretation_version=version))
+    assert result.uncertainty_reason == c.REASON_NONBINARY_PHENOTYPE
+    assert "phenotype_sub_reason" not in result.explanation
 
 
 def test_a_missing_sign_is_read_as_exact(interpret):
