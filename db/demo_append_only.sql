@@ -60,8 +60,8 @@ RESET ROLE;
 
 \echo
 \echo 7. A correction is made the only allowed way: a new review row (should SUCCEED):
-INSERT INTO review_event (case_id, state_id, reviewer, action, reason)
-    SELECT 'CASE_DEMO', state_id, 'demo reviewer', 'CORRECT', 'manual check disagrees' FROM case_state WHERE case_id = 'CASE_DEMO';
+INSERT INTO review_event (case_id, state_id, reviewer, action, reason, corrected_state_code)
+    SELECT 'CASE_DEMO', state_id, 'demo reviewer', 'CORRECT', 'manual check disagrees', 'CONCORDANT_RESISTANT' FROM case_state WHERE case_id = 'CASE_DEMO';
 SELECT action, reason FROM review_event;
 
 \echo
