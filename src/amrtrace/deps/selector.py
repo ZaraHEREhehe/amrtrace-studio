@@ -77,6 +77,15 @@ def in_changed_region(node_context, changed_region) -> bool:
     return any(_overlaps(measurement, interval) for interval in intervals)
 
 
+# decides whether an edge recorded under one version of a node is touched by a change to it
+def edge_version_matches(node_version: str | None, old_version: str | None) -> bool:
+    # a node that is new in this change has no old version, so every case that looked for it counts
+    if old_version is None:
+        return True
+    # an edge that names no version is kept: missing a case is worse than one extra
+    return node_version is None or node_version == old_version
+
+
 def _latest_published_release(conn) -> str:
     row = conn.execute(
         "SELECT release_id FROM release WHERE status = 'PUBLISHED' ORDER BY release_seq DESC LIMIT 1"
@@ -117,11 +126,7 @@ def select_impact_detailed(
             )
             old_version = entity.get("old_version")
             for edge in cursor:
-                # an edge recorded under a different version of the node is not touched by this change
-                if old_version is not None and edge["node_version"] not in (
-                    None,
-                    old_version,
-                ):
+                if not edge_version_matches(edge["node_version"], old_version):
                     continue
                 level1_cases.add(edge["case_id"])
                 if in_changed_region(
