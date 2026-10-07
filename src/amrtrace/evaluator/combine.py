@@ -6,6 +6,7 @@ from .types import GenotypeResult, PhenotypeResult, VersionVector
 # an unresolved phenotype always wins, each with its own reason
 _PHENOTYPE_REASONS = {
     c.PHENOTYPE_UNRESOLVED_NONBINARY: c.REASON_NONBINARY_PHENOTYPE,
+    c.PHENOTYPE_UNRESOLVED_CENSORED: c.REASON_CENSORED_MIC,
     c.PHENOTYPE_CONFLICT: c.REASON_PHENOTYPE_CONFLICT,
     c.PHENOTYPE_MISSING: c.REASON_MISSING_PHENOTYPE,
 }

@@ -54,8 +54,11 @@ def test_every_ast_row_becomes_a_dependency(make_inputs, versions):
     assert {r.node_type for r in result.dependency_records} == {c.NODE_AST_EVIDENCE}
 
 
-def test_interpretation_mode_is_refused_for_now(make_inputs, versions):
-    with pytest.raises(NotImplementedError):
-        evaluate_phenotype(
-            make_inputs(), replace(versions, interpretation_version="TABLE_X")
-        )
+def test_rows_that_name_no_rule_are_untouched_by_interpretation_mode(
+    make_inputs, versions
+):
+    inputs = make_inputs(phenotypes=("I", "R"))
+    interpreted = replace(versions, interpretation_version="TABLE_X")
+    assert evaluate_phenotype(inputs, interpreted) == evaluate_phenotype(
+        inputs, versions
+    )

@@ -146,3 +146,16 @@ Raised and written by Aabia while porting the evaluator (A-01, PR #61). Agreed b
 6. **Interpretation mode is not implemented in A-01.** `evaluate_phenotype` raises `NotImplementedError` when `interpretation_version` is set. I-06 adds that branch (ADR-002, amendment 1).
 7. **The spec file is `docs/spec/CASE_RULES_V1.md`.** References above to `M8_2_CASE_RULES_V1.md` mean this file. Contents and sha256 are unchanged.
 8. **`Optional[X]` is written as `X | None`** in the code. The meaning is the same.
+
+## Amendment 3 (2026-10-07)
+
+Raised by Insharah (I-06 gate item), written by Aabia. Closes the gap left by amendment 2, item 6: interpretation mode is now implemented in `evaluate_phenotype`.
+
+1. **AST row contract in interpretation mode.** Besides `ast_evidence_id` and `phenotype`, each AST row may carry `mic` (number or null), `sign` (`==`, `<`, `<=`, `>`, `>=`; null means exact) and `rule_key`. The adapter builds `rule_key` with `interpretation.models.make_rule_key(standard, organism, antibiotic, method)`, and leaves it null when the row states no standard or has no measured value. The evaluator never builds or parses a rule key.
+2. **`interpretation_rules`** holds rule dictionaries in the shape of `InterpretationRule.to_dict()`. Only rules whose `interpretation_version` equals `versions.interpretation_version` are used.
+3. **Deriving the category.** For a row whose rule applies and that has a measured value, the category comes from `interpretation.intervals.touched_categories` (ADR-002 amendment 1): one category touched gives `S`, `I` or `R`; two or more give `CENSORED`; none gives `NO_CATEGORY`. The reported label is ignored for that row.
+4. **New phenotype state and reason.** A case whose only derived value is `CENSORED` gets `PHENOTYPE_UNRESOLVED_CENSORED`, and `combine` gives `UNRESOLVED` with reason `CENSORED_MIC`. `I` and `NO_CATEGORY` give `PHENOTYPE_UNRESOLVED_NONBINARY` as before. Rows that derive different values give `PHENOTYPE_CONFLICT`.
+5. **Edges.** An applied rule is recorded as `input_evidence` / `derived_from` on node type `interpretation_rule`, with the rule key as node id, the interpretation version as node version, and `node_context = {"mic": ..., "sign": ...}`. These are the names the interpretation differ and the oracle fixtures use.
+6. **No applicable rule.** The reported label stands, and the row is recorded as `applicability` / `evaluated_against` on the same node type, with the rule key it looked for and the interpretation version, and no context. A rule added later for that key can then find the case. A row with no rule key leaves no rule edge.
+7. **As-reported mode is unchanged.** With `interpretation_version = None`, `mic`, `sign`, `rule_key` and `interpretation_rules` are ignored.
+8. **Not yet done.** The frozen V1 adapter does not pass `mic`, `sign` and `rule_key` yet. Until it does, real cases are unaffected by an interpretation version.
