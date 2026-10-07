@@ -7,6 +7,7 @@ Typical use, inside a transaction the caller controls:
                       verification_status="STATE_CHANGED", ...)
     validate_release(conn, "R2")          # after the equivalence check passes
     publish_release(conn, "R2")
+    load_later_release(conn, "R2", {...}, states)   # a whole later release, each state superseding the last
     get_state_as_of(conn, case_id, "R1")  # reconstruct what was believed at R1
 
 There is deliberately no function that updates or deletes a state.
@@ -39,12 +40,12 @@ from .states import (
     get_state,
     get_state_as_of,
 )
-from .load_release import BaselineState, LoadReport, load_baseline_release
+from .load_release import BaselineState, LoadReport, load_baseline_release, load_later_release
 from .models import CaseStateRecord, Release
 
 __all__ = [
     "ALLOWED_TRANSITIONS", "VERIFICATION_STATUSES",
-    "CaseStateRecord", "Release", "BaselineState", "LoadReport", "load_baseline_release",
+    "CaseStateRecord", "Release", "BaselineState", "LoadReport", "load_baseline_release", "load_later_release",
     "LedgerError", "ReleaseNotFound", "ReleaseNotDraft", "InvalidReleaseTransition",
     "EmptyRelease", "DuplicateState", "UnknownReference",
     "create_release", "get_release", "list_releases", "validate_release", "publish_release",
