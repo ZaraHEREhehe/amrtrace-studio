@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 15 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-06 | **Blockers:** none logged.
+**Current step:** 14 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-07 | **Blockers:** none logged.
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -798,8 +798,8 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 13   | I-05      | Insharah | DONE      |  PR #66                             |                                                                                                 |
 | 14   | I-06      | Insharah | IN-REVIEW      | I-06 PR (feat/I-06-interpretation-layer)                                    |                                                                                                 |
 | 15   | I-04      | Insharah | DONE |  PR #68        |                                                                                                 |
-| 16   | A-03      | Aabia    | IN-REVIEW | PR #64, feat/A-03-r1-run            | R1 graph stored: 41,858 cases equal to the ledger; 1,196,148 dependency rows and 344,526 applicability rows, matching ADR-003 section 5; a second run writes nothing |
-| 17   | A-04      | Aabia    | TODO      |                                     |                                                                                                 |
+| 16   | A-03      | Aabia    | DONE      | PR #64, PR #69                      | R1 graph stored: 41,858 cases equal to the ledger; 1,196,148 dependency rows and 344,526 applicability rows, matching ADR-003 section 5; a second run writes nothing |
+| 17   | A-04      | Aabia    | IN-REVIEW | feat/A-04-graph-measurement-script  | Measured on R1: 207,651 nodes, 1,196,148 edges, 349.5 MB; typical lookup about 0.5 ms, all lookups use an index. Report in docs/design/graph_metrics.md |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
 | 19   | Z-14      | Zara     | TODO      |                                     |                                                                                                 |
 | 20   | Z-15      | Zara     | TODO      |                                     |                                                                                                 |
