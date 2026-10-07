@@ -1,0 +1,41 @@
+scenario: C7
+description: >
+  The novelty. A brand-new rule connects a determinant to a drug that no earlier rule covered, so no case has any
+  stored edge to it (the edge could not exist before the rule did). The affected cases are exactly those whose
+  recorded rule space includes that determinant-drug pair (applicability records). A selector that only follows
+  realised edges finds nothing here. Same determinant for another drug, other determinants and cases without a
+  record are not affected.
+authored_by: insharah
+authored_on_base_commit: b6c9e1b38eea2e67e870549aba11427391c9ce48      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Expected sets are written from plan section 6 and the over-selection principle (rule 6), not produced by running the selector.
+  The author had read the A-05 selector source before writing; no expected set was changed to fit it.
+pending:
+  until: A-06
+  reason: applicability-based selection is not implemented yet (A-05 follows realised edges only)
+world:
+  cases: [C7_A_DETN_GENT, C7_B_DETN_GENT, C7_C_DETN_MERO, C7_D_DETM_GENT, C7_E_NO_RECORD]
+  versions:
+    - {node_type: mapping_rule, node_id: MAPRULE_DETN_GENT_NEW, version: MAPPING_SET_V2}
+  mapping_rules:
+    - {mapping_rule_id: MAPRULE_DETN_GENT_NEW, mapping_version: MAPPING_SET_V2, determinant_identity: DETN, candidate_antibiotic: gentamicin}
+  edges:
+    - {case: C7_A_DETN_GENT, dep_type: provenance_version, edge_type: derived_from, node_type: tool_version, node_id: TOOL_T, node_version: T1}
+    - {case: C7_B_DETN_GENT, dep_type: provenance_version, edge_type: derived_from, node_type: tool_version, node_id: TOOL_T, node_version: T1}
+    - {case: C7_C_DETN_MERO, dep_type: provenance_version, edge_type: derived_from, node_type: tool_version, node_id: TOOL_T, node_version: T1}
+  applicability:
+    - {case: C7_A_DETN_GENT, determinant_identity: DETN, candidate_antibiotic: gentamicin}
+    - {case: C7_B_DETN_GENT, determinant_identity: DETN, candidate_antibiotic: gentamicin}
+    - {case: C7_C_DETN_MERO, determinant_identity: DETN, candidate_antibiotic: meropenem}
+    - {case: C7_D_DETM_GENT, determinant_identity: DETM, candidate_antibiotic: gentamicin}
+change_event:
+  change_id: CHG-ORACLE-C7
+  type: MAPPING_ADDED
+  old_version: MAPPING_SET_V1
+  new_version: MAPPING_SET_V2
+  changed_entities:
+    - {node_type: mapping_rule, node_id: MAPRULE_DETN_GENT_NEW, old_version: null, new_version: MAPPING_SET_V2}
+expected:
+  required_case_ids: [C7_A_DETN_GENT, C7_B_DETN_GENT]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [C7_C_DETN_MERO, C7_D_DETM_GENT, C7_E_NO_RECORD]

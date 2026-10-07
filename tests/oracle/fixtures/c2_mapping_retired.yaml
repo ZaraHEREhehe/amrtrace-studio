@@ -1,0 +1,30 @@
+scenario: C2
+description: >
+  An existing mapping rule is retired. Every case with ANY stored edge to that rule is affected: a case the rule
+  supported obviously, and a case that merely evaluated against it, because an evaluated-but-unsupportive rule
+  (for example one that only gave context) can still shape the state. Cases with no edge to the rule are not.
+authored_by: insharah
+authored_on_base_commit: b6c9e1b38eea2e67e870549aba11427391c9ce48      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Expected sets are written from plan section 6 and the over-selection principle (rule 6), not produced by running the selector.
+  The author had read the A-05 selector source before writing; no expected set was changed to fit it.
+world:
+  cases: [C2_A_SUPPORTED, C2_B_EVALUATED_ONLY, C2_C_OTHER_RULE, C2_D_PROVENANCE_ONLY]
+  versions:
+    - {node_type: mapping_rule, node_id: MAPRULE_X, version: MAPPING_SET_V1}
+  edges:
+    - {case: C2_A_SUPPORTED, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_X, node_version: MAPPING_SET_V1}
+    - {case: C2_B_EVALUATED_ONLY, dep_type: applicability, edge_type: evaluated_against, node_type: mapping_rule, node_id: MAPRULE_X, node_version: MAPPING_SET_V1}
+    - {case: C2_C_OTHER_RULE, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_Y, node_version: MAPPING_SET_V1}
+    - {case: C2_D_PROVENANCE_ONLY, dep_type: provenance_version, edge_type: derived_from, node_type: tool_version, node_id: TOOL_T, node_version: T1}
+change_event:
+  change_id: CHG-ORACLE-C2
+  type: MAPPING_RETIRED
+  old_version: MAPPING_SET_V1
+  new_version: MAPPING_SET_V2
+  changed_entities:
+    - {node_type: mapping_rule, node_id: MAPRULE_X, old_version: MAPPING_SET_V1, new_version: null}
+expected:
+  required_case_ids: [C2_A_SUPPORTED, C2_B_EVALUATED_ONLY]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [C2_C_OTHER_RULE, C2_D_PROVENANCE_ONLY]

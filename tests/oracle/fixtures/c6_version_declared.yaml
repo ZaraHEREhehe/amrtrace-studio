@@ -1,0 +1,33 @@
+scenario: C6
+description: >
+  A new evaluator or tool version is declared for one rule subset. Every case that depends on that subset must be
+  selected, including cases whose final state will turn out unchanged (they are re-verified, not skipped). A case
+  with two edges to the subset is selected once. Cases depending only on another subset are not selected.
+authored_by: insharah
+authored_on_base_commit: b6c9e1b38eea2e67e870549aba11427391c9ce48      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Expected sets are written from plan section 6 and the over-selection principle (rule 6), not produced by running the selector.
+  The author had read the A-05 selector source before writing; no expected set was changed to fit it.
+world:
+  cases: [C6_P1, C6_P2_BOTH_SUBSETS, C6_P3_TWO_EDGES, C6_Q1_OTHER_SUBSET, C6_Q2_NO_EDGES]
+  versions:
+    - {node_type: rule_set_version, node_id: RULESET_SUBSET_1, version: RULES_V1}
+    - {node_type: rule_set_version, node_id: RULESET_SUBSET_1, version: RULES_V2}
+  edges:
+    - {case: C6_P1, dep_type: provenance_version, edge_type: derived_from, node_type: rule_set_version, node_id: RULESET_SUBSET_1, node_version: RULES_V1}
+    - {case: C6_P2_BOTH_SUBSETS, dep_type: provenance_version, edge_type: derived_from, node_type: rule_set_version, node_id: RULESET_SUBSET_1, node_version: RULES_V1}
+    - {case: C6_P2_BOTH_SUBSETS, dep_type: provenance_version, edge_type: derived_from, node_type: rule_set_version, node_id: RULESET_SUBSET_2, node_version: RULES_V1}
+    - {case: C6_P3_TWO_EDGES, dep_type: provenance_version, edge_type: derived_from, node_type: rule_set_version, node_id: RULESET_SUBSET_1, node_version: RULES_V1}
+    - {case: C6_P3_TWO_EDGES, dep_type: positive_support, edge_type: derived_from, node_type: rule_set_version, node_id: RULESET_SUBSET_1, node_version: RULES_V1}
+    - {case: C6_Q1_OTHER_SUBSET, dep_type: provenance_version, edge_type: derived_from, node_type: rule_set_version, node_id: RULESET_SUBSET_2, node_version: RULES_V1}
+change_event:
+  change_id: CHG-ORACLE-C6
+  type: EVALUATOR_VERSION
+  old_version: RULES_V1
+  new_version: RULES_V2
+  changed_entities:
+    - {node_type: rule_set_version, node_id: RULESET_SUBSET_1, old_version: RULES_V1, new_version: RULES_V2}
+expected:
+  required_case_ids: [C6_P1, C6_P2_BOTH_SUBSETS, C6_P3_TWO_EDGES]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [C6_Q1_OTHER_SUBSET, C6_Q2_NO_EDGES]
