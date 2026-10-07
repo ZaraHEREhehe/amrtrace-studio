@@ -840,6 +840,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | A-03b | Aabia    | IN-PROGRESS | PR #75 (dry run merged)                    | Interpretation baseline release with the Ed32 table. Dry run done; storing the release, the 1,529 question and the cross-release selector fix are still to do |
 | I-04b | Insharah | DONE   | I-04b PR #77 (feat/I-04b-load-later-release)   | load_later_release in the ledger: a later full or partial release whose states supersede the latest published state. 13 new tests; full suite 491 passed, 1 skipped, 1 xfailed. Unblocks A-03b storing the Ed32 release |
 | I-07b | Insharah | IN-REVIEW   | I-07b PR (feat/I-07b-cross-release-fixture) | Oracle fixture for selection across more than one release (latest edges decide). Strict xfail until the selector fix. world.py can now build later partial releases |
+| I-07b pt 2 | Insharah | IN-REVIEW   | I-07b PR (feat/I-07c-interpretation-rule-introduced) | Oracle fixture: interpretation rule introduced, no prior match (null-version no-match edge). No harness change |
 
 **Reassignments log (step, from, to, reason, date):** step 2 (G-02): driver of record Zara; script and data facts written by Aabia; reviewed and merged by Insharah instead of Aabia (the rotation names Aabia as reviewer), 2026-10-04
 
