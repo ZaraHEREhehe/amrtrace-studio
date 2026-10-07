@@ -1,0 +1,24 @@
+{
+  "fixture_version": "Z14_MINI_COHORT_V1",
+  "oracle_expected_ids_included": false,
+  "real_control_cases": 500,
+  "real_scenario_cases": 154,
+  "real_scenario_mic_counts": {
+    "4": 50,
+    "8": 104
+  },
+  "row_counts": {
+    "ast_evidence": 660,
+    "case": 660,
+    "genotype_evidence": 24791,
+    "isolate": 660,
+    "mapping_rule": 5445
+  },
+  "source_manifest_sha256": "88361fd06cc180b2fae9d110b026e94973c6983a23f2a45e6ebe8c60dc8c273f",
+  "synthetic_cases": {
+    "C2": 2,
+    "C6": 2,
+    "C7": 2
+  },
+  "total_cases": 660
+}
