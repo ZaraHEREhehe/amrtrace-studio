@@ -15,11 +15,14 @@ import yaml
 from psycopg.types.json import Jsonb
 
 from amrtrace.changes import ChangedEntity, ChangeEvent, register_change_event, register_version
-from amrtrace.ledger import BaselineState, load_baseline_release
+from amrtrace.ledger import BaselineState, load_baseline_release, load_later_release
 
 FIXTURE_DIR = pathlib.Path(__file__).resolve().parent / "fixtures"
 RELEASE_ID = "R_ORACLE"
 
+def _release_id(name) -> str:
+    """None or "R1" is the baseline release; any other name is a later release of the same world."""
+    return RELEASE_ID if name in (None, "R1") else f"{RELEASE_ID}_{name}"
 
 def fixture_paths() -> list[pathlib.Path]:
     return sorted(FIXTURE_DIR.glob("*.yaml"))
@@ -31,7 +34,8 @@ def load_fixture(path) -> dict:
 
 
 def build_world(conn, fx: dict) -> None:
-    """Create the cases, a published baseline release, the version nodes, mapping rules, edges and applicability rows."""
+    """Create the cases, a published baseline release (and optional later partial releases), the version nodes,
+    mapping rules, edges and applicability rows."""
     world = fx["world"]
     for case_id in world["cases"]:
         conn.execute("INSERT INTO isolate (target_acc) VALUES (%s)", ("PDT_" + case_id,))
@@ -43,6 +47,13 @@ def build_world(conn, fx: dict) -> None:
         conn, RELEASE_ID, {"oracle_scenario": fx["scenario"]},
         [BaselineState(case_id=c, state_code="UNRESOLVED", explanation={}) for c in world["cases"]],
     )
+    for later in world.get("later_releases", []):
+        load_later_release(
+            conn, _release_id(later["name"]),
+            {"oracle_scenario": fx["scenario"], "release": later["name"]},
+            [BaselineState(case_id=c, state_code="UNRESOLVED", explanation={}) for c in later["cases"]],
+            require_same_cases=False,
+        )
     for v in world.get("versions", []):
         register_version(conn, v["node_type"], v["node_id"], v["version"])
     for m in world.get("mapping_rules", []):
@@ -56,15 +67,15 @@ def build_world(conn, fx: dict) -> None:
         conn.execute(
             "INSERT INTO dependency (case_id, release_id, dep_type, edge_type, node_type, node_id, node_version, node_context) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
-            (e["case"], RELEASE_ID, e["dep_type"], e["edge_type"], e["node_type"], e["node_id"],
+            (e["case"], _release_id(e.get("release")), e["dep_type"], e["edge_type"], e["node_type"], e["node_id"],
              e.get("node_version"), None if e.get("node_context") is None else Jsonb(e["node_context"])),
         )
     for a in world.get("applicability", []):
         conn.execute(
             "INSERT INTO applicability (case_id, release_id, determinant_identity, candidate_antibiotic, organism, "
             "evidence_type, rule_set_version) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (a["case"], RELEASE_ID, a["determinant_identity"], a["candidate_antibiotic"], a.get("organism"),
-             a.get("evidence_type"), a.get("rule_set_version")),
+            (a["case"], _release_id(a.get("release")), a["determinant_identity"], a["candidate_antibiotic"],
+             a.get("organism"), a.get("evidence_type"), a.get("rule_set_version")),
         )
 
 
