@@ -1,0 +1,42 @@
+scenario: CROSS_RELEASE
+description: >
+  A mapping rule is retired after a second, partial release exists. Each case's CURRENT dependencies are the
+  edges stored under the latest release that holds edges for that case. A case never re-evaluated still has its
+  edges only under the first release and must be selected. A case re-evaluated in the second release is judged
+  by its second-release edges: still depending on the rule means selected, no longer depending on it means not
+  selected, even though a stale first-release edge to the rule remains in the table.
+authored_by: insharah
+authored_on_base_commit: d7b1d150e6034bfe0e6042e9ba0d61aab0cf2f5f
+author_note: >
+  Expected sets are written from plan section 6, the over-selection principle (rule 6) and the agreed rule that
+  a case's latest edges decide, not from running the selector. The author had read the A-05 selector source
+  (it looks only at the latest published release) before writing; no expected set was changed to fit it.
+pending:
+  until: the selector uses each case's latest edges across releases
+  reason: the selector looks only at the latest published release
+world:
+  cases: [XR_A_R1_ONLY, XR_B_REEVAL_STILL, XR_C_REEVAL_DROPPED, XR_D_REEVAL_NEW, XR_E_OTHER]
+  later_releases:
+    - name: R2
+      cases: [XR_B_REEVAL_STILL, XR_C_REEVAL_DROPPED, XR_D_REEVAL_NEW]
+  versions:
+    - {node_type: mapping_rule, node_id: MAPRULE_X, version: MAPPING_SET_V1}
+  edges:
+    - {case: XR_A_R1_ONLY, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_X, node_version: MAPPING_SET_V1}
+    - {case: XR_B_REEVAL_STILL, release: R1, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_X, node_version: MAPPING_SET_V1}
+    - {case: XR_B_REEVAL_STILL, release: R2, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_X, node_version: MAPPING_SET_V1}
+    - {case: XR_C_REEVAL_DROPPED, release: R1, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_X, node_version: MAPPING_SET_V1}
+    - {case: XR_C_REEVAL_DROPPED, release: R2, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_Y, node_version: MAPPING_SET_V1}
+    - {case: XR_D_REEVAL_NEW, release: R2, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_X, node_version: MAPPING_SET_V1}
+    - {case: XR_E_OTHER, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_Y, node_version: MAPPING_SET_V1}
+change_event:
+  change_id: CHG-ORACLE-XR
+  type: MAPPING_RETIRED
+  old_version: MAPPING_SET_V1
+  new_version: MAPPING_SET_V2
+  changed_entities:
+    - {node_type: mapping_rule, node_id: MAPRULE_X, old_version: MAPPING_SET_V1, new_version: null}
+expected:
+  required_case_ids: [XR_A_R1_ONLY, XR_B_REEVAL_STILL, XR_D_REEVAL_NEW]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [XR_C_REEVAL_DROPPED, XR_E_OTHER]

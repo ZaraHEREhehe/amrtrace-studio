@@ -1,0 +1,35 @@
+scenario: INTERP_INTRODUCED
+description: >
+  A new interpretation table introduces a rule key that no earlier table had. Cases evaluated in interpretation
+  mode where no rule applied hold a no-match edge (applicability, evaluated_against, no version, no context) to that
+  key; that edge is the only way to find them, because no earlier edge to the new rule can exist. Such a case
+  must be selected. A case whose no-match edge names a different key, a case that matched another rule, and a
+  case with no interpretation edge at all are not affected.
+authored_by: insharah
+authored_on_base_commit: 87edf32347e8f7d50cab4262a2a4c0fd6e2af818
+author_note: >
+  Expected sets are written from plan section 5.5 (a no-match case records an applicability edge so that a later
+  table that adds the rule can discover it) and the over-selection principle (rule 6), not produced by running the
+  selector. The author had read the A-05 selector source before writing; no expected set was changed to fit it.
+  The edge shape comes from the description of ADR-004 amendment 3: no version and no context on a no-match edge.
+world:
+  cases: [IN_A_NOMATCH, IN_B_NOMATCH_CONTEXT_NULL, IN_C_NOMATCH_OTHER_KEY, IN_D_MATCHED_OTHER_RULE, IN_E_AS_REPORTED]
+  versions:
+    - {node_type: interpretation_rule, node_id: "stdx|orgx|drugx|mic", version: TABLE_V2}
+  edges:
+    - {case: IN_A_NOMATCH, dep_type: applicability, edge_type: evaluated_against, node_type: interpretation_rule, node_id: "stdx|orgx|drugx|mic"}
+    - {case: IN_B_NOMATCH_CONTEXT_NULL, dep_type: applicability, edge_type: evaluated_against, node_type: interpretation_rule, node_id: "stdx|orgx|drugx|mic", node_version: null, node_context: null}
+    - {case: IN_C_NOMATCH_OTHER_KEY, dep_type: applicability, edge_type: evaluated_against, node_type: interpretation_rule, node_id: "stdx|orgx|drugy|mic"}
+    - {case: IN_D_MATCHED_OTHER_RULE, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "stdx|orgx|drugz|mic", node_version: TABLE_V1, node_context: {mic: 4.0, sign: "=="}}
+    - {case: IN_E_AS_REPORTED, dep_type: provenance_version, edge_type: derived_from, node_type: tool_version, node_id: TOOL_T, node_version: T1}
+change_event:
+  change_id: CHG-ORACLE-INTRO
+  type: INTERPRETATION_VERSION
+  old_version: TABLE_V1
+  new_version: TABLE_V2
+  changed_entities:
+    - {node_type: interpretation_rule, node_id: "stdx|orgx|drugx|mic", old_version: null, new_version: TABLE_V2, changed_region: null}
+expected:
+  required_case_ids: [IN_A_NOMATCH, IN_B_NOMATCH_CONTEXT_NULL]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [IN_C_NOMATCH_OTHER_KEY, IN_D_MATCHED_OTHER_RULE, IN_E_AS_REPORTED]
