@@ -46,6 +46,9 @@ REASON_MISSING_PHENOTYPE = "MISSING_PHENOTYPE"
 REASON_INVALID_GENOTYPE_ANALYSIS = "INVALID_GENOTYPE_ANALYSIS"
 REASON_CONTEXTUAL_GENOTYPE_EVIDENCE = "CONTEXTUAL_GENOTYPE_EVIDENCE"
 
+# finer detail kept in the explanation, so a gap in the table is not mistaken for intermediate
+SUB_REASON_NO_CATEGORY = "no_category"
+
 # dependency vocabulary shared with the materializer
 DEP_INPUT_EVIDENCE = "input_evidence"
 DEP_POSITIVE_SUPPORT = "positive_support"
