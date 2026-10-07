@@ -99,6 +99,25 @@ def _latest_published_release(conn) -> str:
     return row[0]
 
 
+# for each case, the newest published release that holds stored rows for it: those rows are its current dependencies
+def _current_releases(cursor, case_ids: set[str]) -> dict[str, str]:
+    if not case_ids:
+        return {}
+    ids = sorted(case_ids)
+    # edges and rule-space rows are written together, so either table shows a release evaluated the case
+    cursor.execute(
+        "SELECT DISTINCT ON (s.case_id) s.case_id, s.release_id FROM ("
+        "  SELECT case_id, release_id FROM dependency WHERE case_id = ANY(%s) "
+        "  UNION "
+        "  SELECT case_id, release_id FROM applicability WHERE case_id = ANY(%s)"
+        ") s JOIN release r ON r.release_id = s.release_id "
+        "WHERE r.status = 'PUBLISHED' "
+        "ORDER BY s.case_id, r.release_seq DESC",
+        (ids, ids),
+    )
+    return {row["case_id"]: row["release_id"] for row in cursor.fetchall()}
+
+
 def _reason(edge: dict) -> str:
     return f"{edge['dep_type']} ({edge['edge_type']}) on {edge['node_type']} {edge['node_id']}"
 
@@ -112,7 +131,9 @@ def _is_introduced_rule(entity: dict) -> bool:
 
 
 # the cases whose recorded rule space contains the pair a newly introduced rule speaks about
-def _applicable_cases(cursor, release_id: str, entity: dict) -> list[tuple[str, str]]:
+def _applicable_cases(
+    cursor, release_id: str | None, entity: dict
+) -> list[tuple[str, str, str]]:
     cursor.execute(
         "SELECT determinant_identity, candidate_antibiotic FROM mapping_rule WHERE mapping_rule_id = %s",
         (entity["node_id"],),
@@ -123,15 +144,21 @@ def _applicable_cases(cursor, release_id: str, entity: dict) -> list[tuple[str, 
         return []
     # no stored edge can point at a rule that did not exist, so the lookup goes through the pair instead
     cursor.execute(
-        "SELECT DISTINCT case_id FROM applicability "
-        "WHERE candidate_antibiotic = %s AND determinant_identity = %s AND release_id = %s",
-        (rule["candidate_antibiotic"], rule["determinant_identity"], release_id),
+        "SELECT DISTINCT case_id, release_id FROM applicability "
+        "WHERE candidate_antibiotic = %s AND determinant_identity = %s "
+        "AND (%s::text IS NULL OR release_id = %s)",
+        (
+            rule["candidate_antibiotic"],
+            rule["determinant_identity"],
+            release_id,
+            release_id,
+        ),
     )
     reason = (
         f"applicability ({rule['determinant_identity']}, {rule['candidate_antibiotic']}) "
         f"for new {entity['node_type']} {entity['node_id']}"
     )
-    return [(row["case_id"], reason) for row in cursor.fetchall()]
+    return [(row["case_id"], row["release_id"], reason) for row in cursor.fetchall()]
 
 
 # use_applicability=False gives the realised-edge-only selector, kept so its blind spot stays testable
@@ -149,38 +176,58 @@ def select_impact_detailed(
         raise LookupError(f"change event {change_event_id} does not exist")
     changed_entities = event[0] or []
 
-    # by default the selection runs against what is currently in force
+    # a named release is read on its own; otherwise each case is judged by its own latest edges
+    named_release = release_id
     if release_id is None:
         release_id = _latest_published_release(conn)
 
-    level1_cases = set()
-    reasons = {}
+    # every stored row that could matter, kept with the release it was recorded under
+    edge_hits = []
+    applicable_hits = []
     with conn.cursor(row_factory=dict_row) as cursor:
         for entity in changed_entities:
             # one indexed lookup per changed node: from the node back to the cases that depend on it
             cursor.execute(
-                "SELECT case_id, dep_type, edge_type, node_type, node_id, node_version, node_context "
-                "FROM dependency WHERE release_id = %s AND node_type = %s AND node_id = %s",
-                (release_id, entity["node_type"], entity["node_id"]),
+                "SELECT case_id, release_id, dep_type, edge_type, node_type, node_id, node_version, node_context "
+                "FROM dependency WHERE node_type = %s AND node_id = %s "
+                "AND (%s::text IS NULL OR release_id = %s)",
+                (entity["node_type"], entity["node_id"], named_release, named_release),
             )
             old_version = entity.get("old_version")
-            for edge in cursor:
-                if not edge_version_matches(edge["node_version"], old_version):
-                    continue
-                level1_cases.add(edge["case_id"])
-                if in_changed_region(
-                    edge["node_context"], entity.get("changed_region")
-                ):
-                    reasons.setdefault(edge["case_id"], set()).add(_reason(edge))
+            for edge in cursor.fetchall():
+                if edge_version_matches(edge["node_version"], old_version):
+                    edge_hits.append((edge, entity))
 
-        applicable = {}
         if use_applicability:
             for entity in changed_entities:
-                if not _is_introduced_rule(entity):
-                    continue
-                for case_id, reason in _applicable_cases(cursor, release_id, entity):
-                    level1_cases.add(case_id)
-                    applicable.setdefault(case_id, set()).add(reason)
+                if _is_introduced_rule(entity):
+                    applicable_hits += _applicable_cases(cursor, named_release, entity)
+
+        # a stale row in an earlier release must not select a case that was re-evaluated since
+        current = None
+        if named_release is None:
+            candidates = {edge["case_id"] for edge, _ in edge_hits}
+            candidates |= {case_id for case_id, _, _ in applicable_hits}
+            current = _current_releases(cursor, candidates)
+
+    def is_current(case_id: str, row_release: str) -> bool:
+        return current is None or current.get(case_id) == row_release
+
+    level1_cases = set()
+    reasons = {}
+    for edge, entity in edge_hits:
+        if not is_current(edge["case_id"], edge["release_id"]):
+            continue
+        level1_cases.add(edge["case_id"])
+        if in_changed_region(edge["node_context"], entity.get("changed_region")):
+            reasons.setdefault(edge["case_id"], set()).add(_reason(edge))
+
+    applicable = {}
+    for case_id, row_release, reason in applicable_hits:
+        if not is_current(case_id, row_release):
+            continue
+        level1_cases.add(case_id)
+        applicable.setdefault(case_id, set()).add(reason)
 
     items = tuple(
         ImpactItem(

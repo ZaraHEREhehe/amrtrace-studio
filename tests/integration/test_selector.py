@@ -262,3 +262,60 @@ def test_the_selection_only_reads(graph):
     select_impact(graph, "CHG_1")
 
     assert graph.execute("SELECT count(*) FROM dependency").fetchone()[0] == before
+
+
+def store_graph(conn, release_id, cases):
+    materialize(conn, release_id, [(i, evaluate(i, VERSIONS)) for i in cases], VERSIONS)
+
+
+# two releases: the first holds every case, the second re-evaluates only some of them
+@pytest.fixture
+def two_releases(conn, seed_cases):
+    seed_cases("CASE_A", "CASE_B", "CASE_C")
+    add_release(conn, "R_FIRST")
+    add_release(conn, "R_SECOND")
+    store_graph(
+        conn,
+        "R_FIRST",
+        [
+            make_inputs("CASE_A", ("detA",)),
+            make_inputs("CASE_B", ("detA",)),
+            make_inputs("CASE_C", ("detB",)),
+        ],
+    )
+    # CASE_B no longer carries detA, and CASE_C now does
+    store_graph(
+        conn,
+        "R_SECOND",
+        [make_inputs("CASE_B", ("detB",)), make_inputs("CASE_C", ("detA",))],
+    )
+    add_change(conn, "CHG_1", entity("mapping_rule", "RULE_detA"))
+    return conn
+
+
+def test_a_case_never_evaluated_again_is_selected_through_its_older_edges(
+    two_releases,
+):
+    assert "CASE_A" in selected(two_releases, "CHG_1")
+
+
+def test_a_stale_edge_does_not_select_a_case_that_was_evaluated_again(two_releases):
+    assert selected(two_releases, "CHG_1") == ["CASE_A", "CASE_C"]
+
+
+def test_a_named_release_is_still_read_on_its_own(two_releases):
+    named = select_impact_detailed(two_releases, "CHG_1", release_id="R_FIRST")
+    assert [item.case_id for item in named.items] == ["CASE_A", "CASE_B"]
+
+
+def test_edges_of_a_release_that_is_not_published_do_not_count(conn, seed_cases):
+    seed_cases("CASE_A")
+    add_release(conn, "R_FIRST")
+    add_release(conn, "R_DRAFT", status="DRAFT")
+    store_graph(conn, "R_FIRST", [make_inputs("CASE_A", ("detA",))])
+    store_graph(conn, "R_DRAFT", [make_inputs("CASE_A", ("detB",))])
+    add_change(conn, "CHG_1", entity("mapping_rule", "RULE_detA"))
+    add_change(conn, "CHG_2", entity("mapping_rule", "RULE_detB"))
+
+    assert selected(conn, "CHG_1") == ["CASE_A"]
+    assert selected(conn, "CHG_2") == []
