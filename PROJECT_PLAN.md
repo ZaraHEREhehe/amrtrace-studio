@@ -799,14 +799,14 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 14   | I-06      | Insharah | IN-REVIEW      | I-06 PR (feat/I-06-interpretation-layer)                                    |                                                                                                 |
 | 15   | I-04      | Insharah | DONE |  PR #68        |                                                                                                 |
 | 16   | A-03      | Aabia    | DONE      | PR #64, PR #69                      | R1 graph stored: 41,858 cases equal to the ledger; 1,196,148 dependency rows and 344,526 applicability rows, matching ADR-003 section 5; a second run writes nothing |
-| 17   | A-04      | Aabia    | IN-REVIEW | feat/A-04-graph-measurement-script  | Measured on R1: 207,651 nodes, 1,196,148 edges, 349.5 MB; typical lookup about 0.5 ms, all lookups use an index. Report in docs/design/graph_metrics.md |
+| 17   | A-04      | Aabia    | DONE      | PR #70                              | Measured on R1: 207,651 nodes, 1,196,148 edges, 349.5 MB; typical lookup about 0.5 ms, all lookups use an index. Report in docs/design/graph_metrics.md |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |
 | 19   | Z-14      | Zara     | TODO      |                                     |                                                                                                 |
 | 20   | Z-15      | Zara     | TODO      |                                     |                                                                                                 |
 | 21   | I-07      | Insharah | TODO      |                                     | must be committed before step 22                                                                |
 | 22   | A-05      | Aabia    | IN-PROGRESS | PR #67 (code and tests)           | Selector merged. Not done: the oracle recall check, which needs the fixtures (I-07). R1 and its graph now exist |
 | 23   | A-06      | Aabia    | TODO      |                                     |                                                                                                 |
-| 24   | A-07      | Aabia    | TODO      |                                     |                                                                                                 |
+| 24   | A-07      | Aabia    | IN-REVIEW | feat/A-07-selector-performance-evidence | EXPLAIN plans and latency recorded in docs/design/selector_performance.md; no sequential scan on the hot path; no new index needed for R1 |
 | 25   | I-08      | Insharah | TODO      |                                     |                                                                                                 |
 | 26   | Z-07      | Zara     | TODO      |                                     |                                                                                                 |
 | 27   | A-10      | Aabia    | TODO      |                                     |                                                                                                 |
