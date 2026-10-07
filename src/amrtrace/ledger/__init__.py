@@ -42,12 +42,12 @@ from .states import (
 )
 from .load_release import BaselineState, LoadReport, load_baseline_release, load_later_release
 from .models import CaseStateRecord, Release
-from .review import REVIEW_ACTIONS, ReviewEvent, add_review, get_latest_review, get_reviews
+from .review import REVIEW_ACTIONS, ReviewEvent, add_review, get_current_correction, get_latest_review, get_reviews
 from .export import export_as_of, export_json, snapshot_hash
 from .errors import NoStateToReview, ReleaseNotPublished, ReviewNotAllowed
 
 __all__ = [
-    "REVIEW_ACTIONS", "ReviewEvent", "add_review", "get_reviews", "get_latest_review", "export_as_of", "export_json", "snapshot_hash", "NoStateToReview", "ReviewNotAllowed", "ReleaseNotPublished",
+    "REVIEW_ACTIONS", "ReviewEvent", "add_review", "get_reviews", "get_latest_review", "get_current_correction", "export_as_of", "export_json", "snapshot_hash", "NoStateToReview", "ReviewNotAllowed", "ReleaseNotPublished",
     "ALLOWED_TRANSITIONS", "VERIFICATION_STATUSES",
     "CaseStateRecord", "Release", "BaselineState", "LoadReport", "load_baseline_release", "load_later_release",
     "LedgerError", "ReleaseNotFound", "ReleaseNotDraft", "InvalidReleaseTransition",

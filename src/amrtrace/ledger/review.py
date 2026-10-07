@@ -1,7 +1,9 @@
 """Review events (task I-12): a reviewer confirms, corrects or marks a case state unresolved.
 
 Append-only: there is no function that updates or deletes a review. A review is attached to one published state
-(the case's current state by default) and always carries a reason. Reviews never change the ledger states.
+(the case's current state by default) and always carries a reason. A CORRECT review also carries the state code
+the reviewer believes is right (corrected_state_code). Reviews never change the ledger states: the corrected value
+is the reviewer's view, shown next to the evaluator's state.
 The functions take an open psycopg connection and never commit: the caller owns the transaction.
 """
 
@@ -20,7 +22,7 @@ from .states import get_current_state, get_state
 
 REVIEW_ACTIONS = ("CONFIRM", "CORRECT", "MARK_UNRESOLVED")
 
-_COLUMNS = "review_id, case_id, state_id, reviewer, action, reason, created_at"
+_COLUMNS = "review_id, case_id, state_id, reviewer, action, reason, created_at, corrected_state_code"
 
 
 @dataclass(frozen=True)
@@ -32,6 +34,7 @@ class ReviewEvent:
     action: str  # CONFIRM | CORRECT | MARK_UNRESOLVED
     reason: str
     created_at: datetime
+    corrected_state_code: Optional[str] = None  # set exactly when action == CORRECT
 
 
 def _text(name: str, value) -> str:
@@ -48,18 +51,25 @@ def add_review(
     action: str,
     reason: str,
     state_id: Optional[int] = None,
+    corrected_state_code: Optional[str] = None,
 ) -> ReviewEvent:
     """Append a review of a case's current published state and return it. Writes nothing on any error.
 
     state_id: the state being reviewed. If omitted, the case's current state is used. A given state must belong
     to the case, be in a PUBLISHED release, and still be the case's current state (a state that a later release
     has superseded is stale: review the current one).
+    corrected_state_code: required for CORRECT (one of the five state codes, checked by the database) and not
+    allowed for the other actions.
     """
     case_id = _text("case_id", case_id)
     reviewer = _text("reviewer", reviewer)
     reason = _text("reason", reason)
     if action not in REVIEW_ACTIONS:
         raise ValueError(f"action must be one of {REVIEW_ACTIONS}, got {action!r}")
+    if action == "CORRECT":
+        corrected_state_code = _text("corrected_state_code (required for CORRECT)", corrected_state_code)
+    elif corrected_state_code is not None:
+        raise ValueError(f"corrected_state_code is only allowed for CORRECT, not {action}")
     if state_id is not None and (not isinstance(state_id, int) or isinstance(state_id, bool)):
         raise ValueError("state_id must be an integer state id")
 
@@ -85,13 +95,15 @@ def add_review(
         with atomic(conn):
             with conn.cursor(row_factory=dict_row) as cur:
                 cur.execute(
-                    "INSERT INTO review_event (case_id, state_id, reviewer, action, reason) "
-                    f"VALUES (%s, %s, %s, %s, %s) RETURNING {_COLUMNS}",
-                    (case_id, state_id, reviewer, action, reason),
+                    "INSERT INTO review_event (case_id, state_id, reviewer, action, reason, corrected_state_code) "
+                    f"VALUES (%s, %s, %s, %s, %s, %s) RETURNING {_COLUMNS}",
+                    (case_id, state_id, reviewer, action, reason, corrected_state_code),
                 )
                 row = cur.fetchone()
     except errors.ForeignKeyViolation as exc:
         raise UnknownReference(f"the case or state does not exist: {exc.diag.constraint_name}") from exc
+    except errors.CheckViolation as exc:
+        raise ValueError(f"the review was refused by the database: {exc.diag.constraint_name}") from exc
     return ReviewEvent(**row)
 
 
@@ -110,3 +122,25 @@ def get_latest_review(conn, case_id: str) -> Optional[ReviewEvent]:
         )
         row = cur.fetchone()
     return ReviewEvent(**row) if row else None
+
+
+def get_current_correction(conn, case_id: str) -> Optional[ReviewEvent]:
+    """The reviewer correction that stands on the case's current state, or None.
+
+    It is the latest review of the CURRENT state, and only if that review is a CORRECT. A later CONFIRM or
+    MARK_UNRESOLVED on the same state replaces it. A correction on an older state does not carry over to a
+    newer state: a later release has to be reviewed again. I-09 uses this to refuse to overwrite a correction.
+    """
+    current = get_current_state(conn, case_id)
+    if current is None:
+        return None
+    with conn.cursor(row_factory=dict_row) as cur:
+        cur.execute(
+            f"SELECT {_COLUMNS} FROM review_event WHERE case_id = %s AND state_id = %s "
+            "ORDER BY review_id DESC LIMIT 1",
+            (case_id, current.state_id),
+        )
+        row = cur.fetchone()
+    if row is None or row["action"] != "CORRECT":
+        return None
+    return ReviewEvent(**row)
