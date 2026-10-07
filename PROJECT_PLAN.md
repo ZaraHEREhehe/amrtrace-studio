@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 15 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-06 | **Blockers:** none logged.
+**Current step:** 14 (IN-REVIEW; early start under D-15) | **Last updated by / when:** Insharah, 2026-10-07 | **Blockers:** none logged.
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -796,8 +796,8 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 11   | A-01      | Aabia    | DONE      | PR #61                              | 91 unit tests; drug-specific genotype rules moved to a versioned policy (ADR-004 amendment 2); OP-1 and OP-3 closed (ADR-003 amendment 1) |
 | 12   | A-02      | Aabia    | DONE      | PR #63                              | Gate passed: 41,858 cases, 15 fields each, 0 mismatches against frozen V1 |
 | 13   | I-05      | Insharah | DONE      |  PR #66                             |                                                                                                 |
-| 14   | I-06      | Insharah | TODO      |                                     |                                                                                                 |
-| 15   | I-04      | Insharah | IN-REVIEW |  I-04 PR (feat/I-04-load-r1)        |                                                                                                 |
+| 14   | I-06      | Insharah | IN-REVIEW      | I-06 PR (feat/I-06-interpretation-layer)                                    |                                                                                                 |
+| 15   | I-04      | Insharah | DONE |  PR #68        |                                                                                                 |
 | 16   | A-03      | Aabia    | DONE      | PR #64, PR #69                      | R1 graph stored: 41,858 cases equal to the ledger; 1,196,148 dependency rows and 344,526 applicability rows, matching ADR-003 section 5; a second run writes nothing |
 | 17   | A-04      | Aabia    | IN-REVIEW | feat/A-04-graph-measurement-script  | Measured on R1: 207,651 nodes, 1,196,148 edges, 349.5 MB; typical lookup about 0.5 ms, all lookups use an index. Report in docs/design/graph_metrics.md |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |

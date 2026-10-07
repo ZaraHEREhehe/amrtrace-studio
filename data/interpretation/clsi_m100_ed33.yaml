@@ -1,0 +1,12 @@
+# CLSI M100 edition 33, gentamicin breakpoints for Enterobacterales, applied to Escherichia coli.
+# Source: CLSI M100 (project references [13] and [14]). MIC in ug/mL. Data, not code.
+interpretation_version: CLSI_M100_ED33
+standard: CLSI
+rules:
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: intermediate, op: "==", value: 4}
+      - {label: resistant, op: ">=", value: 8}
