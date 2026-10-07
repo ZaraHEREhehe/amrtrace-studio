@@ -818,7 +818,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 33   | A-09      | Aabia    | TODO      |                                     |                                                                                                 |
 | 34   | Z-09      | Zara     | TODO      |                                     |                                                                                                 |
 | 35   | Z-10      | Zara     | TODO      |                                     |                                                                                                 |
-| 36   | I-12      | Insharah | TODO      |                                     |                                                                                                 |
+| 36   | I-12      | Insharah | IN-REVIEW | I-12 PR (feat/I-12-review-events-and-export) | add_review (append-only, reason required, current published state only), get_reviews, get_latest_review; export_as_of, export_json and snapshot_hash for a reproducible as-of export. CORRECT reviews carry corrected_state_code (migration 0005). Early start under D-15 |
 | 37   | I-13      | Insharah | TODO      |                                     |                                                                                                 |
 | 38   | Z-11      | Zara     | TODO      |                                     |                                                                                                 |
 | 39   | Z-12      | Zara     | TODO      |                                     |                                                                                                 |

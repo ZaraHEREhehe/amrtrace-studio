@@ -27,3 +27,15 @@ class DuplicateState(LedgerError):
 
 class UnknownReference(LedgerError):
     """The case, the superseded state, or the triggering change event does not exist."""
+
+
+class NoStateToReview(LedgerError):
+    """The case has no state in a published release, so there is nothing to review."""
+
+
+class ReviewNotAllowed(LedgerError):
+    """The state cannot be reviewed: wrong case, not published, or no longer the case's current state."""
+
+
+class ReleaseNotPublished(LedgerError):
+    """Only a published release can be exported."""

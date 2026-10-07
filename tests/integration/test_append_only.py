@@ -114,8 +114,8 @@ def test_releases_cannot_be_deleted_or_truncated(conn, ledger_rows):
 
 def test_a_correction_is_a_new_row_and_the_original_review_stays(conn, ledger_rows):
     conn.execute(
-        "INSERT INTO review_event (case_id, state_id, reviewer, action, reason) "
-        "VALUES ('C1', %s, 'reviewer', 'CORRECT', 'resistant after manual check')", (ledger_rows,))
+        "INSERT INTO review_event (case_id, state_id, reviewer, action, reason, corrected_state_code) "
+        "VALUES ('C1', %s, 'reviewer', 'CORRECT', 'resistant after manual check', 'CONCORDANT_RESISTANT')", (ledger_rows,))
     rows = conn.execute("SELECT action, reason FROM review_event ORDER BY review_id").fetchall()
     assert rows == [("CONFIRM", "looks right"), ("CORRECT", "resistant after manual check")]
     blocked(conn, "UPDATE review_event SET action = 'CONFIRM' WHERE action = 'CORRECT'")   # cannot be re-written either
