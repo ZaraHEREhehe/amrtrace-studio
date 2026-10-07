@@ -136,7 +136,7 @@ def render_report(
     table: InterpretationTable, release_id: str, comparison: BaselineComparison
 ) -> str:
     lines = [
-        f"table {table.interpretation_version} against release {release_id} (dry run, nothing written)",
+        f"table {table.interpretation_version} against release {release_id}",
         f"cases evaluated: {comparison.cases:,}",
         f"cases a rule applied to: {comparison.rule_applied:,}",
         f"rule edges: {comparison.derived_edges:,} applied, {comparison.applicability_edges:,} looked for and not found",
