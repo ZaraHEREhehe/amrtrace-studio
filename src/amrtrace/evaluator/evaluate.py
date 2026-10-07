@@ -4,7 +4,7 @@ from dataclasses import asdict
 from . import constants as c
 from .combine import combine
 from .genotype import evaluate_genotype
-from .hashing import sha256_of
+from .hashing import canonical_json, sha256_of
 from .phenotype import evaluate_phenotype
 from .types import CaseInputs, DependencyRecord, EvalResult, VersionVector
 
@@ -35,11 +35,20 @@ def _version_records(
     ]
 
 
-# a fixed sort so the record order never depends on how inputs were ordered
-def _sorted_records(records: list[DependencyRecord]) -> tuple[DependencyRecord, ...]:
-    return tuple(
-        sorted(records, key=lambda r: (r.dep_type, r.edge_type, r.node_type, r.node_id))
+# a full sort key, so two edges to the same node still come out in a fixed order
+def _record_key(record: DependencyRecord) -> tuple:
+    return (
+        record.dep_type,
+        record.edge_type,
+        record.node_type,
+        record.node_id,
+        record.node_version or "",
+        canonical_json(record.node_context),
     )
+
+
+def _sorted_records(records: list[DependencyRecord]) -> tuple[DependencyRecord, ...]:
+    return tuple(sorted(records, key=_record_key))
 
 
 def evaluate(inputs: CaseInputs, versions: VersionVector) -> EvalResult:
