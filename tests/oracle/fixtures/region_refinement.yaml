@@ -1,0 +1,52 @@
+scenario: REGION
+description: >
+  Synthetic stand-in for the real interpretation-table change (CLSI-REAL), with invented names. The changed region
+  is MIC 2 to 4 and 8 to 16 (closed intervals). A case is selected if the values its measurement allows overlap
+  the region: exact values inside it, censored values whose range reaches into it, and cases whose edge does not
+  say where the measurement sits (unsure means keep). Everything else is left alone. '>16' and '<2' do not reach a
+  closed interval ending at 16 or starting at 2; '>=16' and '<=4' do.
+authored_by: insharah
+authored_on_base_commit: b6c9e1b38eea2e67e870549aba11427391c9ce48      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Expected sets are written from plan section 6 and the over-selection principle (rule 6), not produced by running the selector.
+  The author had read the A-05 selector source before writing; no expected set was changed to fit it.
+world:
+  antibiotic: gentamicin
+  cases: [R_EXACT_4, R_EXACT_8, R_EXACT_3, R_EXACT_12, R_EXACT_2, R_EXACT_16, R_LE_4, R_GE_16, R_NO_CONTEXT,
+          R_EXACT_1, R_EXACT_6, R_EXACT_32, R_LE_1, R_GT_16, R_LT_2, R_GE_32, R_OTHER_RULE]
+  versions:
+    - {node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", version: TABLE_V1}
+    - {node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", version: TABLE_V2}
+  edges:
+    - {case: R_EXACT_4, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 4, sign: "=="}}
+    - {case: R_EXACT_8, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 8, sign: "=="}}
+    - {case: R_EXACT_3, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 3, sign: "=="}}
+    - {case: R_EXACT_12, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 12, sign: "=="}}
+    - {case: R_EXACT_2, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 2, sign: "=="}}
+    - {case: R_EXACT_16, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 16, sign: "=="}}
+    - {case: R_LE_4, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 4, sign: "<="}}
+    - {case: R_GE_16, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 16, sign: ">="}}
+    - {case: R_NO_CONTEXT, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1}
+    - {case: R_EXACT_1, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 1, sign: "=="}}
+    - {case: R_EXACT_6, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 6, sign: "=="}}
+    - {case: R_EXACT_32, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 32, sign: "=="}}
+    - {case: R_LE_1, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 1, sign: "<="}}
+    - {case: R_GT_16, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 16, sign: ">"}}
+    - {case: R_LT_2, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 2, sign: "<"}}
+    - {case: R_GE_32, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|mythicin|mic", node_version: TABLE_V1, node_context: {mic: 32, sign: ">="}}
+    - {case: R_OTHER_RULE, dep_type: input_evidence, edge_type: derived_from, node_type: interpretation_rule, node_id: "fantasy_std|imaginary bacillus|otheromycin|mic", node_version: TABLE_V1, node_context: {mic: 4, sign: "=="}}
+change_event:
+  change_id: CHG-ORACLE-REGION
+  type: INTERPRETATION_VERSION
+  old_version: TABLE_V1
+  new_version: TABLE_V2
+  changed_entities:
+    - node_type: interpretation_rule
+      node_id: "fantasy_std|imaginary bacillus|mythicin|mic"
+      old_version: TABLE_V1
+      new_version: TABLE_V2
+      changed_region: {field: mic, intervals: [[2, 4], [8, 16]]}
+expected:
+  required_case_ids: [R_EXACT_4, R_EXACT_8, R_EXACT_3, R_EXACT_12, R_EXACT_2, R_EXACT_16, R_LE_4, R_GE_16, R_NO_CONTEXT]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [R_EXACT_1, R_EXACT_6, R_EXACT_32, R_LE_1, R_GT_16, R_LT_2, R_GE_32, R_OTHER_RULE]
