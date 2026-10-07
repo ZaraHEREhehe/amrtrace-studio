@@ -796,8 +796,8 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 11   | A-01      | Aabia    | DONE      | PR #61                              | 91 unit tests; drug-specific genotype rules moved to a versioned policy (ADR-004 amendment 2); OP-1 and OP-3 closed (ADR-003 amendment 1) |
 | 12   | A-02      | Aabia    | DONE      | PR #63                              | Gate passed: 41,858 cases, 15 fields each, 0 mismatches against frozen V1 |
 | 13   | I-05      | Insharah | DONE      |  PR #66                             |                                                                                                 |
-| 14   | I-06      | Insharah | TODO      |                                     |                                                                                                 |
-| 15   | I-04      | Insharah | IN-REVIEW |  I-04 PR (feat/I-04-load-r1)        |                                                                                                 |
+| 14   | I-06      | Insharah | IN-REVIEW      | I-06 PR (feat/I-06-interpretation-layer)                                    |                                                                                                 |
+| 15   | I-04      | Insharah | DONE |  PR #68        |                                                                                                 |
 | 16   | A-03      | Aabia    | IN-REVIEW | PR #64, feat/A-03-r1-run            | R1 graph stored: 41,858 cases equal to the ledger; 1,196,148 dependency rows and 344,526 applicability rows, matching ADR-003 section 5; a second run writes nothing |
 | 17   | A-04      | Aabia    | TODO      |                                     |                                                                                                 |
 | 18   | Z-06      | Zara     | TODO      |                                     |                                                                                                 |

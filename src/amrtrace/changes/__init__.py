@@ -10,6 +10,7 @@ impact set is a later task (I-08).
 """
 
 from .builtin import BUILTIN_CHANGE_TYPES, register_builtin_types
+from .differs import register_default_differs
 from .errors import (
     ChangeError,
     ChangeNotFound,
@@ -26,6 +27,7 @@ from .validation import validate_against_database, validate_change_event, valida
 from .versions import get_version, list_versions, register_version, version_exists
 
 register_builtin_types(default_registry)
+register_default_differs(default_registry)
 
 __all__ = [
     "BUILTIN_CHANGE_TYPES", "register_builtin_types",
