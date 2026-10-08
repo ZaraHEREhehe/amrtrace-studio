@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 25 | **Last updated by / when:** Insharah, 2026-10-08 | **Blockers:** none logged. CLSI-REAL waits for the Ed32 baseline release (A-03b, I-04b).
+**Current step:** 29 | **Last updated by / when:** Insharah, 2026-10-08 | **Blockers:** none logged.
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -807,11 +807,11 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 22   | A-05      | Aabia    | DONE      | PR #67, PR #82                      | Oracle check done on the real cohort: CLSI-REAL selects all 154 required cases (recall 100%); 8,614 cases have an edge to the changed rule and region refinement narrows them to 254, which is 0.6% of the 41,858 cases. C2, C6, C1, C7, region refinement, the cross-release fixture and the introduced-rule fixture pass |
 | 23   | A-06      | Aabia    | DONE      | PR #78                              | Selector passes oracle C7: a new mapping rule has no stored edges, so its cases are found through the applicability table by determinant and antibiotic. A test keeps the realised-edge-only selector failing C7 |
 | 24   | A-07      | Aabia    | DONE      | PR #72                              | EXPLAIN plans and latency recorded in docs/design/selector_performance.md; no sequential scan on the hot path; no new index needed for R1 |
-| 25   | I-08      | Insharah | IN-REVIEW | feat/I-08-change-application-service | apply_change (register, select, store impact set in one transaction); migration 0006; real-data runner tests/oracle/real_data.py, not yet run on the real cohort |
+| 25   | I-08      | Insharah | DONE      | PR #86 | apply_change (register, select, store impact set in one transaction); migration 0006; real-data runner tests/oracle/real_data.py. Run on the real cohort by Aabia: 254 selected, 154 of 154 required cases, recall 100% |
 | 26   | Z-07      | Zara     | TODO      |                                     |                                                                                                 |
 | 27   | A-10      | Aabia    | DONE      | PR #83                              | src/amrtrace/deps/subgraph.py returns one case's dependency subgraph as typed nodes and edges, plus its rule space, ready to send as JSON. It shows the newest published release that holds rows for the case unless a release is named |
 | 28   | Z-08      | Zara     | TODO      |                                     |                                                                                                 |
-| 29   | I-09      | Insharah | TODO      |                                     |                                                                                                 |
+| 29   | I-09      | Insharah | IN-REVIEW | feat/I-09-selective-reevaluation | reevaluate(): re-evaluates only the stored impact set and appends a partial release in one savepoint; any error leaves a FAILED run row and nothing else; reviewer corrections are never overwritten and are listed for re-check; migration 0007 (reeval_run guards); command ingest/reevaluate_change.py |
 | 30   | I-10      | Insharah | TODO      |                                     |                                                                                                 |
 | 31   | I-11      | Insharah | TODO      |                                     |                                                                                                 |
 | 32   | A-08      | Aabia    | TODO      |                                     |                                                                                                 |

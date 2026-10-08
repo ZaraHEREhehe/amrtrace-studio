@@ -82,6 +82,30 @@ BEGIN
         END IF;
     END LOOP;
 
+    -- 7. re-evaluation runs (I-09): guarded updates, no delete or truncate, progress columns open to the app role
+    SELECT count(*) INTO n FROM pg_trigger
+        WHERE tgrelid = 'public.reeval_run'::regclass AND NOT tgisinternal AND tgenabled = 'O'
+          AND tgfoid = 'guard_reeval_run_update'::regproc;
+    IF n <> 1 THEN
+        RAISE EXCEPTION 'reeval_run should have its update guard enabled, found % guard trigger(s)', n;
+    END IF;
+    SELECT count(*) INTO n FROM pg_trigger
+        WHERE tgrelid = 'public.reeval_run'::regclass AND NOT tgisinternal AND tgenabled = 'O'
+          AND tgfoid = 'forbid_impact_mutation'::regproc;
+    IF n <> 2 THEN
+        RAISE EXCEPTION 'reeval_run should have 2 enabled append-only triggers, found %', n;
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns
+                   WHERE table_name = 'reeval_run' AND column_name = 'release_id') THEN
+        RAISE EXCEPTION 'reeval_run.release_id is missing';
+    END IF;
+    IF NOT has_table_privilege('amrtrace_app', 'reeval_run', 'INSERT')
+       OR NOT has_column_privilege('amrtrace_app', 'reeval_run', 'status', 'UPDATE')
+       OR has_column_privilege('amrtrace_app', 'reeval_run', 'change_id', 'UPDATE')
+       OR has_table_privilege('amrtrace_app', 'reeval_run', 'DELETE') THEN
+        RAISE EXCEPTION 'amrtrace_app privileges on reeval_run are wrong';
+    END IF;
+
     RAISE NOTICE 'SCHEMA OK';
 END
 $$;
