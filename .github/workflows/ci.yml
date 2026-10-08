@@ -44,3 +44,79 @@ jobs:
 
       - name: Build web image
         run: docker build --file docker/Dockerfile.web --tag amrtrace-web:ci .
+
+  unit-tests:
+    name: Unit tests with PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      AMRTRACE_PG_HOST: localhost
+      AMRTRACE_PG_PORT: "5432"
+      AMRTRACE_PG_USER: postgres
+      AMRTRACE_PG_PASSWORD: dev
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check pytest-cov==7.1.0
+
+      - name: Verify PostgreSQL service
+        run: |
+          python - <<'PY'
+          import os
+          import psycopg
+
+          with psycopg.connect(
+              host=os.environ["AMRTRACE_PG_HOST"],
+              port=os.environ["AMRTRACE_PG_PORT"],
+              user=os.environ["AMRTRACE_PG_USER"],
+              password=os.environ["AMRTRACE_PG_PASSWORD"],
+              dbname="postgres",
+              connect_timeout=5,
+          ) as conn:
+              value = conn.execute("SELECT 1").fetchone()[0]
+              assert value == 1
+
+          print("PostgreSQL service reachable")
+          PY
+
+      - name: Run unit tests with coverage
+        run: |
+          pytest tests/unit \
+            --cov=amrtrace \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: z-05-coverage
+          path: coverage.xml
+          if-no-files-found: error
+          retention-days: 14
