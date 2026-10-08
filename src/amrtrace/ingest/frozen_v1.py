@@ -2,7 +2,7 @@
 import hashlib
 import json
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -282,8 +282,12 @@ def build_case_inputs(
     panel: tuple[str, ...],
     organism: str,
     interpretation_rules: tuple[dict, ...] | None = None,
+    case_ids: Iterable[str] | None = None,
 ) -> Iterator[CaseInputs]:
     panel_set = frozenset(panel)
+    # None means every case; a set of ids builds only those, for selective re-evaluation
+    wanted = None if case_ids is None else {str(case_id) for case_id in case_ids}
+    built = set()
     # None means as-reported mode: no measurements and no rules are handed over
     with_measurement = interpretation_rules is not None
     rules_by_key = defaultdict(list)
@@ -312,6 +316,10 @@ def build_case_inputs(
     for target, antibiotic in sorted(
         ast_groups, key=lambda key: (panel_order[key[1]], key[0])
     ):
+        case_id = stable_case_id(target, antibiotic)
+        if wanted is not None and case_id not in wanted:
+            continue
+        built.add(case_id)
         isolate = isolates.get(target)
         if isolate is None:
             raise ValueError(f"AST rows exist for {target} but there is no isolate row")
@@ -349,7 +357,7 @@ def build_case_inputs(
         )
 
         yield CaseInputs(
-            case_id=stable_case_id(target, antibiotic),
+            case_id=case_id,
             target_acc=target,
             antibiotic=antibiotic,
             organism=organism,
@@ -359,6 +367,13 @@ def build_case_inputs(
             genotype_rows=genotype_rows,
             mapping_rules=tuple(mapping_rules),
             interpretation_rules=case_interpretation_rules,
+        )
+
+    # an id that names no case is a mistake upstream, so it is reported instead of skipped quietly
+    if wanted is not None and wanted - built:
+        missing = sorted(wanted - built)
+        raise ValueError(
+            f"{len(missing)} requested case ids are not in the files, for example {missing[0]}"
         )
 
 
