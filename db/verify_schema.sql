@@ -5,7 +5,7 @@ DECLARE
     expected_tables text[] := ARRAY[
         'snapshot', 'antibiotic', 'isolate', 'ast_evidence', 'genotype_evidence', 'mapping_rule', 'case',
         'version_node', 'interpretation_rule', 'change_event', 'release', 'case_state', 'dependency',
-        'applicability', 'reeval_run', 'review_event'];
+        'applicability', 'reeval_run', 'review_event', 'impact_set', 'impact_item'];
     t text;
     n integer;
 BEGIN
@@ -66,6 +66,21 @@ BEGIN
        OR has_table_privilege('amrtrace_app', 'case_state', 'TRUNCATE') THEN
         RAISE EXCEPTION 'amrtrace_app privileges on case_state are wrong';
     END IF;
+
+    -- 6. stored impact sets (I-08): append-only through their own trigger function, app role cannot change them
+    FOREACH t IN ARRAY ARRAY['impact_set', 'impact_item'] LOOP
+        SELECT count(*) INTO n FROM pg_trigger
+            WHERE tgrelid = ('public.' || t)::regclass AND NOT tgisinternal AND tgenabled = 'O'
+              AND tgfoid = 'forbid_impact_mutation'::regproc;
+        IF n <> 2 THEN
+            RAISE EXCEPTION 'table % should have 2 enabled append-only triggers, found %', t, n;
+        END IF;
+        IF NOT has_table_privilege('amrtrace_app', t, 'INSERT')
+           OR has_table_privilege('amrtrace_app', t, 'UPDATE')
+           OR has_table_privilege('amrtrace_app', t, 'DELETE') THEN
+            RAISE EXCEPTION 'amrtrace_app privileges on % are wrong', t;
+        END IF;
+    END LOOP;
 
     RAISE NOTICE 'SCHEMA OK';
 END

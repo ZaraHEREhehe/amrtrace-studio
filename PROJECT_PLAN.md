@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 22 (A-05 IN-PROGRESS: oracle run pending) | **Last updated by / when:** Insharah, 2026-10-07 | **Blockers:** none logged. CLSI-REAL waits for the Ed32 baseline release (A-03b, I-04b).
+**Current step:** 25 | **Last updated by / when:** Insharah, 2026-10-08 | **Blockers:** none logged. CLSI-REAL waits for the Ed32 baseline release (A-03b, I-04b).
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -807,9 +807,9 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 22   | A-05      | Aabia    | DONE      | PR #67, PR #82                      | Oracle check done on the real cohort: CLSI-REAL selects all 154 required cases (recall 100%); 8,614 cases have an edge to the changed rule and region refinement narrows them to 254, which is 0.6% of the 41,858 cases. C2, C6, C1, C7, region refinement, the cross-release fixture and the introduced-rule fixture pass |
 | 23   | A-06      | Aabia    | DONE      | PR #78                              | Selector passes oracle C7: a new mapping rule has no stored edges, so its cases are found through the applicability table by determinant and antibiotic. A test keeps the realised-edge-only selector failing C7 |
 | 24   | A-07      | Aabia    | DONE      | PR #72                              | EXPLAIN plans and latency recorded in docs/design/selector_performance.md; no sequential scan on the hot path; no new index needed for R1 |
-| 25   | I-08      | Insharah | TODO      |                                     |                                                                                                 |
+| 25   | I-08      | Insharah | IN-REVIEW | feat/I-08-change-application-service | apply_change (register, select, store impact set in one transaction); migration 0006; real-data runner tests/oracle/real_data.py, not yet run on the real cohort |
 | 26   | Z-07      | Zara     | TODO      |                                     |                                                                                                 |
-| 27   | A-10      | Aabia    | IN-REVIEW | feat/A-10-dossier-subgraph-query    | src/amrtrace/deps/subgraph.py returns one case's dependency subgraph as typed nodes and edges, plus its rule space, ready to send as JSON. It shows the newest published release that holds rows for the case unless a release is named |
+| 27   | A-10      | Aabia    | DONE      | PR #83                              | src/amrtrace/deps/subgraph.py returns one case's dependency subgraph as typed nodes and edges, plus its rule space, ready to send as JSON. It shows the newest published release that holds rows for the case unless a release is named |
 | 28   | Z-08      | Zara     | TODO      |                                     |                                                                                                 |
 | 29   | I-09      | Insharah | TODO      |                                     |                                                                                                 |
 | 30   | I-10      | Insharah | TODO      |                                     |                                                                                                 |
@@ -818,13 +818,13 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 33   | A-09      | Aabia    | TODO      |                                     |                                                                                                 |
 | 34   | Z-09      | Zara     | TODO      |                                     |                                                                                                 |
 | 35   | Z-10      | Zara     | TODO      |                                     |                                                                                                 |
-| 36   | I-12      | Insharah | IN-REVIEW | I-12 PR (feat/I-12-review-events-and-export) | add_review (append-only, reason required, current published state only), get_reviews, get_latest_review; export_as_of, export_json and snapshot_hash for a reproducible as-of export. CORRECT reviews carry corrected_state_code (migration 0005). Early start under D-15 |
+| 36   | I-12      | Insharah | DONE | PR #81| add_review (append-only, reason required, current published state only), get_reviews, get_latest_review; export_as_of, export_json and snapshot_hash for a reproducible as-of export. CORRECT reviews carry corrected_state_code (migration 0005). Early start under D-15 |
 | 37   | I-13      | Insharah | TODO      |                                     |                                                                                                 |
 | 38   | Z-11      | Zara     | TODO      |                                     |                                                                                                 |
 | 39   | Z-12      | Zara     | TODO      |                                     |                                                                                                 |
 | 40   | Z-13      | Zara     | TODO      |                                     |                                                                                                 |
 | 41   | G-03      | Zara     | TODO      |                                     |                                                                                                 |
-| 42   | A-11      | Aabia    | TODO      |                                     |                                                                                                 |
+| 42   | A-11      | Aabia    | IN-REVIEW | docs/A-11-graph-design-note         | docs/design/graph_design.md: the graph as built (taxonomy with R1 and R2 counts, layers, why the stored graph is flat), the applicability rationale, how selection uses it, changes since the proposal, and limits |
 | 43   | I-14      | Insharah | TODO      |                                     |                                                                                                 |
 | 44   | G-04      | Insharah | TODO      |                                     |                                                                                                 |
 | 45   | G-05      | Insharah | TODO      |                                     |                                                                                                 |
