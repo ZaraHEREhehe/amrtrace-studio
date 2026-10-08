@@ -779,7 +779,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 
 ## 14. Live status (update in every PR)
 
-**Current step:** 29 | **Last updated by / when:** Insharah, 2026-10-08 | **Blockers:** none logged.
+**Current step:** 30 | **Last updated by / when:** Insharah, 2026-10-08 | **Blockers:** none logged.
 
 | Step | Task      | Driver   | Status    | PR / evidence                       | Notes                                                                                           |
 | ---- | --------- | -------- | --------- | ----------------------------------- | ----------------------------------------------------------------------------------------------- |
@@ -811,8 +811,8 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 26   | Z-07      | Zara     | TODO      |                                     |                                                                                                 |
 | 27   | A-10      | Aabia    | DONE      | PR #83                              | src/amrtrace/deps/subgraph.py returns one case's dependency subgraph as typed nodes and edges, plus its rule space, ready to send as JSON. It shows the newest published release that holds rows for the case unless a release is named |
 | 28   | Z-08      | Zara     | TODO      |                                     |                                                                                                 |
-| 29   | I-09      | Insharah | IN-REVIEW | feat/I-09-selective-reevaluation | reevaluate(): re-evaluates only the stored impact set and appends a partial release in one savepoint; any error leaves a FAILED run row and nothing else; reviewer corrections are never overwritten and are listed for re-check; migration 0007 (reeval_run guards); command ingest/reevaluate_change.py |
-| 30   | I-10      | Insharah | TODO      |                                     |                                                                                                 |
+| 29   | I-09      | Insharah | DONE      | issue #30 | reevaluate(): re-evaluates only the stored impact set and appends a partial release in one savepoint; any error leaves a FAILED run row and nothing else; reviewer corrections are never overwritten and are listed for re-check; migration 0007; command ingest/reevaluate_change.py. Run on the real cohort by Aabia: 254 re-evaluated, 246 changed, stored as R3 |
+| 30   | I-10      | Insharah | IN-REVIEW | feat/I-10-exhaustive-comparator | compare_with_exhaustive(): every case re-evaluated and compared with the selective result on state, uncertainty and dependency; any mismatch blocks the release (gate_release); recall, precision and reprocessing ratio reported; migration 0008 (equivalence_report); commands ingest/compare_change.py and reevaluate_change --hold |
 | 31   | I-11      | Insharah | TODO      |                                     |                                                                                                 |
 | 32   | A-08      | Aabia    | TODO      |                                     |                                                                                                 |
 | 33   | A-09      | Aabia    | TODO      |                                     |                                                                                                 |
