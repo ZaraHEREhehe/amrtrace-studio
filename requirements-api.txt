@@ -1,0 +1,4 @@
+# Runtime dependencies for the AMRTrace Studio API.
+fastapi==0.142.4
+uvicorn==0.53.0
+psycopg[binary]==3.3.6

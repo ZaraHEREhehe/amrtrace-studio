@@ -1,0 +1,3 @@
+# Test dependencies for the Z-06 FastAPI layer.
+-r requirements-api.txt
+httpx2==2.13.0

@@ -45,6 +45,69 @@ jobs:
       - name: Build web image
         run: docker build --file docker/Dockerfile.web --tag amrtrace-web:ci .
 
+
+  api-tests:
+    name: Z-06 API integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      AMRTRACE_PG_HOST: localhost
+      AMRTRACE_PG_PORT: "5432"
+      AMRTRACE_PG_USER: postgres
+      AMRTRACE_PG_PASSWORD: dev
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install API test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -r requirements-api-test.txt
+
+      - name: Verify PostgreSQL service
+        run: |
+          python - <<'PY'
+          import os
+          import psycopg
+
+          with psycopg.connect(
+              host=os.environ["AMRTRACE_PG_HOST"],
+              port=os.environ["AMRTRACE_PG_PORT"],
+              user=os.environ["AMRTRACE_PG_USER"],
+              password=os.environ["AMRTRACE_PG_PASSWORD"],
+              dbname="postgres",
+              connect_timeout=5,
+          ) as conn:
+              assert conn.execute("SELECT 1").fetchone()[0] == 1
+
+          print("PostgreSQL service reachable")
+          PY
+
+      - name: Run Z-06 API tests
+        run: pytest tests/integration/test_api_read.py -q --maxfail=1
+
   unit-tests:
     name: Unit tests with PostgreSQL
     runs-on: ubuntu-latest
