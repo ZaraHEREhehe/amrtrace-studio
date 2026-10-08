@@ -809,7 +809,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 24   | A-07      | Aabia    | DONE      | PR #72                              | EXPLAIN plans and latency recorded in docs/design/selector_performance.md; no sequential scan on the hot path; no new index needed for R1 |
 | 25   | I-08      | Insharah | TODO      |                                     |                                                                                                 |
 | 26   | Z-07      | Zara     | TODO      |                                     |                                                                                                 |
-| 27   | A-10      | Aabia    | IN-REVIEW | feat/A-10-dossier-subgraph-query    | src/amrtrace/deps/subgraph.py returns one case's dependency subgraph as typed nodes and edges, plus its rule space, ready to send as JSON. It shows the newest published release that holds rows for the case unless a release is named |
+| 27   | A-10      | Aabia    | DONE      | PR #83                              | src/amrtrace/deps/subgraph.py returns one case's dependency subgraph as typed nodes and edges, plus its rule space, ready to send as JSON. It shows the newest published release that holds rows for the case unless a release is named |
 | 28   | Z-08      | Zara     | TODO      |                                     |                                                                                                 |
 | 29   | I-09      | Insharah | TODO      |                                     |                                                                                                 |
 | 30   | I-10      | Insharah | TODO      |                                     |                                                                                                 |
@@ -824,7 +824,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 39   | Z-12      | Zara     | TODO      |                                     |                                                                                                 |
 | 40   | Z-13      | Zara     | TODO      |                                     |                                                                                                 |
 | 41   | G-03      | Zara     | TODO      |                                     |                                                                                                 |
-| 42   | A-11      | Aabia    | TODO      |                                     |                                                                                                 |
+| 42   | A-11      | Aabia    | IN-REVIEW | docs/A-11-graph-design-note         | docs/design/graph_design.md: the graph as built (taxonomy with R1 and R2 counts, layers, why the stored graph is flat), the applicability rationale, how selection uses it, changes since the proposal, and limits |
 | 43   | I-14      | Insharah | TODO      |                                     |                                                                                                 |
 | 44   | G-04      | Insharah | TODO      |                                     |                                                                                                 |
 | 45   | G-05      | Insharah | TODO      |                                     |                                                                                                 |
