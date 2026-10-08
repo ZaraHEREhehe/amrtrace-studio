@@ -1,5 +1,6 @@
 # selective re-evaluation of a change that is already applied: only the cases in its stored impact set are evaluated again
 import argparse
+from dataclasses import dataclass
 from pathlib import Path
 
 import psycopg
@@ -28,14 +29,19 @@ INTERPRETATION_CHANGE = "INTERPRETATION_VERSION"
 SHOWN_CORRECTIONS = 10
 
 
-def reevaluate_interpretation_change(
-    conn,
-    tables: FrozenTables,
-    change_id: str,
-    release_id: str,
-    panel: tuple[str, ...],
-    organism: str,
-) -> ReevalReport:
+@dataclass(frozen=True)
+class ChangeContext:
+    """Everything needed to evaluate a case under the versions a stored interpretation change moves to."""
+
+    version_vector: dict
+    versions: object
+    inputs_for: object
+    base_release_id: str
+
+
+def interpretation_context(
+    conn, tables: FrozenTables, change_id: str, panel: tuple[str, ...], organism: str
+) -> ChangeContext:
     row = conn.execute(
         "SELECT type, old_version, new_version FROM change_event WHERE change_id = %s", (change_id,)
     ).fetchone()
@@ -44,7 +50,7 @@ def reevaluate_interpretation_change(
     change_type, _, new_version = row
     if change_type != INTERPRETATION_CHANGE:
         raise ValueError(
-            f"change {change_id} has type {change_type}; this command re-evaluates {INTERPRETATION_CHANGE} changes only"
+            f"change {change_id} has type {change_type}; this command works on {INTERPRETATION_CHANGE} changes only"
         )
     impact = get_impact_set(conn, change_id)
     if impact is None:
@@ -69,18 +75,33 @@ def reevaluate_interpretation_change(
     def inputs_for(case_ids):
         return build_case_inputs(tables, panel, organism, interpretation_rules=rules, case_ids=case_ids)
 
+    return ChangeContext(version_vector, versions, inputs_for, impact.release_id)
+
+
+def reevaluate_interpretation_change(
+    conn,
+    tables: FrozenTables,
+    change_id: str,
+    release_id: str,
+    panel: tuple[str, ...],
+    organism: str,
+    publish: bool = True,
+) -> ReevalReport:
+    """publish=False leaves the new release a DRAFT, so the exhaustive comparison can gate it (compare_change)."""
+    context = interpretation_context(conn, tables, change_id, panel, organism)
     return reevaluate(
         conn,
         change_id,
         release_id,
-        version_vector,
-        versions,
-        inputs_for=inputs_for,
+        context.version_vector,
+        context.versions,
+        inputs_for=context.inputs_for,
         evaluate=evaluate,
+        publish=publish,
     )
 
 
-def render_report(report: ReevalReport, stored: bool) -> str:
+def render_report(report: ReevalReport, stored: bool, held: bool = False) -> str:
     lines = [
         f"change {report.change_id}: {report.selected:,} cases selected against release {report.base_release_id}",
         f"run {report.run_id}: {report.status}",
@@ -102,6 +123,8 @@ def render_report(report: ReevalReport, stored: bool) -> str:
             f"  {notice.case_id}: {notice.reviewer} corrected {notice.previous_state_code} -> "
             f"{notice.corrected_state_code}; now {notice.new_state_code} ({verdict})"
         )
+    if report.release_id is not None and held:
+        lines.append(f"release {report.release_id} is a DRAFT: run compare_change --gate to publish or block it")
     lines.append("STORED" if stored else "DRY RUN: everything above was rolled back, nothing is stored (use --commit to keep it)")
     return "\n".join(lines)
 
@@ -115,6 +138,8 @@ def main() -> int:
     parser.add_argument("--data-dir", default="data/raw")
     parser.add_argument("--manifest", default="data/manifest/sha256.txt")
     parser.add_argument("--commit", action="store_true", help="keep the result; without it everything is rolled back")
+    parser.add_argument("--hold", action="store_true",
+                        help="leave the new release a DRAFT until compare_change --gate has checked it")
     arguments = parser.parse_args()
 
     try:
@@ -123,7 +148,8 @@ def main() -> int:
         with psycopg.connect(_conninfo()) as conn:
             try:
                 report = reevaluate_interpretation_change(
-                    conn, tables, arguments.change_id, arguments.release_id, _panel(conn), _organism(conn)
+                    conn, tables, arguments.change_id, arguments.release_id, _panel(conn), _organism(conn),
+                    publish=not arguments.hold,
                 )
             except ReevaluationFailed as problem:
                 # the failed run row is the only thing written; keep it only when asked to store results
@@ -135,7 +161,7 @@ def main() -> int:
         print(f"STOP: {type(problem).__name__}: {problem}")
         return 1
 
-    print(render_report(report, stored=arguments.commit))
+    print(render_report(report, stored=arguments.commit, held=arguments.hold))
     return 0
 
 

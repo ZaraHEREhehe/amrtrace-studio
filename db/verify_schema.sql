@@ -5,7 +5,7 @@ DECLARE
     expected_tables text[] := ARRAY[
         'snapshot', 'antibiotic', 'isolate', 'ast_evidence', 'genotype_evidence', 'mapping_rule', 'case',
         'version_node', 'interpretation_rule', 'change_event', 'release', 'case_state', 'dependency',
-        'applicability', 'reeval_run', 'review_event', 'impact_set', 'impact_item'];
+        'applicability', 'reeval_run', 'review_event', 'impact_set', 'impact_item', 'equivalence_report'];
     t text;
     n integer;
 BEGIN
@@ -104,6 +104,21 @@ BEGIN
        OR has_column_privilege('amrtrace_app', 'reeval_run', 'change_id', 'UPDATE')
        OR has_table_privilege('amrtrace_app', 'reeval_run', 'DELETE') THEN
         RAISE EXCEPTION 'amrtrace_app privileges on reeval_run are wrong';
+    END IF;
+
+    -- 8. equivalence reports (I-10): append-only through the shared trigger function, app role can read and add only
+    SELECT count(*) INTO n FROM pg_trigger
+        WHERE tgrelid = 'public.equivalence_report'::regclass AND NOT tgisinternal AND tgenabled = 'O'
+          AND tgfoid = 'forbid_impact_mutation'::regproc;
+    IF n <> 2 THEN
+        RAISE EXCEPTION 'equivalence_report should have 2 enabled append-only triggers, found %', n;
+    END IF;
+    IF NOT has_table_privilege('amrtrace_app', 'equivalence_report', 'SELECT')
+       OR NOT has_table_privilege('amrtrace_app', 'equivalence_report', 'INSERT')
+       OR has_table_privilege('amrtrace_app', 'equivalence_report', 'UPDATE')
+       OR has_table_privilege('amrtrace_app', 'equivalence_report', 'DELETE')
+       OR has_table_privilege('amrtrace_app', 'equivalence_report', 'TRUNCATE') THEN
+        RAISE EXCEPTION 'amrtrace_app privileges on equivalence_report are wrong';
     END IF;
 
     RAISE NOTICE 'SCHEMA OK';

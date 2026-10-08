@@ -34,6 +34,7 @@ from amrtrace.evaluator.types import CaseInputs, EvalResult, VersionVector
 from amrtrace.ledger.load_release import BaselineState, load_later_release
 
 MODE_SELECTIVE = "SELECTIVE"
+MODE_EXHAUSTIVE = "EXHAUSTIVE"
 ERROR_TEXT_LIMIT = 2000
 
 
@@ -125,17 +126,17 @@ def _current_corrections(conn, case_ids: list[str]) -> dict[str, tuple[str, str,
     return {row[0]: (row[1], row[2], row[3]) for row in rows}
 
 
-def _start_run(conn, run_id: str, change_id: str, selected: int) -> None:
+def _start_run(conn, run_id: str, change_id: str, selected: int, mode: str = MODE_SELECTIVE) -> None:
     try:
         with atomic(conn):
             conn.execute(
                 "INSERT INTO reeval_run (run_id, change_id, mode, status, selected_count, started_at) "
                 "VALUES (%s, %s, %s, 'RUNNING', %s, clock_timestamp())",
-                (run_id, change_id, MODE_SELECTIVE, selected),
+                (run_id, change_id, mode, selected),
             )
     except errors.UniqueViolation as exc:
         raise AlreadyReevaluated(
-            f"change {change_id} already has a live {MODE_SELECTIVE} run (running or complete)"
+            f"change {change_id} already has a live {mode} run (running or complete)"
         ) from exc
 
 
