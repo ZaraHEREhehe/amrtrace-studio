@@ -819,7 +819,7 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | 34   | Z-09      | Zara     | TODO      |                                     |                                                                                                 |
 | 35   | Z-10      | Zara     | TODO      |                                     |                                                                                                 |
 | 36   | I-12      | Insharah | DONE | PR #81| add_review (append-only, reason required, current published state only), get_reviews, get_latest_review; export_as_of, export_json and snapshot_hash for a reproducible as-of export. CORRECT reviews carry corrected_state_code (migration 0005). Early start under D-15 |
-| 37   | I-13      | Insharah | TODO      |                                     |                                                                                                 |
+| 37   | I-13      | Insharah | IN-REVIEW | feat/I-13-case-diff | case_diff() in src/amrtrace/reeval/diff.py: before/after state, explanation, versions and dependency records for one case; tests/integration/test_reeval_diff.py |
 | 38   | Z-11      | Zara     | TODO      |                                     |                                                                                                 |
 | 39   | Z-12      | Zara     | TODO      |                                     |                                                                                                 |
 | 40   | Z-13      | Zara     | TODO      |                                     |                                                                                                 |
