@@ -12,6 +12,15 @@ from .compare import (
     gate_release,
     stored_report,
 )
+from .diff import (
+    CaseDiff,
+    CaseNotFound,
+    DependencyRecordView,
+    FieldChange,
+    StateSide,
+    VersionChange,
+    case_diff,
+)
 from .engine import (
     AlreadyReevaluated,
     CorrectionNotice,
@@ -24,6 +33,7 @@ from .engine import (
 )
 
 __all__ = [
+    "CaseDiff", "CaseNotFound", "DependencyRecordView", "FieldChange", "StateSide", "VersionChange", "case_diff",
     "AlreadyCompared", "AlreadyReevaluated", "AxisResult", "ComparisonFailed", "CorrectionNotice",
     "EquivalenceReport", "GateError", "InputsMismatch", "Mismatch", "NoImpactSet", "NoSelectiveRun", "ReevalReport",
     "ReevaluationError", "ReevaluationFailed", "compare_with_exhaustive", "gate_release", "reevaluate",
