@@ -1,4 +1,4 @@
-"""Minimal Z-02 API stub used only for container health verification."""
+# Minimal Z-02 API stub used only for container health verification.
 
 from __future__ import annotations
 
