@@ -130,3 +130,29 @@ Raised and written by Aabia (A-01, PR #61). Closes OP-1 and OP-3.
    - `*_supporting` is the subset of items that decided the genotype state. For a decisive state these are the decisive items. For a contextual state these are the contextual items, so the lists are not limited to resistance support. The counts agree: 7,472 decisive plus 3,534 contextual cases equals the 11,006 cases with a non-empty supporting list.
    - The edge mapping in section 5 stands. Read `positive_support` on the two supporting lists as "evidence that decided the state", which includes contextual evidence.
 2. **OP-3 is closed.** The spec is in the repository as `docs/spec/CASE_RULES_V1.md`, renamed from `M8_2_CASE_RULES_V1.md` to match its rule ID. Its sha256 is `c4338fc4c50fdadb2c62a92c7bf3c8c3100d467b2d3aaa7a9a00c8ba573406f2`, as recorded above. The file is marked `-text` in `.gitattributes` so the hash is the same on every machine. Provenance is in `docs/spec/README.md`.
+
+## Amendment 2 (2026-10-08)
+
+Raised and written by Aabia after the Ed32 interpretation release was stored (PR #82). Records what the graph now holds beyond section 5.
+
+1. **A new node type, `interpretation_rule`.** Its node id is the rule key built by `interpretation.models.make_rule_key`, and its node version is the interpretation version in force. Two kinds of edge point at it, both stored in `dependency`:
+   - `input_evidence` / `derived_from`, when a rule was applied to a measurement. `node_context` holds `{"mic": ..., "sign": ...}`, which region refinement reads.
+   - `applicability` / `evaluated_against`, when the case looked for a rule and none applied. It has no context. It is stored in `dependency` and not in the `applicability` table, because that table is keyed on determinant and antibiotic (section 6, D-19).
+2. **Section 5 describes R1 only.** R1's edges come from exploding the five frozen id lists. A later release is materialized from the evaluator's own dependency records, which give the same five groups plus the interpretation edges.
+3. **R2, the Ed32 interpretation release, as stored.**
+
+| `dep_type` | `node_type` | Rows |
+|---|---|---|
+| `input_evidence` | `ast_evidence` | 41,880 |
+| `input_evidence` | `genotype_evidence` | 469,755 |
+| `input_evidence` | `interpretation_rule` | 8,616 |
+| `positive_support` | `genotype_evidence` | 26,972 |
+| `positive_support` | `mapping_rule` | 20,009 |
+| `applicability` | `mapping_rule` | 344,526 |
+| `applicability` | `interpretation_rule` | 33,228 |
+| `provenance_version` | seven version node types, 41,858 each | 293,006 |
+| | **Total** | **1,237,992** |
+
+   This is R1's 1,196,148 rows plus the 41,844 interpretation edges. The `applicability` table holds 344,526 rows for R2, the same as for R1. R2 has 41,858 states, of which 1,541 differ from R1 and 40,317 do not.
+4. **A release stores its own full set of rows for every case it evaluates.** Rows of earlier releases are never changed. The current dependencies of a case are the rows of the newest published release that holds rows for that case. The impact selector and the subgraph query both use this rule.
+5. **Cost.** A full release adds about 1.2 million rows to `dependency`. The effect on selection time is measured in `docs/design/selector_performance.md`.

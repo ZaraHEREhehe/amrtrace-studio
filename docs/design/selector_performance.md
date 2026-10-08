@@ -108,3 +108,49 @@ WHERE release_id = 'R1' AND node_type = '<node type>' AND node_id = '<node id>';
 ```
 
 Cold figures depend on what is already in memory, so a repeat run on a warm database will be faster than the table above.
+
+## Re-measurement with two releases (2026-10-08)
+
+This is the follow-up promised above. It was done after R2, the Ed32 interpretation release, was stored. R2 is a full release, so the `dependency` table went from 1,196,148 to 2,434,140 rows. That differs from the assumption in the decision above, which expected later releases to store rows only for re-evaluated cases.
+
+### What was measured
+
+`scripts/selector_timing.py` times the whole call to `select_impact_detailed` from Python, three times per change. The changes are registered inside a transaction that is rolled back, so nothing is written. "First" is the first call and "best" is the fastest of the three.
+
+These figures are **not like for like with the table at the top of this note**. That table gives the time of one SQL lookup. These give the whole selection: the lookup, finding each case's current release, region refinement and building the result.
+
+| Change | Stored rows | Cases selected | First fix: first / best | After the correction: first / best |
+|---|---|---|---|---|
+| Typical mapping rule | 4 | 2 | 7.7 / 1.9 ms | 7.2 / 2.0 ms |
+| Busiest mapping rule | 18,254 | 9,127 | 2,118 / 632 ms | 1,408 / 235 ms |
+| Busiest interpretation rule | 8,843 | 8,843 | 627 / 491 ms | 300 / 118 ms |
+| Version node every case depends on | 83,716 | 41,858 | 7,402 / 2,054 ms | 4,789 / 805 ms |
+| New rule found through the rule space | 19,248 | 9,624 | 373 / 373 ms | 520 / 130 ms |
+
+### What went wrong, and the correction
+
+The selector was changed in A-05 so that each case is judged by the newest published release that holds rows for it. The first version of that change found the newest release by reading every stored row of every candidate case. For the version node that is about 2.4 million rows, read only to learn "R1 or R2".
+
+The correction asks one question per case through `dependency_case_release_idx` and `applicability_case_release_idx`: does the newest release hold anything for this case? Only cases that answer no are asked about the next older release. The selected cases are identical, and the busy changes became 2.5 to 4 times faster.
+
+The correctness checks were repeated after the correction: the full test suite passes, and CLSI-REAL on the real cohort still selects 254 cases, including all 154 required ones.
+
+### Findings
+
+1. **The typical change is unaffected.** About 2 ms for the whole selection.
+2. **A change to a busy node now costs a few hundred milliseconds, and a change that touches every case costs about 0.8 s warm.** The cost grows with the number of candidate cases and with the number of releases that hold rows for the same node.
+3. **A change that touches every case is not a selection problem.** All 41,858 cases must be re-evaluated anyway, which takes far longer than 0.8 s.
+4. **Finding 3 of the original note has come true.** Both releases' rows for a node are read, and half are then discarded because they are not the case's current release.
+
+### Decision
+
+No new index is added now. The remaining cost on busy nodes is below one second, and the evaluation scenarios select a few hundred cases.
+
+If more full releases are stored, the right change is structural, not a wider index: record each case's current release once, when a release is published, so the selector reads only current rows. That would need a migration and an owner for the ledger side, so it is raised here for the team and not done in this task.
+
+### How to repeat it
+
+```powershell
+python scripts\selector_timing.py
+python scripts\run_real_oracle.py --new-table data\interpretation\clsi_m100_ed33.yaml
+```

@@ -101,21 +101,29 @@ def _latest_published_release(conn) -> str:
 
 # for each case, the newest published release that holds stored rows for it: those rows are its current dependencies
 def _current_releases(cursor, case_ids: set[str]) -> dict[str, str]:
-    if not case_ids:
-        return {}
-    ids = sorted(case_ids)
-    # edges and rule-space rows are written together, so either table shows a release evaluated the case
     cursor.execute(
-        "SELECT DISTINCT ON (s.case_id) s.case_id, s.release_id FROM ("
-        "  SELECT case_id, release_id FROM dependency WHERE case_id = ANY(%s) "
-        "  UNION "
-        "  SELECT case_id, release_id FROM applicability WHERE case_id = ANY(%s)"
-        ") s JOIN release r ON r.release_id = s.release_id "
-        "WHERE r.status = 'PUBLISHED' "
-        "ORDER BY s.case_id, r.release_seq DESC",
-        (ids, ids),
+        "SELECT release_id FROM release WHERE status = 'PUBLISHED' ORDER BY release_seq DESC"
     )
-    return {row["case_id"]: row["release_id"] for row in cursor.fetchall()}
+    releases = [row["release_id"] for row in cursor.fetchall()]
+
+    current = {}
+    remaining = sorted(case_ids)
+    # newest release first: a case is settled by the first release that holds anything for it
+    for release_id in releases:
+        if not remaining:
+            break
+        # one index probe per case, which stays cheap however many edges a case has
+        # edges and rule-space rows are written together, so either table shows the release evaluated the case
+        cursor.execute(
+            "SELECT c.case_id FROM unnest(%s::text[]) AS c(case_id) WHERE "
+            "EXISTS (SELECT 1 FROM dependency d WHERE d.case_id = c.case_id AND d.release_id = %s) "
+            "OR EXISTS (SELECT 1 FROM applicability a WHERE a.case_id = c.case_id AND a.release_id = %s)",
+            (remaining, release_id, release_id),
+        )
+        for row in cursor.fetchall():
+            current[row["case_id"]] = release_id
+        remaining = [case_id for case_id in remaining if case_id not in current]
+    return current
 
 
 def _reason(edge: dict) -> str:
