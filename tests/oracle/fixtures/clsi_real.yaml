@@ -7,10 +7,6 @@ authored_on_base_commit: b6c9e1b38eea2e67e870549aba11427391c9ce48
 author_note: Expected set derived from the raw AST evidence files (see build_clsi_real_fixture.py), not from the dependency
   graph or the selector.
 real_data: true
-pending:
-  until: interpretation baseline
-  reason: needs a release evaluated in interpretation mode with CLSI_M100_ED32, because the as-reported baseline R1 stores
-    no edges to interpretation rules
 change_event:
   change_id: CHG-CLSI-ED33
   type: INTERPRETATION_VERSION
