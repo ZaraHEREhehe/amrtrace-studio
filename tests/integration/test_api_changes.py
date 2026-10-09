@@ -42,6 +42,13 @@ def _mapping_change(change_id: str = "CHG-API-1") -> dict:
 
 @pytest.fixture
 def api_change_database(conn):
+    conn.execute(
+        """
+        INSERT INTO antibiotic (antibiotic, in_panel)
+        VALUES ('drug-test', true)
+        """
+    )
+
     for case_id in ("CASE_A", "CASE_B", "CASE_C"):
         target = f"PDT_{case_id}"
         conn.execute(
