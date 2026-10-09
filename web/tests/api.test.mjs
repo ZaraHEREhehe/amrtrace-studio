@@ -1,0 +1,142 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  ApiError,
+  createChange,
+  getCaseDependencies,
+  listChanges,
+} from "../api.mjs";
+
+
+function response(status, payload) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async text() {
+      return payload === null ? "" : JSON.stringify(payload);
+    },
+  };
+}
+
+
+test("listChanges uses the same-origin API proxy", async () => {
+  let seenUrl;
+  let seenOptions;
+
+  const fakeFetch = async (url, options) => {
+    seenUrl = url;
+    seenOptions = options;
+    return response(200, []);
+  };
+
+  const result = await listChanges(25, fakeFetch);
+
+  assert.deepEqual(result, []);
+  assert.equal(seenUrl, "/api/changes?limit=25");
+  assert.equal(seenOptions.method, "GET");
+});
+
+
+test("createChange sends JSON to POST /api/changes", async () => {
+  let seenUrl;
+  let seenOptions;
+
+  const payload = {
+    change_id: "CHANGE_TEST",
+    type: "TYPE_TEST",
+    old_version: "V1",
+    new_version: "V2",
+    initiator: "ui-test",
+  };
+
+  const fakeFetch = async (url, options) => {
+    seenUrl = url;
+    seenOptions = options;
+    return response(201, { event: payload });
+  };
+
+  const result = await createChange(payload, fakeFetch);
+
+  assert.equal(seenUrl, "/api/changes");
+  assert.equal(seenOptions.method, "POST");
+  assert.equal(
+    seenOptions.headers["Content-Type"],
+    "application/json",
+  );
+  assert.deepEqual(
+    JSON.parse(seenOptions.body),
+    payload,
+  );
+  assert.deepEqual(result, { event: payload });
+});
+
+
+test("structured API failures remain structured", async () => {
+  const fakeFetch = async () =>
+    response(422, {
+      error_code: "invalid_change_event",
+      message: "Change event validation failed",
+      details: {
+        problems: ["synthetic problem"],
+      },
+    });
+
+  await assert.rejects(
+    () => createChange({}, fakeFetch),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, 422);
+      assert.equal(
+        error.errorCode,
+        "invalid_change_event",
+      );
+      assert.deepEqual(
+        error.details,
+        { problems: ["synthetic problem"] },
+      );
+      return true;
+    },
+  );
+});
+
+
+test("case ids are URL encoded for dependency requests", async () => {
+  let seenUrl;
+
+  const fakeFetch = async (url) => {
+    seenUrl = url;
+
+    return response(200, {
+      case_id: "CASE A/1",
+      release_id: "R1",
+      nodes: [],
+      edges: [],
+      rule_space: [],
+    });
+  };
+
+  await getCaseDependencies("CASE A/1", fakeFetch);
+
+  assert.equal(
+    seenUrl,
+    "/api/cases/CASE%20A%2F1/dependencies",
+  );
+});
+
+
+test("network failures have a stable error code", async () => {
+  const fakeFetch = async () => {
+    throw new Error("offline");
+  };
+
+  await assert.rejects(
+    () => listChanges(100, fakeFetch),
+    (error) => {
+      assert.ok(error instanceof ApiError);
+      assert.equal(error.status, 0);
+      assert.equal(error.errorCode, "network_error");
+      return true;
+    },
+  );
+});

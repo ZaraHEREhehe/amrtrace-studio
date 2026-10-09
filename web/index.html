@@ -2,13 +2,296 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  >
+  <meta
+    name="description"
+    content="AMRTrace Studio change-impact and dependency review interface"
+  >
   <title>AMRTrace Studio</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
-  <main>
-    <h1>AMRTrace Studio</h1>
-    <p>Web container is running.</p>
-  </main>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">AMR</div>
+        <h1>AMRTrace Studio</h1>
+        <p>Evidence-aware change tracing</p>
+      </div>
+
+      <nav class="nav-stack" aria-label="Primary">
+        <button
+          class="nav-button active"
+          type="button"
+          data-nav="changes"
+        >
+          Change Events
+        </button>
+
+        <button
+          class="nav-button"
+          type="button"
+          data-nav="dependencies"
+        >
+          Dependency View
+        </button>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <section class="page" data-view="changes">
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Change registry</p>
+            <h2>Change Events</h2>
+            <p class="muted">
+              Register a typed change and inspect its stored impact set.
+            </p>
+          </div>
+
+          <button
+            id="refresh-changes"
+            class="button"
+            type="button"
+          >
+            Refresh
+          </button>
+        </header>
+
+        <div class="grid-two">
+          <div>
+            <section class="card">
+              <div class="section-heading compact">
+                <div>
+                  <p class="eyebrow">Registered</p>
+                  <h3>Events</h3>
+                </div>
+              </div>
+
+              <div
+                id="changes-status"
+                class="status"
+                hidden
+              ></div>
+
+              <div
+                id="change-list"
+                class="change-list"
+                aria-live="polite"
+              ></div>
+            </section>
+
+            <section class="card">
+              <div class="section-heading compact">
+                <div>
+                  <p class="eyebrow">New event</p>
+                  <h3>Register change</h3>
+                </div>
+              </div>
+
+              <form id="change-form">
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="change-id">Change ID</label>
+                    <input
+                      id="change-id"
+                      name="change_id"
+                      required
+                      autocomplete="off"
+                    >
+                  </div>
+
+                  <div class="field">
+                    <label for="change-type">Type</label>
+                    <input
+                      id="change-type"
+                      name="type"
+                      required
+                      autocomplete="off"
+                    >
+                  </div>
+
+                  <div class="field">
+                    <label for="old-version">Old version</label>
+                    <input
+                      id="old-version"
+                      name="old_version"
+                      required
+                      autocomplete="off"
+                    >
+                  </div>
+
+                  <div class="field">
+                    <label for="new-version">New version</label>
+                    <input
+                      id="new-version"
+                      name="new_version"
+                      required
+                      autocomplete="off"
+                    >
+                  </div>
+
+                  <div class="field">
+                    <label for="initiator">Initiator</label>
+                    <input
+                      id="initiator"
+                      name="initiator"
+                      required
+                      autocomplete="off"
+                    >
+                  </div>
+
+                  <div class="field field-wide">
+                    <label for="changed-entities">
+                      Changed entities JSON
+                    </label>
+                    <textarea
+                      id="changed-entities"
+                      name="changed_entities"
+                      spellcheck="false"
+                    >[]</textarea>
+                  </div>
+
+                  <div class="field field-wide">
+                    <label for="declared-scope">
+                      Declared scope JSON
+                    </label>
+                    <textarea
+                      id="declared-scope"
+                      name="declared_scope"
+                      spellcheck="false"
+                    >{}</textarea>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button
+                    class="button button-primary"
+                    type="submit"
+                  >
+                    Register change
+                  </button>
+                </div>
+
+                <div
+                  id="create-status"
+                  class="status"
+                  aria-live="polite"
+                  hidden
+                ></div>
+              </form>
+            </section>
+          </div>
+
+          <section class="card">
+            <div
+              id="change-detail-status"
+              class="status"
+              hidden
+            ></div>
+
+            <div id="change-detail">
+              <div class="empty-state">
+                Select a change event to inspect its details and impact.
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+
+      <section
+        class="page"
+        data-view="dependencies"
+        hidden
+      >
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Stored provenance</p>
+            <h2>Dependency View</h2>
+            <p class="muted">
+              Inspect the current published dependency subgraph for one case.
+            </p>
+          </div>
+        </header>
+
+        <section class="card">
+          <form
+            id="dependency-form"
+            class="dependency-form"
+          >
+            <div class="field">
+              <label for="case-id">Case ID</label>
+              <input
+                id="case-id"
+                name="case_id"
+                required
+                autocomplete="off"
+                placeholder="Enter a case ID"
+              >
+            </div>
+
+            <button
+              class="button button-primary"
+              type="submit"
+            >
+              Load graph
+            </button>
+          </form>
+
+          <div
+            id="dependency-status"
+            class="status"
+            aria-live="polite"
+            hidden
+          ></div>
+
+          <div id="dependency-summary"></div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Case provenance</p>
+              <h3>Dependency graph</h3>
+            </div>
+          </div>
+
+          <div class="graph-layout">
+            <div
+              id="graph-canvas"
+              class="graph-canvas"
+            >
+              <div class="empty-state">
+                Enter a case ID to load its dependency graph.
+              </div>
+            </div>
+
+            <aside
+              id="node-inspector"
+              class="node-inspector"
+              aria-live="polite"
+            ></aside>
+          </div>
+
+          <div class="rule-section">
+            <h4>Recorded rule space</h4>
+
+            <div id="rule-space">
+              <div class="empty-state">
+                Rule-space rows appear after a case is loaded.
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="/app.mjs"></script>
 </body>
 </html>

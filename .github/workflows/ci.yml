@@ -55,6 +55,25 @@ jobs:
         run: python -m pytest tests/unit/test_genericity_guard.py -q
 
 
+
+  web-tests:
+    name: Web UI tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Run dependency-free web tests
+        run: node --test web/tests/*.test.mjs
+
+
   docker-build:
     name: Docker image builds
     runs-on: ubuntu-latest
@@ -69,6 +88,38 @@ jobs:
 
       - name: Build web image
         run: docker build --file docker/Dockerfile.web --tag amrtrace-web:ci .
+
+      - name: Smoke-test web and API proxy
+        run: |
+          docker network create amrtrace-ci
+          docker run -d --rm             --name amrtrace-api-ci             --network amrtrace-ci             --network-alias api             amrtrace-api:ci
+          docker run -d --rm             --name amrtrace-web-ci             --network amrtrace-ci             -p 8080:80             amrtrace-web:ci
+
+          for attempt in {1..20}; do
+            if curl --fail --silent               http://127.0.0.1:8080/api/health               > /tmp/amrtrace-health.json; then
+              break
+            fi
+            sleep 1
+          done
+
+          curl --fail --silent             http://127.0.0.1:8080/             | grep -q "AMRTrace Studio"
+
+          python - <<'PY'
+          import json
+
+          with open(
+              "/tmp/amrtrace-health.json",
+              encoding="utf-8",
+          ) as handle:
+              payload = json.load(handle)
+
+          assert payload == {
+              "service": "api",
+              "status": "ok",
+          }, payload
+
+          print("Web -> API proxy smoke test passed")
+          PY
 
 
   api-tests:
