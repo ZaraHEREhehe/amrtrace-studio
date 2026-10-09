@@ -58,7 +58,6 @@ jobs:
         run: python -m pytest tests/unit/test_genericity_guard.py -q
 
 
-
   web-tests:
     name: Web UI tests
     runs-on: ubuntu-latest
@@ -77,120 +76,10 @@ jobs:
         run: node --test web/tests/*.test.mjs
 
 
-  docker-build:
-    name: Docker image builds
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Build API image
-        run: docker build --file docker/Dockerfile.api --tag amrtrace-api:ci .
-
-      - name: Build web image
-        run: docker build --file docker/Dockerfile.web --tag amrtrace-web:ci .
-
-      - name: Smoke-test web and API proxy
-        run: |
-          docker network create amrtrace-ci
-          docker run -d --rm             --name amrtrace-api-ci             --network amrtrace-ci             --network-alias api             amrtrace-api:ci
-          docker run -d --rm             --name amrtrace-web-ci             --network amrtrace-ci             -p 8080:80             amrtrace-web:ci
-
-          for attempt in {1..20}; do
-            if curl --fail --silent               http://127.0.0.1:8080/api/health               > /tmp/amrtrace-health.json; then
-              break
-            fi
-            sleep 1
-          done
-
-          curl --fail --silent             http://127.0.0.1:8080/             | grep -q "AMRTrace Studio"
-
-          python - <<'PY'
-          import json
-
-          with open(
-              "/tmp/amrtrace-health.json",
-              encoding="utf-8",
-          ) as handle:
-              payload = json.load(handle)
-
-          assert payload == {
-              "service": "api",
-              "status": "ok",
-          }, payload
-
-          print("Web -> API proxy smoke test passed")
-          PY
-
-
-  api-tests:
-    name: API integration tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: dev
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d postgres"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    env:
-      AMRTRACE_PG_HOST: localhost
-      AMRTRACE_PG_PORT: "5432"
-      AMRTRACE_PG_USER: postgres
-      AMRTRACE_PG_PASSWORD: dev
-
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install API test dependencies
-        run: |
-          python -m pip install --disable-pip-version-check -r requirements-dev.txt
-          python -m pip install --disable-pip-version-check -r requirements-api-test.txt
-
-      - name: Verify PostgreSQL service
-        run: |
-          python - <<'PY'
-          import os
-          import psycopg
-
-          with psycopg.connect(
-              host=os.environ["AMRTRACE_PG_HOST"],
-              port=os.environ["AMRTRACE_PG_PORT"],
-              user=os.environ["AMRTRACE_PG_USER"],
-              password=os.environ["AMRTRACE_PG_PASSWORD"],
-              dbname="postgres",
-              connect_timeout=5,
-          ) as conn:
-              assert conn.execute("SELECT 1").fetchone()[0] == 1
-
-          print("PostgreSQL service reachable")
-          PY
-
-      - name: Run API integration tests
-        run: pytest tests/integration/test_api_read.py tests/integration/test_api_changes.py tests/integration/test_api_reevaluation.py -q --maxfail=1
-
   unit-tests:
     name: Unit tests with PostgreSQL
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     services:
       postgres:
@@ -241,8 +130,7 @@ jobs:
               dbname="postgres",
               connect_timeout=5,
           ) as conn:
-              value = conn.execute("SELECT 1").fetchone()[0]
-              assert value == 1
+              assert conn.execute("SELECT 1").fetchone()[0] == 1
 
           print("PostgreSQL service reachable")
           PY
@@ -252,7 +140,8 @@ jobs:
           pytest tests/unit \
             --cov=amrtrace \
             --cov-report=term-missing \
-            --cov-report=xml:coverage.xml
+            --cov-report=xml:coverage.xml \
+            --durations=10
 
       - name: Upload coverage report
         if: always()
@@ -262,3 +151,287 @@ jobs:
           path: coverage.xml
           if-no-files-found: error
           retention-days: 14
+
+
+  integration-tests:
+    name: Full integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      AMRTRACE_PG_HOST: localhost
+      AMRTRACE_PG_PORT: "5432"
+      AMRTRACE_PG_USER: postgres
+      AMRTRACE_PG_PASSWORD: dev
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install full integration dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -r requirements-api-test.txt
+
+      - name: Verify PostgreSQL service
+        run: |
+          python - <<'PY'
+          import os
+          import psycopg
+
+          with psycopg.connect(
+              host=os.environ["AMRTRACE_PG_HOST"],
+              port=os.environ["AMRTRACE_PG_PORT"],
+              user=os.environ["AMRTRACE_PG_USER"],
+              password=os.environ["AMRTRACE_PG_PASSWORD"],
+              dbname="postgres",
+              connect_timeout=5,
+          ) as conn:
+              assert conn.execute("SELECT 1").fetchone()[0] == 1
+
+          print("PostgreSQL service reachable")
+          PY
+
+      - name: Run all committed-data integration tests
+        run: |
+          # The full frozen V1 files under data/raw are intentionally not
+          # committed. A-02 already gates those files; CI uses the committed
+          # deterministic Z-14 mini-cohort instead.
+          pytest tests/integration \
+            -m "not golden" \
+            -q \
+            --maxfail=1 \
+            --durations=10
+
+
+  oracle-tests:
+    name: Oracle tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      AMRTRACE_PG_HOST: localhost
+      AMRTRACE_PG_PORT: "5432"
+      AMRTRACE_PG_USER: postgres
+      AMRTRACE_PG_PASSWORD: dev
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install oracle dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Verify PostgreSQL service
+        run: |
+          python - <<'PY'
+          import os
+          import psycopg
+
+          with psycopg.connect(
+              host=os.environ["AMRTRACE_PG_HOST"],
+              port=os.environ["AMRTRACE_PG_PORT"],
+              user=os.environ["AMRTRACE_PG_USER"],
+              password=os.environ["AMRTRACE_PG_PASSWORD"],
+              dbname="postgres",
+              connect_timeout=5,
+          ) as conn:
+              assert conn.execute("SELECT 1").fetchone()[0] == 1
+
+          print("PostgreSQL service reachable")
+          PY
+
+      - name: Run oracle fixture and selector tests
+        run: |
+          pytest tests/oracle \
+            -q \
+            --maxfail=1 \
+            --durations=10
+
+
+  equivalence-tests:
+    name: Mini-cohort equivalence E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: dev
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      AMRTRACE_PG_HOST: localhost
+      AMRTRACE_PG_PORT: "5432"
+      AMRTRACE_PG_USER: postgres
+      AMRTRACE_PG_PASSWORD: dev
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install E2E dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-dev.txt
+
+      - name: Verify PostgreSQL service
+        run: |
+          python - <<'PY'
+          import os
+          import psycopg
+
+          with psycopg.connect(
+              host=os.environ["AMRTRACE_PG_HOST"],
+              port=os.environ["AMRTRACE_PG_PORT"],
+              user=os.environ["AMRTRACE_PG_USER"],
+              password=os.environ["AMRTRACE_PG_PASSWORD"],
+              dbname="postgres",
+              connect_timeout=5,
+          ) as conn:
+              assert conn.execute("SELECT 1").fetchone()[0] == 1
+
+          print("PostgreSQL service reachable")
+          PY
+
+      - name: Run selective-to-exhaustive equivalence scenarios
+        run: |
+          pytest tests/e2e \
+            -q \
+            --maxfail=1 \
+            --durations=10
+
+
+  docker-build:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build --file docker/Dockerfile.api --tag amrtrace-api:ci .
+
+      - name: Build web image
+        run: docker build --file docker/Dockerfile.web --tag amrtrace-web:ci .
+
+      - name: Smoke-test web and API proxy
+        run: |
+          docker network create amrtrace-ci
+
+          cleanup() {
+            docker rm -f amrtrace-web-ci amrtrace-api-ci \
+              >/dev/null 2>&1 || true
+            docker network rm amrtrace-ci \
+              >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker run -d --rm \
+            --name amrtrace-api-ci \
+            --network amrtrace-ci \
+            --network-alias api \
+            amrtrace-api:ci
+
+          docker run -d --rm \
+            --name amrtrace-web-ci \
+            --network amrtrace-ci \
+            -p 8080:80 \
+            amrtrace-web:ci
+
+          healthy=0
+
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:8080/api/health \
+              > /tmp/amrtrace-health.json; then
+              healthy=1
+              break
+            fi
+
+            sleep 1
+          done
+
+          if [ "$healthy" -ne 1 ]; then
+            echo "API/web proxy failed to become healthy."
+            echo "--- API container logs ---"
+            docker logs amrtrace-api-ci || true
+            echo "--- Web container logs ---"
+            docker logs amrtrace-web-ci || true
+            exit 1
+          fi
+
+          curl --fail --silent --show-error \
+            http://127.0.0.1:8080/ \
+            | grep -q "AMRTrace Studio"
+
+          python - <<'PY'
+          import json
+
+          with open(
+              "/tmp/amrtrace-health.json",
+              encoding="utf-8",
+          ) as handle:
+              payload = json.load(handle)
+
+          assert payload == {
+              "service": "api",
+              "status": "ok",
+          }, payload
+
+          print("Web -> API proxy smoke test passed")
+          PY
