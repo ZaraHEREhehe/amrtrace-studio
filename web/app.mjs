@@ -4,7 +4,10 @@ import {
   getCaseDependencies,
   getChange,
   getImpact,
+  getRun,
+  getRunEquivalence,
   listChanges,
+  startReevaluation,
 } from "./api.mjs";
 
 import {
@@ -12,6 +15,14 @@ import {
   formatEdgeLabel,
   formatNodeDetails,
 } from "./graph.mjs";
+
+import {
+  decisionLabel,
+  formatPercent,
+  gateLabel,
+  mismatchValue,
+  orderedAxes,
+} from "./run_view.mjs";
 
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -678,6 +689,458 @@ async function submitDependencyLookup(event) {
 }
 
 
+function renderRunDetail(run) {
+  const container = byId("run-detail");
+  clear(container);
+
+  const statusClass =
+    run.status === "COMPLETE"
+      ? "run-status-complete"
+      : run.status === "FAILED"
+        ? "run-status-failed"
+        : "run-status-pending";
+
+  const badge = make("span", {
+    className: `run-status-badge ${statusClass}`,
+    text: run.status,
+  });
+
+  const heading = make("div", {
+    className: "section-heading compact",
+  });
+
+  const headingText = make("div");
+
+  headingText.append(
+    make("p", {
+      className: "eyebrow",
+      text: "Persisted run",
+    }),
+    make("h3", {
+      text: run.run_id,
+    }),
+  );
+
+  heading.append(headingText, badge);
+
+  container.append(
+    heading,
+    definitionList({
+      "Change ID": run.change_id,
+      Mode: run.mode,
+      Status: run.status,
+      Release: run.release_id,
+      Selected: run.selected_count,
+      Reevaluated: run.reevaluated_count,
+      Started: humanDate(run.started_at),
+      Finished: humanDate(run.finished_at),
+      Error: run.error,
+    }),
+  );
+}
+
+
+function metricCard(label, value, detail = null) {
+  const card = make("article", {
+    className: "metric-card",
+  });
+
+  card.append(
+    make("span", {
+      className: "metric-label",
+      text: label,
+    }),
+    make("strong", {
+      className: "metric-value",
+      text: value,
+    }),
+  );
+
+  if (detail) {
+    card.append(
+      make("span", {
+        className: "metric-detail",
+        text: detail,
+      }),
+    );
+  }
+
+  return card;
+}
+
+
+function renderAxisReport(axis) {
+  const card = make("article", {
+    className: "axis-card",
+  });
+
+  const heading = make("div", {
+    className: "axis-heading",
+  });
+
+  const title = make("h4", {
+    text:
+      axis.axis.charAt(0).toUpperCase() +
+      axis.axis.slice(1),
+  });
+
+  const result = make("span", {
+    className:
+      axis.mismatched === 0
+        ? "axis-result axis-match"
+        : "axis-result axis-mismatch",
+    text:
+      axis.mismatched === 0
+        ? "MATCH"
+        : `${axis.mismatched} MISMATCH`,
+  });
+
+  heading.append(title, result);
+
+  card.append(
+    heading,
+    definitionList({
+      Compared: axis.compared,
+      Mismatched: axis.mismatched,
+    }),
+  );
+
+  if (!axis.examples.length) {
+    card.append(
+      make("div", {
+        className: "empty-state compact-empty",
+        text: "No mismatch examples.",
+      }),
+    );
+
+    return card;
+  }
+
+  const wrap = make("div", {
+    className: "table-wrap",
+  });
+
+  const table = make("table", {
+    className: "mismatch-table",
+  });
+
+  const thead = make("thead");
+  const header = make("tr");
+
+  for (const label of [
+    "Case",
+    "Selective",
+    "Exhaustive",
+  ]) {
+    header.append(
+      make("th", {
+        text: label,
+      }),
+    );
+  }
+
+  thead.append(header);
+  table.append(thead);
+
+  const tbody = make("tbody");
+
+  for (const example of axis.examples) {
+    const row = make("tr");
+
+    const selective = make("code", {
+      text: mismatchValue(example.selective),
+    });
+
+    const exhaustive = make("code", {
+      text: mismatchValue(example.exhaustive),
+    });
+
+    const selectiveCell = make("td");
+    const exhaustiveCell = make("td");
+
+    selectiveCell.append(selective);
+    exhaustiveCell.append(exhaustive);
+
+    row.append(
+      make("td", {
+        text: example.case_id,
+      }),
+      selectiveCell,
+      exhaustiveCell,
+    );
+
+    tbody.append(row);
+  }
+
+  table.append(tbody);
+  wrap.append(table);
+  card.append(wrap);
+
+  return card;
+}
+
+
+function renderEquivalence(report) {
+  const container = byId("equivalence-detail");
+  clear(container);
+
+  const decision = decisionLabel(report);
+  const gate = gateLabel(report);
+
+  const banner = make("div", {
+    className:
+      decision === "PASS"
+        ? "decision decision-pass"
+        : "decision decision-blocked",
+  });
+
+  banner.append(
+    make("span", {
+      className: "decision-label",
+      text: decision,
+    }),
+    make("span", {
+      className: "decision-detail",
+      text: `Release gate: ${gate}`,
+    }),
+  );
+
+  const metrics = make("div", {
+    className: "metric-grid",
+  });
+
+  metrics.append(
+    metricCard(
+      "Recall",
+      formatPercent(report.recall),
+      `${report.selected_and_affected} of ${report.affected} affected selected`,
+    ),
+    metricCard(
+      "Precision",
+      formatPercent(report.precision),
+      `${report.selected_and_affected} of ${report.selected} selected were affected`,
+    ),
+    metricCard(
+      "Reprocessing ratio",
+      formatPercent(report.reprocessing_ratio),
+      `${report.selected} of ${report.total_cases} total cases`,
+    ),
+    metricCard(
+      "Missed cases",
+      String(report.missed),
+      "Must remain zero for 100% recall",
+    ),
+  );
+
+  const summary = definitionList({
+    "Change ID": report.change_id,
+    "Selective run": report.selective_run_id,
+    "Exhaustive run": report.exhaustive_run_id,
+    Release: report.release_id,
+    "Gate status": gate,
+    "Total cases": report.total_cases,
+    Selected: report.selected,
+    Affected: report.affected,
+    "State changed": report.state_changed,
+    "Selected and affected":
+      report.selected_and_affected,
+    Missed: report.missed,
+  });
+
+  const axes = make("div", {
+    className: "axis-grid",
+  });
+
+  for (const axis of orderedAxes(report)) {
+    axes.append(renderAxisReport(axis));
+  }
+
+  container.append(
+    banner,
+    metrics,
+    make("h4", {
+      text: "Comparison summary",
+    }),
+    summary,
+    make("h4", {
+      text: "Three-axis equivalence",
+    }),
+    axes,
+  );
+}
+
+
+function clearRunResults() {
+  clear(byId("run-detail"));
+  clear(byId("equivalence-detail"));
+}
+
+
+async function submitReevaluation(event) {
+  event.preventDefault();
+
+  const form = event.currentTarget;
+  const formData = new FormData(form);
+
+  const changeId = String(
+    formData.get("change_id") ?? "",
+  ).trim();
+
+  const releaseId = String(
+    formData.get("release_id") ?? "",
+  ).trim();
+
+  const exhaustive = byId("run-exhaustive").checked;
+  const gate = byId("run-gate").checked;
+
+  const status = byId("run-status");
+  const submit = byId("run-submit");
+
+  clearRunResults();
+
+  if (!changeId || !releaseId) {
+    setStatus(
+      status,
+      "error",
+      "Change ID and release ID are required.",
+    );
+    return;
+  }
+
+  submit.disabled = true;
+
+  setStatus(
+    status,
+    "loading",
+    exhaustive
+      ? "Running selective re-evaluation and exhaustive equivalence comparison?"
+      : "Running selective re-evaluation?",
+  );
+
+  try {
+    const result = await startReevaluation(
+      changeId,
+      {
+        release_id: releaseId,
+        run_exhaustive: exhaustive,
+        gate,
+      },
+    );
+
+    renderRunDetail(result.selective_run);
+
+    byId("run-id").value =
+      result.selective_run.run_id;
+
+    if (result.equivalence) {
+      renderEquivalence(result.equivalence);
+    } else {
+      byId("equivalence-detail").append(
+        make("div", {
+          className: "empty-state",
+          text:
+            "Selective run completed without an exhaustive " +
+            "equivalence comparison.",
+        }),
+      );
+    }
+
+    setStatus(
+      status,
+      "success",
+      `Run ${result.selective_run.run_id} completed.`,
+    );
+  } catch (error) {
+    setStatus(
+      status,
+      "error",
+      errorText(error),
+    );
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+
+async function loadRunAndEquivalence(runId) {
+  const status = byId("run-lookup-status");
+
+  clearRunResults();
+
+  setStatus(
+    status,
+    "loading",
+    `Loading run ${runId}?`,
+  );
+
+  try {
+    const run = await getRun(runId);
+    renderRunDetail(run);
+
+    try {
+      const report = await getRunEquivalence(runId);
+      renderEquivalence(report);
+    } catch (error) {
+      if (
+        error instanceof ApiError &&
+        error.errorCode === "equivalence_not_found"
+      ) {
+        byId("equivalence-detail").append(
+          make("div", {
+            className: "empty-state",
+            text:
+              "This run does not have a stored equivalence report.",
+          }),
+        );
+      } else {
+        throw error;
+      }
+    }
+
+    hideStatus(status);
+  } catch (error) {
+    setStatus(
+      status,
+      "error",
+      errorText(error),
+    );
+  }
+}
+
+
+async function submitRunLookup(event) {
+  event.preventDefault();
+
+  const runId = String(
+    new FormData(event.currentTarget).get("run_id") ?? "",
+  ).trim();
+
+  if (!runId) {
+    setStatus(
+      byId("run-lookup-status"),
+      "error",
+      "Enter a run ID.",
+    );
+    return;
+  }
+
+  await loadRunAndEquivalence(runId);
+}
+
+
+function syncGateControl() {
+  const exhaustive = byId("run-exhaustive");
+  const gate = byId("run-gate");
+
+  if (!exhaustive.checked) {
+    gate.checked = false;
+    gate.disabled = true;
+  } else {
+    gate.disabled = false;
+  }
+}
+
+
 function activateView(name) {
   for (const section of document.querySelectorAll("[data-view]")) {
     section.hidden = section.dataset.view !== name;
@@ -720,6 +1183,23 @@ function boot() {
     "click",
     () => void loadChanges(),
   );
+
+  byId("reevaluation-form").addEventListener(
+    "submit",
+    submitReevaluation,
+  );
+
+  byId("run-lookup-form").addEventListener(
+    "submit",
+    submitRunLookup,
+  );
+
+  byId("run-exhaustive").addEventListener(
+    "change",
+    syncGateControl,
+  );
+
+  syncGateControl();
 
   activateView("changes");
   void loadChanges();

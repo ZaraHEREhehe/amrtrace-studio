@@ -5,7 +5,10 @@ import {
   ApiError,
   createChange,
   getCaseDependencies,
+  getRun,
+  getRunEquivalence,
   listChanges,
+  startReevaluation,
 } from "../api.mjs";
 
 
@@ -138,5 +141,83 @@ test("network failures have a stable error code", async () => {
       assert.equal(error.errorCode, "network_error");
       return true;
     },
+  );
+});
+
+test("startReevaluation posts the complete run request", async () => {
+  let seenUrl;
+  let seenOptions;
+
+  const fakeFetch = async (url, options) => {
+    seenUrl = url;
+    seenOptions = options;
+
+    return response(201, {
+      selective_run: {
+        run_id: "RUN-1",
+      },
+      equivalence: null,
+    });
+  };
+
+  const payload = {
+    release_id: "R NEXT",
+    run_exhaustive: true,
+    gate: true,
+  };
+
+  await startReevaluation(
+    "CHANGE A/1",
+    payload,
+    fakeFetch,
+  );
+
+  assert.equal(
+    seenUrl,
+    "/api/changes/CHANGE%20A%2F1/reevaluate",
+  );
+  assert.equal(seenOptions.method, "POST");
+  assert.deepEqual(
+    JSON.parse(seenOptions.body),
+    payload,
+  );
+});
+
+
+test("getRun URL encodes the persisted run id", async () => {
+  let seenUrl;
+
+  const fakeFetch = async (url) => {
+    seenUrl = url;
+    return response(200, {
+      run_id: "RUN A/1",
+    });
+  };
+
+  await getRun("RUN A/1", fakeFetch);
+
+  assert.equal(
+    seenUrl,
+    "/api/runs/RUN%20A%2F1",
+  );
+});
+
+
+test("getRunEquivalence uses the run report endpoint", async () => {
+  let seenUrl;
+
+  const fakeFetch = async (url) => {
+    seenUrl = url;
+    return response(200, {
+      selective_run_id: "RUN-1",
+      passed: true,
+    });
+  };
+
+  await getRunEquivalence("RUN-1", fakeFetch);
+
+  assert.equal(
+    seenUrl,
+    "/api/runs/RUN-1/equivalence",
   );
 });

@@ -79,3 +79,14 @@ test("web image contains nginx config and application files", () => {
     /COPY web\/ \/usr\/share\/nginx\/html\//,
   );
 });
+
+test("run page exposes the documented Z-09 controls", () => {
+  assert.match(index, /data-nav="runs"/);
+  assert.match(index, /id="reevaluation-form"/);
+  assert.match(index, /id="run-lookup-form"/);
+  assert.match(index, /id="equivalence-detail"/);
+
+  assert.match(app, /startReevaluation/);
+  assert.match(app, /getRunEquivalence/);
+  assert.match(app, /decisionLabel/);
+});

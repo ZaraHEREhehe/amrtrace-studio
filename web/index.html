@@ -39,6 +39,14 @@
         >
           Dependency View
         </button>
+
+        <button
+          class="nav-button"
+          type="button"
+          data-nav="runs"
+        >
+          Runs & Equivalence
+        </button>
       </nav>
     </aside>
 
@@ -289,6 +297,173 @@
           </div>
         </section>
       </section>
+
+      <section
+        class="page"
+        data-view="runs"
+        hidden
+      >
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Selective verification</p>
+            <h2>Runs &amp; Equivalence</h2>
+            <p class="muted">
+              Re-evaluate the stored impact set, compare it with an
+              exhaustive run, and inspect the release gate decision.
+            </p>
+          </div>
+        </header>
+
+        <div class="run-grid">
+          <section class="card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Start run</p>
+                <h3>Re-evaluate a change</h3>
+              </div>
+            </div>
+
+            <form id="reevaluation-form">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="run-change-id">
+                    Change ID
+                  </label>
+                  <input
+                    id="run-change-id"
+                    name="change_id"
+                    required
+                    autocomplete="off"
+                    placeholder="Registered change ID"
+                  >
+                </div>
+
+                <div class="field">
+                  <label for="run-release-id">
+                    New release ID
+                  </label>
+                  <input
+                    id="run-release-id"
+                    name="release_id"
+                    required
+                    autocomplete="off"
+                    placeholder="Unique release ID"
+                  >
+                </div>
+              </div>
+
+              <div class="check-stack">
+                <label class="check-row">
+                  <input
+                    id="run-exhaustive"
+                    type="checkbox"
+                    checked
+                  >
+                  <span>
+                    Run exhaustive comparator after the selective run
+                  </span>
+                </label>
+
+                <label class="check-row">
+                  <input
+                    id="run-gate"
+                    type="checkbox"
+                    checked
+                  >
+                  <span>
+                    Apply the PASS/BLOCKED release gate
+                  </span>
+                </label>
+              </div>
+
+              <div class="form-actions">
+                <button
+                  id="run-submit"
+                  class="button button-primary"
+                  type="submit"
+                >
+                  Start re-evaluation
+                </button>
+              </div>
+            </form>
+
+            <div
+              id="run-status"
+              class="status"
+              aria-live="polite"
+              hidden
+            ></div>
+          </section>
+
+          <section class="card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Stored result</p>
+                <h3>Open run</h3>
+              </div>
+            </div>
+
+            <form
+              id="run-lookup-form"
+              class="dependency-form"
+            >
+              <div class="field">
+                <label for="run-id">
+                  Run ID
+                </label>
+                <input
+                  id="run-id"
+                  name="run_id"
+                  required
+                  autocomplete="off"
+                  placeholder="RUN-..."
+                >
+              </div>
+
+              <button
+                class="button"
+                type="submit"
+              >
+                Load run
+              </button>
+            </form>
+
+            <div
+              id="run-lookup-status"
+              class="status"
+              aria-live="polite"
+              hidden
+            ></div>
+          </section>
+        </div>
+
+        <section class="card">
+          <div id="run-detail">
+            <div class="empty-state">
+              Start or load a run to inspect its persisted status
+              and counts.
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">Safety gate</p>
+              <h3>Equivalence report</h3>
+            </div>
+          </div>
+
+          <div id="equivalence-detail">
+            <div class="empty-state">
+              An exhaustive comparison will show recall, precision,
+              reprocessing ratio, the three comparison axes, and
+              the PASS/BLOCKED decision here.
+            </div>
+          </div>
+        </section>
+      </section>
+
     </main>
   </div>
 

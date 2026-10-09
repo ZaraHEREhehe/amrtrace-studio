@@ -148,3 +148,59 @@ class ChangeApplicationView(BaseModel):
     event: ChangeEventView
     impact: ImpactSetView
     entities_derived: bool
+
+class ReevaluationRequest(BaseModel):
+    release_id: str = Field(min_length=1)
+    run_exhaustive: bool = True
+    gate: bool = True
+
+
+class RunView(BaseModel):
+    run_id: str
+    change_id: str
+    mode: str
+    status: str
+    selected_count: int | None
+    reevaluated_count: int | None
+    release_id: str | None
+    started_at: datetime | None
+    finished_at: datetime | None
+    error: str | None
+
+
+class EquivalenceMismatchView(BaseModel):
+    case_id: str
+    axis: str
+    selective: Any
+    exhaustive: Any
+
+
+class EquivalenceAxisView(BaseModel):
+    axis: str
+    compared: int
+    mismatched: int
+    examples: list[EquivalenceMismatchView]
+
+
+class EquivalenceReportView(BaseModel):
+    change_id: str
+    selective_run_id: str
+    exhaustive_run_id: str
+    release_id: str | None
+    total_cases: int
+    selected: int
+    affected: int
+    state_changed: int
+    selected_and_affected: int
+    missed: int
+    recall: float | None
+    precision: float | None
+    reprocessing_ratio: float | None
+    axes: list[EquivalenceAxisView]
+    passed: bool
+    gate_status: str
+
+
+class ReevaluationResponse(BaseModel):
+    selective_run: RunView
+    equivalence: EquivalenceReportView | None

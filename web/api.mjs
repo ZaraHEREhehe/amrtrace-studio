@@ -120,3 +120,39 @@ export function getCaseDependencies(caseId, fetchImpl = globalThis.fetch) {
     fetchImpl,
   );
 }
+
+export function startReevaluation(
+  changeId,
+  payload,
+  fetchImpl = globalThis.fetch,
+) {
+  return requestJson(
+    `/changes/${encodeURIComponent(changeId)}/reevaluate`,
+    {
+      method: "POST",
+      body: payload,
+    },
+    fetchImpl,
+  );
+}
+
+
+export function getRun(runId, fetchImpl = globalThis.fetch) {
+  return requestJson(
+    `/runs/${encodeURIComponent(runId)}`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+export function getRunEquivalence(
+  runId,
+  fetchImpl = globalThis.fetch,
+) {
+  return requestJson(
+    `/runs/${encodeURIComponent(runId)}/equivalence`,
+    {},
+    fetchImpl,
+  );
+}
