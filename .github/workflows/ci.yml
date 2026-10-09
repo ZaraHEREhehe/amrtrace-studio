@@ -106,6 +106,7 @@ jobs:
           done
 
           curl --fail --silent             http://127.0.0.1:8080/             | grep -q "AMRTrace Studio"
+          curl --fail --silent --head http://127.0.0.1:8080/app.mjs | grep -qi "content-type: text/javascript"
 
           python - <<'PY'
           import json
