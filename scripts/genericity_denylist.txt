@@ -1,0 +1,31 @@
+﻿# Domain-specific names forbidden inside the generic engine packages.
+# Matching will be case-insensitive.
+
+# Antibiotics
+ceftriaxone
+ciprofloxacin
+gentamicin
+meropenem
+trimethoprim-sulfamethoxazole
+cefepime
+ceftazidime
+imipenem
+
+# Organisms
+Escherichia coli
+E. coli
+
+# Interpretation standards / editions
+CLSI
+EUCAST
+Ed32
+Ed33
+
+# Example determinant
+blaEC
+
+# Oracle/scenario identifiers
+C1
+C2
+C6
+C7
