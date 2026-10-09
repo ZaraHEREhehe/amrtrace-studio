@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -204,3 +204,77 @@ class EquivalenceReportView(BaseModel):
 class ReevaluationResponse(BaseModel):
     selective_run: RunView
     equivalence: EquivalenceReportView | None
+
+class ReviewCreate(BaseModel):
+    reviewer: str = Field(min_length=1)
+    action: Literal[
+        "CONFIRM",
+        "CORRECT",
+        "MARK_UNRESOLVED",
+    ]
+    reason: str = Field(min_length=1)
+    state_id: int | None = Field(default=None, ge=1)
+    corrected_state_code: str | None = None
+
+
+class ReviewEventView(BaseModel):
+    review_id: int
+    case_id: str
+    state_id: int
+    reviewer: str
+    action: str
+    reason: str
+    created_at: datetime
+    corrected_state_code: str | None
+
+
+class DiffStateView(BaseModel):
+    state_id: int
+    release_id: str
+    release_seq: int
+    state_code: str
+    phenotype_state: str | None
+    genotype_state: str | None
+    uncertainty_reason: str | None
+    explanation: Any
+    verification_status: str
+    evaluator_version: str | None
+    refgene_db_version: str | None
+    input_hash: str | None
+    output_hash: str | None
+    triggered_by_change_id: str | None
+
+
+class DiffFieldChangeView(BaseModel):
+    field: str
+    before: Any
+    after: Any
+
+
+class DiffVersionChangeView(BaseModel):
+    name: str
+    before: Any
+    after: Any
+
+
+class DiffDependencyView(BaseModel):
+    dep_type: str
+    edge_type: str
+    node_type: str
+    node_id: str
+    node_version: str | None
+    node_context: Any
+
+
+class CaseDiffView(BaseModel):
+    case_id: str
+    outcome: str
+    before: DiffStateView | None
+    after: DiffStateView | None
+    state_changes: list[DiffFieldChangeView]
+    explanation_changed: bool
+    version_changes: list[DiffVersionChangeView]
+    dependencies_removed: list[DiffDependencyView]
+    dependencies_added: list[DiffDependencyView]
+    dependencies_unchanged: int
+    triggered_by_change_id: str | None

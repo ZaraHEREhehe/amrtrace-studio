@@ -90,3 +90,27 @@ test("run page exposes the documented Z-09 controls", () => {
   assert.match(app, /getRunEquivalence/);
   assert.match(app, /decisionLabel/);
 });
+
+test("case dossier exposes the complete Z-11 workflow", () => {
+  assert.match(index, /data-nav="dossier"/);
+  assert.match(index, /id="dossier-form"/);
+  assert.match(index, /id="dossier-overview"/);
+  assert.match(index, /id="dossier-history"/);
+  assert.match(index, /id="dossier-diff-form"/);
+  assert.match(index, /id="dossier-graph"/);
+  assert.match(index, /id="dossier-review-form"/);
+  assert.match(index, /id="dossier-reviews"/);
+  assert.match(index, /id="dossier-export"/);
+
+  assert.match(app, /getCaseDiff/);
+  assert.match(app, /createReview/);
+  assert.match(app, /renderDossierDependencies/);
+  assert.match(app, /exportUrl/);
+});
+
+
+test("dossier keeps API-derived values text-only", () => {
+  assert.doesNotMatch(app, /\.innerHTML\s*=/);
+  assert.doesNotMatch(app, /insertAdjacentHTML/);
+  assert.match(app, /textContent/);
+});

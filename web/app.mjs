@@ -1,7 +1,13 @@
 import {
   ApiError,
   createChange,
+  createReview,
+  exportUrl,
+  getCase,
   getCaseDependencies,
+  getCaseDiff,
+  getCaseHistory,
+  getCaseReviews,
   getChange,
   getImpact,
   getRun,
@@ -456,8 +462,10 @@ function svgElement(tag, attributes = {}) {
 }
 
 
-function renderNodeInspector(node) {
-  const inspector = byId("node-inspector");
+function renderNodeInspector(
+  node,
+  inspector = byId("node-inspector"),
+) {
   clear(inspector);
 
   inspector.append(
@@ -467,8 +475,12 @@ function renderNodeInspector(node) {
 }
 
 
-function renderGraph(subgraph) {
-  const container = byId("graph-canvas");
+function renderGraph(
+  subgraph,
+  container = byId("graph-canvas"),
+  inspector = byId("node-inspector"),
+  markerId = "dependency-arrow",
+) {
   clear(container);
 
   const model = buildGraphModel(subgraph);
@@ -493,7 +505,7 @@ function renderGraph(subgraph) {
 
   const defs = svgElement("defs");
   const marker = svgElement("marker", {
-    id: "arrow",
+    id: markerId,
     markerWidth: "10",
     markerHeight: "10",
     refX: "8",
@@ -519,7 +531,7 @@ function renderGraph(subgraph) {
       x2: edge.targetNode.x - 88,
       y2: edge.targetNode.y,
       class: "graph-edge",
-      "marker-end": "url(#arrow)",
+      "marker-end": `url(#${markerId})`,
     });
 
     const title = svgElement("title");
@@ -564,7 +576,8 @@ function renderGraph(subgraph) {
     });
     subtitle.textContent = node.subtitle;
 
-    const select = () => renderNodeInspector(node);
+    const select = () =>
+      renderNodeInspector(node, inspector);
 
     group.addEventListener("click", select);
     group.addEventListener("keydown", (event) => {
@@ -1141,6 +1154,692 @@ function syncGateControl() {
 }
 
 
+let activeDossierCaseId = null;
+let activeDossierStateId = null;
+
+
+function displayValue(value) {
+  if (value === null || value === undefined) {
+    return "?";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+}
+
+
+function renderDataTable(
+  columns,
+  rows,
+  emptyMessage,
+) {
+  if (!rows.length) {
+    return make("div", {
+      className: "empty-state compact-empty",
+      text: emptyMessage,
+    });
+  }
+
+  const wrap = make("div", {
+    className: "table-wrap",
+  });
+
+  const table = make("table");
+  const thead = make("thead");
+  const header = make("tr");
+
+  for (const [label] of columns) {
+    header.append(
+      make("th", {
+        text: label,
+      }),
+    );
+  }
+
+  thead.append(header);
+  table.append(thead);
+
+  const tbody = make("tbody");
+
+  for (const item of rows) {
+    const row = make("tr");
+
+    for (const [, getter] of columns) {
+      const value =
+        typeof getter === "function"
+          ? getter(item)
+          : item[getter];
+
+      const cell = make("td");
+
+      if (
+        typeof value === "object" &&
+        value !== null
+      ) {
+        cell.append(
+          make("code", {
+            text: displayValue(value),
+          }),
+        );
+      } else {
+        cell.textContent = displayValue(value);
+      }
+
+      row.append(cell);
+    }
+
+    tbody.append(row);
+  }
+
+  table.append(tbody);
+  wrap.append(table);
+
+  return wrap;
+}
+
+
+function dossierStatePanel(label, state) {
+  const panel = make("article", {
+    className: "state-panel",
+  });
+
+  panel.append(
+    make("p", {
+      className: "eyebrow",
+      text: label,
+    }),
+  );
+
+  if (!state) {
+    panel.append(
+      make("div", {
+        className: "empty-state compact-empty",
+        text: `No ${label.toLowerCase()} state exists.`,
+      }),
+    );
+
+    return panel;
+  }
+
+  panel.append(
+    make("h4", {
+      text: state.state_code,
+    }),
+    definitionList({
+      Release: state.release_id,
+      "State ID": state.state_id,
+      Phenotype: state.phenotype_state,
+      Genotype: state.genotype_state,
+      Uncertainty: state.uncertainty_reason,
+      Verification: state.verification_status,
+      "Evaluator version": state.evaluator_version,
+      "Reference DB": state.refgene_db_version,
+      "Triggered by": state.triggered_by_change_id,
+      Explanation: state.explanation,
+    }),
+  );
+
+  return panel;
+}
+
+
+function renderDossierOverview(dossier) {
+  const container = byId("dossier-overview");
+  clear(container);
+
+  const current = dossier.current_state;
+  const exportLink = byId("dossier-export");
+
+  const heading = make("div", {
+    className: "section-heading compact",
+  });
+
+  const headingText = make("div");
+
+  headingText.append(
+    make("p", {
+      className: "eyebrow",
+      text: "Case dossier",
+    }),
+    make("h3", {
+      text: dossier.case_id,
+    }),
+  );
+
+  heading.append(headingText);
+
+  container.append(
+    heading,
+    definitionList({
+      "Case ID": dossier.case_id,
+      "Target accession": dossier.target_acc,
+      Antibiotic: dossier.antibiotic,
+      Panel: dossier.panel_id,
+      "Current release": current?.release_id,
+      "Current state": current?.state_code,
+      Verification: current?.verification_status,
+      Uncertainty: current?.uncertainty_reason,
+      "Version vector": dossier.version_vector,
+    }),
+  );
+
+  container.append(
+    make("h4", {
+      text: "Current AST evidence",
+    }),
+    renderDataTable(
+      [
+        ["Evidence ID", "ast_evidence_id"],
+        ["Phenotype", "phenotype"],
+        ["Normalized", "phenotype_normalized"],
+        ["Sign", "measurement_sign"],
+        ["MIC", "mic"],
+        ["Disk", "disk_diffusion"],
+        ["Standard", "standard"],
+      ],
+      dossier.evidence.ast,
+      "No AST evidence is referenced by the current published state.",
+    ),
+    make("h4", {
+      text: "Current genotype evidence",
+    }),
+    renderDataTable(
+      [
+        ["Evidence ID", "genotype_evidence_id"],
+        ["Source", "representation_source"],
+        ["Element", "element_raw"],
+        ["Subtype", "subtype_raw"],
+        ["Subclass", "subclass_raw"],
+        ["Analysis version", "amrfinderplus_version"],
+        ["Reference DB", "refgene_db_version"],
+      ],
+      dossier.evidence.genotype,
+      "No genotype evidence is referenced by the current published state.",
+    ),
+  );
+
+  activeDossierStateId = current?.state_id ?? null;
+
+  byId("dossier-review-fieldset").disabled =
+    activeDossierStateId === null;
+
+  if (current?.release_id) {
+    exportLink.href = exportUrl(
+      current.release_id,
+      "json",
+    );
+
+    exportLink.hidden = false;
+
+    exportLink.setAttribute(
+      "download",
+      `amrtrace-${current.release_id}.json`,
+    );
+  } else {
+    exportLink.hidden = true;
+    exportLink.removeAttribute("href");
+    exportLink.removeAttribute("download");
+  }
+}
+
+
+function renderDossierHistory(history) {
+  const container = byId("dossier-history");
+  clear(container);
+
+  container.append(
+    renderDataTable(
+      [
+        ["Release", "release_id"],
+        ["Release status", "release_status"],
+        ["State", "state_code"],
+        ["Verification", "verification_status"],
+        ["Uncertainty", "uncertainty_reason"],
+        ["Triggered by", "triggered_by_change_id"],
+        ["Created", (row) => humanDate(row.created_at)],
+      ],
+      history,
+      "No ledger states exist for this case.",
+    ),
+  );
+}
+
+
+function renderDossierReviews(reviews) {
+  const container = byId("dossier-reviews");
+  clear(container);
+
+  container.append(
+    renderDataTable(
+      [
+        ["Review ID", "review_id"],
+        ["State ID", "state_id"],
+        ["Reviewer", "reviewer"],
+        ["Action", "action"],
+        ["Corrected state", "corrected_state_code"],
+        ["Reason", "reason"],
+        ["Created", (row) => humanDate(row.created_at)],
+      ],
+      reviews,
+      "No reviews have been appended for this case.",
+    ),
+  );
+}
+
+
+function renderDossierDiff(diff) {
+  const container = byId("dossier-diff");
+  clear(container);
+
+  const heading = make("div", {
+    className: "diff-heading",
+  });
+
+  heading.append(
+    make("span", {
+      className: "outcome-badge",
+      text: diff.outcome,
+    }),
+    make("span", {
+      className: "muted",
+      text:
+        diff.triggered_by_change_id
+          ? `Triggered by ${diff.triggered_by_change_id}`
+          : "No producing change recorded for the selected comparison.",
+    }),
+  );
+
+  const states = make("div", {
+    className: "state-grid",
+  });
+
+  states.append(
+    dossierStatePanel("Before", diff.before),
+    dossierStatePanel("After", diff.after),
+  );
+
+  const dependencyRows = [
+    ...diff.dependencies_removed.map((row) => ({
+      ...row,
+      delta: "REMOVED",
+    })),
+    ...diff.dependencies_added.map((row) => ({
+      ...row,
+      delta: "ADDED",
+    })),
+  ];
+
+  container.append(
+    heading,
+    states,
+    make("h4", {
+      text: "State-field changes",
+    }),
+    renderDataTable(
+      [
+        ["Field", "field"],
+        ["Before", "before"],
+        ["After", "after"],
+      ],
+      diff.state_changes,
+      "No conclusion fields changed.",
+    ),
+    make("h4", {
+      text: "Version changes",
+    }),
+    renderDataTable(
+      [
+        ["Version", "name"],
+        ["Before", "before"],
+        ["After", "after"],
+      ],
+      diff.version_changes,
+      "No version labels changed.",
+    ),
+    make("h4", {
+      text: "Dependency-record changes",
+    }),
+    renderDataTable(
+      [
+        ["Delta", "delta"],
+        ["Dependency type", "dep_type"],
+        ["Edge type", "edge_type"],
+        ["Node type", "node_type"],
+        ["Node ID", "node_id"],
+        ["Node version", "node_version"],
+        ["Context", "node_context"],
+      ],
+      dependencyRows,
+      "No dependency records were added or removed.",
+    ),
+    definitionList({
+      "Explanation changed":
+        diff.explanation_changed ? "Yes" : "No",
+      "Unchanged dependency records":
+        diff.dependencies_unchanged,
+    }),
+  );
+}
+
+
+function renderDossierDependencies(subgraph) {
+  const summary = byId(
+    "dossier-dependency-summary",
+  );
+
+  const graph = byId("dossier-graph");
+  const inspector = byId(
+    "dossier-node-inspector",
+  );
+
+  clear(summary);
+  clear(graph);
+  clear(inspector);
+
+  if (!subgraph) {
+    graph.append(
+      make("div", {
+        className: "empty-state",
+        text:
+          "No dependency graph exists for the case's " +
+          "current published state.",
+      }),
+    );
+
+    return;
+  }
+
+  summary.append(
+    definitionList({
+      Release: subgraph.release_id,
+      Nodes: subgraph.nodes.length,
+      Edges: subgraph.edges.length,
+      "Rule-space rows": subgraph.rule_space.length,
+    }),
+  );
+
+  renderGraph(
+    subgraph,
+    graph,
+    inspector,
+    "dossier-arrow",
+  );
+}
+
+
+async function loadDossier(caseId) {
+  const status = byId("dossier-status");
+
+  activeDossierCaseId = null;
+  activeDossierStateId = null;
+
+  byId("dossier-review-fieldset").disabled = true;
+  byId("dossier-export").hidden = true;
+
+  for (const id of [
+    "dossier-overview",
+    "dossier-history",
+    "dossier-reviews",
+    "dossier-diff",
+    "dossier-dependency-summary",
+    "dossier-graph",
+    "dossier-node-inspector",
+  ]) {
+    clear(byId(id));
+  }
+
+  setStatus(
+    status,
+    "loading",
+    `Loading complete dossier for ${caseId}?`,
+  );
+
+  try {
+    const dependencyPromise =
+      getCaseDependencies(caseId)
+        .then((value) => value)
+        .catch((error) => {
+          if (
+            error instanceof ApiError &&
+            error.errorCode ===
+              "dependencies_not_found"
+          ) {
+            return null;
+          }
+
+          throw error;
+        });
+
+    const [
+      dossier,
+      history,
+      reviews,
+      diff,
+      dependencies,
+    ] = await Promise.all([
+      getCase(caseId),
+      getCaseHistory(caseId),
+      getCaseReviews(caseId),
+      getCaseDiff(caseId),
+      dependencyPromise,
+    ]);
+
+    activeDossierCaseId = caseId;
+
+    renderDossierOverview(dossier);
+    renderDossierHistory(history);
+    renderDossierReviews(reviews);
+    renderDossierDiff(diff);
+    renderDossierDependencies(dependencies);
+
+    byId("dossier-before-release").value =
+      diff.before?.release_id ?? "";
+
+    byId("dossier-after-release").value =
+      diff.after?.release_id ??
+      dossier.current_state?.release_id ??
+      "";
+
+    hideStatus(status);
+  } catch (error) {
+    setStatus(
+      status,
+      "error",
+      errorText(error),
+    );
+  }
+}
+
+
+async function submitDossierLookup(event) {
+  event.preventDefault();
+
+  const caseId = String(
+    new FormData(event.currentTarget)
+      .get("case_id") ?? "",
+  ).trim();
+
+  if (!caseId) {
+    setStatus(
+      byId("dossier-status"),
+      "error",
+      "Enter a case ID.",
+    );
+
+    return;
+  }
+
+  await loadDossier(caseId);
+}
+
+
+async function submitDossierDiff(event) {
+  event.preventDefault();
+
+  const status = byId("dossier-diff-status");
+
+  if (!activeDossierCaseId) {
+    setStatus(
+      status,
+      "error",
+      "Load a case dossier first.",
+    );
+
+    return;
+  }
+
+  const data = new FormData(event.currentTarget);
+
+  const beforeRelease = String(
+    data.get("before_release") ?? "",
+  ).trim();
+
+  const afterRelease = String(
+    data.get("after_release") ?? "",
+  ).trim();
+
+  setStatus(
+    status,
+    "loading",
+    "Comparing stored case states?",
+  );
+
+  try {
+    const diff = await getCaseDiff(
+      activeDossierCaseId,
+      {
+        beforeRelease:
+          beforeRelease || null,
+        afterRelease:
+          afterRelease || null,
+      },
+    );
+
+    renderDossierDiff(diff);
+    hideStatus(status);
+  } catch (error) {
+    setStatus(
+      status,
+      "error",
+      errorText(error),
+    );
+  }
+}
+
+
+function syncReviewCorrection() {
+  const action = byId(
+    "dossier-review-action",
+  ).value;
+
+  const corrected = byId(
+    "dossier-corrected-state",
+  );
+
+  const needsCorrection =
+    action === "CORRECT";
+
+  corrected.disabled = !needsCorrection;
+  corrected.required = needsCorrection;
+
+  if (!needsCorrection) {
+    corrected.value = "";
+  }
+}
+
+
+async function submitDossierReview(event) {
+  event.preventDefault();
+
+  const status = byId(
+    "dossier-review-status",
+  );
+
+  if (
+    !activeDossierCaseId ||
+    activeDossierStateId === null
+  ) {
+    setStatus(
+      status,
+      "error",
+      "Load a case with a current published state first.",
+    );
+
+    return;
+  }
+
+  const form = event.currentTarget;
+  const submit = byId(
+    "dossier-review-submit",
+  );
+
+  const data = new FormData(form);
+
+  const action = String(
+    data.get("action") ?? "",
+  );
+
+  const payload = {
+    reviewer: String(
+      data.get("reviewer") ?? "",
+    ).trim(),
+    action,
+    reason: String(
+      data.get("reason") ?? "",
+    ).trim(),
+    state_id: activeDossierStateId,
+  };
+
+  if (action === "CORRECT") {
+    payload.corrected_state_code = String(
+      data.get("corrected_state_code") ?? "",
+    ).trim();
+  }
+
+  submit.disabled = true;
+
+  setStatus(
+    status,
+    "loading",
+    "Appending review event?",
+  );
+
+  try {
+    const review = await createReview(
+      activeDossierCaseId,
+      payload,
+    );
+
+    const reviews = await getCaseReviews(
+      activeDossierCaseId,
+    );
+
+    renderDossierReviews(reviews);
+
+    setStatus(
+      status,
+      "success",
+      `Review ${review.review_id} appended. ` +
+        "No ledger state was overwritten.",
+    );
+
+    form.reset();
+    syncReviewCorrection();
+  } catch (error) {
+    setStatus(
+      status,
+      "error",
+      errorText(error),
+    );
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+
 function activateView(name) {
   for (const section of document.querySelectorAll("[data-view]")) {
     section.hidden = section.dataset.view !== name;
@@ -1199,7 +1898,28 @@ function boot() {
     syncGateControl,
   );
 
+  byId("dossier-form").addEventListener(
+    "submit",
+    submitDossierLookup,
+  );
+
+  byId("dossier-diff-form").addEventListener(
+    "submit",
+    submitDossierDiff,
+  );
+
+  byId("dossier-review-form").addEventListener(
+    "submit",
+    submitDossierReview,
+  );
+
+  byId("dossier-review-action").addEventListener(
+    "change",
+    syncReviewCorrection,
+  );
+
   syncGateControl();
+  syncReviewCorrection();
 
   activateView("changes");
   void loadChanges();
