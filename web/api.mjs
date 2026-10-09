@@ -156,3 +156,96 @@ export function getRunEquivalence(
     fetchImpl,
   );
 }
+
+export function getCase(caseId, fetchImpl = globalThis.fetch) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+export function getCaseHistory(
+  caseId,
+  fetchImpl = globalThis.fetch,
+) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/history`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+export function getCaseReviews(
+  caseId,
+  fetchImpl = globalThis.fetch,
+) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/reviews`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+export function createReview(
+  caseId,
+  payload,
+  fetchImpl = globalThis.fetch,
+) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/review`,
+    {
+      method: "POST",
+      body: payload,
+    },
+    fetchImpl,
+  );
+}
+
+
+export function getCaseDiff(
+  caseId,
+  {
+    beforeRelease = null,
+    afterRelease = null,
+  } = {},
+  fetchImpl = globalThis.fetch,
+) {
+  const params = new URLSearchParams();
+
+  if (beforeRelease) {
+    params.set("before_release", beforeRelease);
+  }
+
+  if (afterRelease) {
+    params.set("after_release", afterRelease);
+  }
+
+  const query = params.toString();
+
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/diff` +
+      (query ? `?${query}` : ""),
+    {},
+    fetchImpl,
+  );
+}
+
+
+export function exportUrl(releaseId, format = "json") {
+  if (!["json", "sha256"].includes(format)) {
+    throw new TypeError(
+      `Unsupported export format: ${format}`,
+    );
+  }
+
+  const params = new URLSearchParams({
+    as_of_release: releaseId,
+    format,
+  });
+
+  return `${API_ROOT}/export?${params.toString()}`;
+}

@@ -47,6 +47,14 @@
         >
           Runs & Equivalence
         </button>
+
+        <button
+          class="nav-button"
+          type="button"
+          data-nav="dossier"
+        >
+          Case Dossier
+        </button>
       </nav>
     </aside>
 
@@ -460,6 +468,311 @@
               reprocessing ratio, the three comparison axes, and
               the PASS/BLOCKED decision here.
             </div>
+          </div>
+        </section>
+      </section>
+
+
+      <section
+        class="page"
+        data-view="dossier"
+        hidden
+      >
+        <header class="page-header">
+          <div>
+            <p class="eyebrow">Reviewer workspace</p>
+            <h2>Case Dossier</h2>
+            <p class="muted">
+              Reconstruct what changed and why, inspect provenance,
+              append a review, and export a reproducible snapshot.
+            </p>
+          </div>
+        </header>
+
+        <section class="card">
+          <form
+            id="dossier-form"
+            class="dependency-form"
+          >
+            <div class="field">
+              <label for="dossier-case-id">
+                Case ID
+              </label>
+              <input
+                id="dossier-case-id"
+                name="case_id"
+                required
+                autocomplete="off"
+                placeholder="Enter a case ID"
+              >
+            </div>
+
+            <button
+              class="button button-primary"
+              type="submit"
+            >
+              Load dossier
+            </button>
+
+            <a
+              id="dossier-export"
+              class="button"
+              href="#"
+              hidden
+            >
+              Export current snapshot
+            </a>
+          </form>
+
+          <div
+            id="dossier-status"
+            class="status"
+            aria-live="polite"
+            hidden
+          ></div>
+        </section>
+
+        <section
+          id="dossier-overview"
+          class="card"
+        >
+          <div class="empty-state">
+            Load a case to inspect its current published state,
+            evidence and version vector.
+          </div>
+        </section>
+
+        <div class="dossier-grid">
+          <section class="card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Append-only ledger</p>
+                <h3>State history</h3>
+              </div>
+            </div>
+
+            <p class="muted">
+              Audit history includes non-published states; the
+              dossier conclusion above uses only the latest
+              PUBLISHED state.
+            </p>
+
+            <div id="dossier-history">
+              <div class="empty-state">
+                State history appears after a case is loaded.
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Human review</p>
+                <h3>Review actions</h3>
+              </div>
+            </div>
+
+            <form id="dossier-review-form">
+              <fieldset
+                id="dossier-review-fieldset"
+                class="review-fieldset"
+                disabled
+              >
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="dossier-reviewer">
+                      Reviewer
+                    </label>
+                    <input
+                      id="dossier-reviewer"
+                      name="reviewer"
+                      required
+                      autocomplete="off"
+                    >
+                  </div>
+
+                  <div class="field">
+                    <label for="dossier-review-action">
+                      Action
+                    </label>
+                    <select
+                      id="dossier-review-action"
+                      name="action"
+                      required
+                    >
+                      <option value="CONFIRM">
+                        CONFIRM
+                      </option>
+                      <option value="CORRECT">
+                        CORRECT
+                      </option>
+                      <option value="MARK_UNRESOLVED">
+                        MARK_UNRESOLVED
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="field field-wide">
+                    <label for="dossier-review-reason">
+                      Reason
+                    </label>
+                    <textarea
+                      id="dossier-review-reason"
+                      name="reason"
+                      required
+                      placeholder="Explain the review decision"
+                    ></textarea>
+                  </div>
+
+                  <div class="field field-wide">
+                    <label for="dossier-corrected-state">
+                      Corrected state
+                    </label>
+                    <select
+                      id="dossier-corrected-state"
+                      name="corrected_state_code"
+                      disabled
+                    >
+                      <option value="">
+                        Choose a corrected state
+                      </option>
+                      <option value="CONCORDANT_RESISTANT">
+                        CONCORDANT_RESISTANT
+                      </option>
+                      <option value="CONCORDANT_SUSCEPTIBLE">
+                        CONCORDANT_SUSCEPTIBLE
+                      </option>
+                      <option
+                        value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S"
+                      >
+                        DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S
+                      </option>
+                      <option
+                        value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE"
+                      >
+                        DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE
+                      </option>
+                      <option value="UNRESOLVED">
+                        UNRESOLVED
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button
+                    id="dossier-review-submit"
+                    class="button button-primary"
+                    type="submit"
+                  >
+                    Append review
+                  </button>
+                </div>
+              </fieldset>
+            </form>
+
+            <div
+              id="dossier-review-status"
+              class="status"
+              aria-live="polite"
+              hidden
+            ></div>
+
+            <h4>Review history</h4>
+
+            <div id="dossier-reviews">
+              <div class="empty-state">
+                Review history appears after a case is loaded.
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <section class="card">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">I-13 stored comparison</p>
+              <h3>Before / after</h3>
+            </div>
+          </div>
+
+          <form
+            id="dossier-diff-form"
+            class="comparison-form"
+          >
+            <div class="field">
+              <label for="dossier-before-release">
+                Before release
+              </label>
+              <input
+                id="dossier-before-release"
+                name="before_release"
+                autocomplete="off"
+                placeholder="Default: previous published state"
+              >
+            </div>
+
+            <div class="field">
+              <label for="dossier-after-release">
+                After release
+              </label>
+              <input
+                id="dossier-after-release"
+                name="after_release"
+                autocomplete="off"
+                placeholder="Default: current published state"
+              >
+            </div>
+
+            <button
+              class="button"
+              type="submit"
+            >
+              Compare releases
+            </button>
+          </form>
+
+          <div
+            id="dossier-diff-status"
+            class="status"
+            aria-live="polite"
+            hidden
+          ></div>
+
+          <div id="dossier-diff">
+            <div class="empty-state">
+              Before/after state, version, explanation and
+              dependency differences appear here.
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="section-heading compact">
+            <div>
+              <p class="eyebrow">A-10 stored provenance</p>
+              <h3>Dependency path</h3>
+            </div>
+          </div>
+
+          <div id="dossier-dependency-summary"></div>
+
+          <div class="graph-layout">
+            <div
+              id="dossier-graph"
+              class="graph-canvas"
+            >
+              <div class="empty-state">
+                Current dependency path appears after a case
+                is loaded.
+              </div>
+            </div>
+
+            <aside
+              id="dossier-node-inspector"
+              class="node-inspector"
+              aria-live="polite"
+            ></aside>
           </div>
         </section>
       </section>

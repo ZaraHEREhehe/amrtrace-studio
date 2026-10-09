@@ -4,7 +4,13 @@ import test from "node:test";
 import {
   ApiError,
   createChange,
+  createReview,
+  exportUrl,
+  getCase,
   getCaseDependencies,
+  getCaseDiff,
+  getCaseHistory,
+  getCaseReviews,
   getRun,
   getRunEquivalence,
   listChanges,
@@ -219,5 +225,119 @@ test("getRunEquivalence uses the run report endpoint", async () => {
   assert.equal(
     seenUrl,
     "/api/runs/RUN-1/equivalence",
+  );
+});
+
+test("case dossier API URLs encode case ids", async () => {
+  const urls = [];
+
+  const fakeFetch = async (url) => {
+    urls.push(url);
+    return response(200, {});
+  };
+
+  await getCase("CASE A/1", fakeFetch);
+  await getCaseHistory("CASE A/1", fakeFetch);
+  await getCaseReviews("CASE A/1", fakeFetch);
+
+  assert.deepEqual(
+    urls,
+    [
+      "/api/cases/CASE%20A%2F1",
+      "/api/cases/CASE%20A%2F1/history",
+      "/api/cases/CASE%20A%2F1/reviews",
+    ],
+  );
+});
+
+
+test("case diff sends optional release bounds", async () => {
+  let seenUrl;
+
+  const fakeFetch = async (url) => {
+    seenUrl = url;
+    return response(200, {
+      case_id: "CASE A/1",
+      outcome: "UNCHANGED",
+    });
+  };
+
+  await getCaseDiff(
+    "CASE A/1",
+    {
+      beforeRelease: "R 1",
+      afterRelease: "R/2",
+    },
+    fakeFetch,
+  );
+
+  assert.equal(
+    seenUrl,
+    "/api/cases/CASE%20A%2F1/diff" +
+      "?before_release=R+1&after_release=R%2F2",
+  );
+});
+
+
+test("createReview posts append-only review payload", async () => {
+  let seenUrl;
+  let seenOptions;
+
+  const payload = {
+    reviewer: "Reviewer One",
+    action: "CORRECT",
+    reason: "Evidence differs",
+    state_id: 42,
+    corrected_state_code: "UNRESOLVED",
+  };
+
+  const fakeFetch = async (url, options) => {
+    seenUrl = url;
+    seenOptions = options;
+
+    return response(201, {
+      review_id: 5,
+      case_id: "CASE A/1",
+      ...payload,
+    });
+  };
+
+  await createReview(
+    "CASE A/1",
+    payload,
+    fakeFetch,
+  );
+
+  assert.equal(
+    seenUrl,
+    "/api/cases/CASE%20A%2F1/review",
+  );
+
+  assert.equal(
+    seenOptions.method,
+    "POST",
+  );
+
+  assert.deepEqual(
+    JSON.parse(seenOptions.body),
+    payload,
+  );
+});
+
+
+test("exportUrl targets same-origin reproducible export", () => {
+  assert.equal(
+    exportUrl("R 1/2"),
+    "/api/export?as_of_release=R+1%2F2&format=json",
+  );
+
+  assert.equal(
+    exportUrl("R1", "sha256"),
+    "/api/export?as_of_release=R1&format=sha256",
+  );
+
+  assert.throws(
+    () => exportUrl("R1", "csv"),
+    /Unsupported export format/,
   );
 });
