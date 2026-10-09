@@ -4,8 +4,8 @@ The API reads the same PostgreSQL database as the rest of AMRTrace Studio.
 Connection settings come only from environment variables; no credentials are
 stored in source code.
 
-Each request gets its own connection. Read transactions are rolled back when
-the request ends so the read API never commits application state.
+Each request gets its own connection. Read dependencies always roll back.
+Write dependencies commit only after a successful request and roll back on error.
 """
 
 from __future__ import annotations
@@ -37,4 +37,19 @@ def get_connection() -> Iterator[psycopg.Connection]:
     finally:
         if not conn.closed:
             conn.rollback()
+            conn.close()
+
+
+def get_write_connection() -> Iterator[psycopg.Connection]:
+    """Yield a request-scoped connection that commits only on success."""
+    conn = psycopg.connect(database_conninfo())
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        if not conn.closed:
+            conn.rollback()
+        raise
+    finally:
+        if not conn.closed:
             conn.close()

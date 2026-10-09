@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class CaseSummary(BaseModel):
@@ -107,3 +107,44 @@ class CaseSubgraphView(BaseModel):
     nodes: list[GraphNodeView]
     edges: list[GraphEdgeView]
     rule_space: list[RuleSpaceEntryView]
+
+class ChangedEntityPayload(BaseModel):
+    node_type: str
+    node_id: str
+    old_version: str | None = None
+    new_version: str | None = None
+    changed_region: dict[str, Any] | None = None
+
+
+class ChangeCreate(BaseModel):
+    change_id: str
+    type: str
+    old_version: str
+    new_version: str
+    changed_entities: list[ChangedEntityPayload] = Field(default_factory=list)
+    declared_scope: dict[str, Any] = Field(default_factory=dict)
+    initiator: str
+
+
+class ChangeEventView(ChangeCreate):
+    created_at: datetime
+
+
+class ImpactItemView(BaseModel):
+    case_id: str
+    reason: str
+    mechanism: str
+
+
+class ImpactSetView(BaseModel):
+    change_id: str
+    release_id: str
+    level1_size: int
+    level2_size: int
+    items: list[ImpactItemView]
+
+
+class ChangeApplicationView(BaseModel):
+    event: ChangeEventView
+    impact: ImpactSetView
+    entities_derived: bool
