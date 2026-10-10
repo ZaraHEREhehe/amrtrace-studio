@@ -55,11 +55,15 @@ The frontend proxies `/api/` requests to the backend. Verify API liveness:
 Invoke-RestMethod http://localhost:8080/api/health
 ~~~
 
-Expected response:
+Expected response in Windows PowerShell (the object is usually formatted as a table, rather than raw JSON):
 
-~~~json
-{"service":"api","status":"ok"}
+~~~text
+service status
+------- ------
+api     ok
 ~~~
+
+The underlying API response is JSON with `service` set to `api` and `status` set to `ok`.
 
 **Important:** Docker Compose creates an **empty** development database. It does not automatically apply schema migrations, load cases or publish a baseline release. A healthy API does not necessarily mean case records are available.
 
@@ -137,9 +141,11 @@ Do not regenerate the committed manifest to disguise a mismatch. Use a **separat
 
 ~~~powershell
 .\.venv\Scripts\python.exe -m amrtrace.ingest.load_frozen_v1
+.\.venv\Scripts\python.exe -m amrtrace.ingest.baseline_states
+.\.venv\Scripts\python.exe -m amrtrace.ingest.materialize_baseline
 ~~~
 
-This command loads source tables only. The full baseline-state release must also be produced through the separate project ingestion/baseline procedure; the mini-cohort demonstration does not claim full-data reproduction.
+Run these commands **in order**, only on the separate, freshly migrated database containing the approved full frozen files. They load the source tables, create and publish the `R1` baseline states, and then verify/materialize the `R1` dependency and applicability graph. The required private files are not committed; these full-data steps were not part of the Windows mini-cohort reproduction.
 
 ## 5. Automated tests
 
@@ -150,6 +156,8 @@ Run these from the repository root using the Python environment and local Postgr
 ~~~powershell
 .\.venv\Scripts\python.exe -m pytest tests/unit -q
 ~~~
+
+The three Z-12 deployment-transition tests exercise Bash scripts designed for the Linux production VM. They run in Linux CI and are **skipped on native Windows**, where Windows temporary paths are incompatible with the invoked Bash shell. These three platform skips are expected; PostgreSQL-dependent test skips are separate and must not be reported as passes.
 
 ### PostgreSQL integration tests
 
@@ -220,7 +228,7 @@ A real manual rollback uses:
 sudo /usr/local/sbin/amrtrace-z12-rollback --apply
 ~~~
 
-**`--apply` restarts production containers:** only run it during approved recovery or testing. The script restores the previous successful application release; moving back to the newer reviewed release requires the separate manual restore procedure proposed in [PR #113](https://github.com/ZaraHEREhehe/amrtrace-studio/pull/113), pending approval and merge. **Application image rollback does not revert PostgreSQL schema or data.**
+**`--apply` restarts production containers:** only run it during approved recovery or testing. The script restores the previous successful application release; moving back to a newer reviewed release requires the guarded manual restore procedure documented in the [Z-12 runbook](docs/deployment_z12.md), merged in [PR #113](https://github.com/ZaraHEREhehe/amrtrace-studio/pull/113). **Application image rollback does not revert PostgreSQL schema or data.**
 
 The October 10, 2026 verification recorded automatic main deployment, byte-matching VM scripts, an observed healthy V2-to-V1 transition, and restoration of V2 with three successful health checks. The first rollback transcript did **not** retain the explicit `ROLLBACK_REDEPLOY_VERIFIED` line; the runbook states that evidence limitation.
 
