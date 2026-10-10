@@ -13,7 +13,7 @@ COPY requirements-api.txt /app/requirements-api.txt
 
 RUN python -m pip install     --disable-pip-version-check     --no-cache-dir     -r /app/requirements-api.txt
 
-COPY src /app/src
+COPY --chown=amrtrace:amrtrace src /app/src
 
 USER amrtrace
 
