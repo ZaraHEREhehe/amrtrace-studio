@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for approved AMRTrace Studio releases
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=10min
+RandomizedDelaySec=1min
+Unit=amrtrace-z12-deploy.service
+
+[Install]
+WantedBy=timers.target
