@@ -149,4 +149,4 @@ Azure for Students credit is finite. Monitor VM, Azure Database for PostgreSQL, 
 
 ## LLM assistance
 
-ChatGPT was used for guidance, troubleshooting, and documentation support during deployment.
+AI-assisted tools were used for technical guidance, troubleshooting, and documentation support. Implementation, verification, and final decisions remain the responsibility of the project team.
