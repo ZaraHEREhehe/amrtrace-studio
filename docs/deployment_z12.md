@@ -49,7 +49,7 @@ sudo journalctl -u amrtrace-z12-deploy.service -n 30 --no-pager
 
 Loopback app checks should return 200. The public endpoints **without credentials** should return 401, not 200. For a browser demo, use username `demo` and the separately stored demo password. Never send secrets, browser login passwords, signed Blob SAS URLs, or PostgreSQL credentials in logs/screenshots. This is a demo perimeter, not multi-user RBAC.
 
-## Post-merge production acceptance (Azure observations; final signoff pending)
+## Post-merge production acceptance (reviewed evidence; final closeout)
 
 Aabia approved PR [#111](https://github.com/ZaraHEREhehe/amrtrace-studio/pull/111) after fixing the original same-tag-only manual rollback. The PR was merged on 2026-10-10 as `f8bec6403a2adf9a69e13541420bcbfd97287557`. GitHub shows [main CI success](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077023) and [main image-publishing success](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077052). GitHub workflow success alone does not prove VM runtime state. The Azure systemd journal and Docker/HTTP observations below provide the separate runtime evidence; the explicit rollback-script completion line is still missing.
 
@@ -124,6 +124,86 @@ sudo /usr/local/sbin/amrtrace-z12-rollback --apply
 
 This restores `image.previous.env` to `image.env`, recreates both app containers from their previously downloaded commit-tagged images, and requires all three localhost endpoints to return 200. It refuses missing local images or identical current/previous tags and, on rollback health failure, tries to restore the original active version. A successful manual rollback also updates `image.last-good.env` to match the verified running version. If a suitable image is no longer local, pull it from GHCR before retrying. The implementation acquires the same lock as the timer and does not alter PostgreSQL schema/data. Keep the previous-release tag, last-good tag and original verified dump; an application image rollback does not undo database migrations or written reviews.
 
+### Restore the reviewed release after a manual rollback (manual roll-forward)
+
+After a successful rollback, the deployment poller can report `NO_CHANGE` because its `main.baseline` still matches `main`; it does not automatically reverse an intentional manual rollback. Also, rerunning `amrtrace-z12-rollback --apply` is **not** a roll-forward operation. Restoring a newer release is a separate, controlled operation.
+
+**Before any planned rollback**, preserve the active, already-verified image tag on the VM (this is a tag pointer, not a database dump):
+
+```bash
+sudo install -m 600 /opt/amrtrace-studio/image.env /opt/amrtrace-studio/image.pre-rollback.env
+sudo grep '^AMRTRACE_IMAGE_TAG=' /opt/amrtrace-studio/image.pre-rollback.env
+```
+
+Confirm that the preserved tag belongs to the reviewed release you intend to restore, and that both the matching `api` and `web` images exist locally. During the 2026-10-10 rehearsal the equivalent saved pointer was `/opt/amrtrace-studio/z12-stage/image.before-rollback.env`; that test-specific path is not a general requirement. Arrange a maintenance window: Docker Compose restarts the API and web containers. Do **not** run the development Compose stack or change PostgreSQL state.
+
+To restore the previously saved release, run the following as one shell block using Azure Bastion. It takes the same lock as the deployment timer, validates tag format and local images, saves the current rollback pointer, checks all three loopback endpoints, and updates `image.last-good.env` **only after health verification**. If restoration fails, it attempts to restart the original version and reports an error rather than silently claiming success.
+
+```bash
+sudo bash <<'BASH'
+set -Eeuo pipefail
+umask 077
+R=/opt/amrtrace-studio
+SOURCE="$R/image.pre-rollback.env"
+CURRENT="$R/image.env"
+COMPOSE="$R/compose.ghcr.yml"
+URL=http://127.0.0.1:8080
+
+exec 9>/run/lock/amrtrace-z12-deploy.lock
+flock -n 9 || { echo "ERROR: Deployment in progress"; exit 1; }
+for f in "$SOURCE" "$CURRENT" "$COMPOSE" "$R/runtime.env"; do
+  test -f "$f" || { echo "ERROR: Missing $f"; exit 1; }
+done
+target=$(sed -n 's/^AMRTRACE_IMAGE_TAG=//p' "$SOURCE")
+active=$(sed -n 's/^AMRTRACE_IMAGE_TAG=//p' "$CURRENT")
+[[ "$target" =~ ^sha-[0-9a-f]{40}$ ]] || { echo "ERROR: Invalid saved release tag"; exit 1; }
+[[ "$active" =~ ^sha-[0-9a-f]{40}$ ]] || { echo "ERROR: Invalid active release tag"; exit 1; }
+if [[ "$active" == "$target" ]]; then
+  echo "ALREADY_RUNNING=$target"; exit 0
+fi
+for service in api web; do
+  docker image inspect "ghcr.io/zaraherehehe/amrtrace-studio-$service:$target" >/dev/null ||
+    { echo "ERROR: Missing local $service image; no changes made"; exit 1; }
+done
+
+original=$(mktemp "$R/.image-before-restore.XXXXXXXX")
+trap 'rm -f "$original"' EXIT
+install -m 600 "$CURRENT" "$original"
+install -m 600 "$SOURCE" "$CURRENT"
+
+compose_up() {
+  docker compose --env-file "$CURRENT" -f "$COMPOSE" up -d --no-build --pull never --force-recreate
+}
+healthy() {
+  for attempt in {1..18}; do
+    if curl -fsS -o /dev/null --max-time 10 "$URL/" &&
+       curl -fsS -o /dev/null --max-time 10 "$URL/api/health" &&
+       curl -fsS -o /dev/null --max-time 30 "$URL/api/cases?limit=1"; then
+      return 0
+    fi
+    sleep 5
+  done
+  return 1
+}
+if compose_up && healthy; then
+  install -m 600 "$CURRENT" "$R/image.last-good.env"
+  echo "RESTORE_LATEST_VERIFIED=$target"
+else
+  echo "ERROR: Restore failed; attempting to return to original release" >&2
+  install -m 600 "$original" "$CURRENT"
+  if ! compose_up || ! healthy; then
+    echo "ERROR: Recovery unhealthy; investigate Docker logs immediately" >&2
+    exit 1
+  fi
+  install -m 600 "$CURRENT" "$R/image.last-good.env"
+  echo "ORIGINAL_RELEASE_RECOVERED=$active" >&2
+  exit 1
+fi
+BASH
+```
+
+After a successful restoration, confirm `docker ps` reports the chosen SHA for **both** services and confirm `/`, `/api/health`, and `/api/cases?limit=1` return HTTP 200. The `image.previous.env` pointer is intentionally unchanged (the older successful release remains the rollback target), and this procedure does not change `main.baseline` or PostgreSQL. If the saved image pointer or images are missing, **do not guess a tag**: identify a reviewed commit with both GHCR images published, stage and verify the images, and obtain approval before substituting a different release.
+
 If the deployment timer repeatedly reports failure, inspect `journalctl -u amrtrace-z12-deploy.service`, `sudo docker compose ... logs --tail=100 api web`, and `main.failed`. After fixing the failed revision or publishing a new revision to `main`, confirm app health again.
 
 ## Review and evidence
@@ -135,7 +215,7 @@ If the deployment timer repeatedly reports failure, inspect `journalctl -u amrtr
 - Same-version rollback rehearsal passed on 2026-10-10: both Docker services recreated and all three health endpoints ultimately passed (a transient curl connection reset during startup recovered).
 - Aabia approved the fixed cross-version design in [PR #111](https://github.com/ZaraHEREhehe/amrtrace-studio/pull/111); merged to main. [Main CI](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077023) and [main GHCR publishing](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077052) are green.
 - **Post-merge Azure observations captured (2026-10-10):** `DEPLOY_SUCCESS` for reviewed main, matching baseline/image revision, distinct rollback-ready tags, healthy running V1 after V2, then explicit V2 restoration with three HTTP 200 endpoints and `V2_LAST_GOOD_CONFIRMED`. See acceptance record above.
-- **Before Z-12 DONE / issue #40 closure:** VM helper byte comparison is complete (`amrtrace-z12-deploy MATCH`; `amrtrace-z12-rollback MATCH`). Present the observed V2-to-V1 transition to the reviewer while explicitly noting the missing first `ROLLBACK_REDEPLOY_VERIFIED` line, and obtain final acceptance/signoff. No further Azure change is implied by this documentation update.
+- **Closeout:** Both VM helpers matched the merged scripts. Aabia approved the evidence documentation in PR #112 and treated a repeat rollback capture as non-blocking follow-up. The first `ROLLBACK_REDEPLOY_VERIFIED` line was not captured and is **not** claimed. The manual roll-forward procedure is now documented; final DONE status and issue #40 closure are subject to review and merge of the closeout PR.
 
 ## CI trust boundary and demo limitations
 
@@ -147,6 +227,6 @@ Nginx retains the default roughly 60-second upstream read timeout. A full-cohort
 
 Azure for Students credit is finite. Monitor VM, Azure Database for PostgreSQL, reserved public IP and storage costs; remove the temporary blob transfer account/container after backup retention needs are satisfied. Low VM RAM and swap may make intensive exhaustive recomputation impractical. Do not expose write endpoints publicly without password protection. Rotate any exposed keys and keep secrets outside source control.
 
-## LLM assistance
+## AI assistance
 
-AI-assisted tools were used for technical guidance, troubleshooting, and documentation support. Implementation, verification, and final decisions remain the responsibility of the project team.
+Used ChatGPT for troubleshooting support.
