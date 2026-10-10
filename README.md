@@ -38,6 +38,6 @@ sudo /usr/local/sbin/amrtrace-z12-rollback --check
 sudo /usr/local/sbin/amrtrace-z12-rollback --apply
 ```
 
-The rollback re-deploys the saved, previously health-checked image tag; it does **not** roll back database contents. A same-version redeployment and three health checks passed on 2026-10-10; cross-version rollback and a post-merge automatic rollout still need evidence.
+After the first successful upgrade, the deployer saves the superseded working tag in `image.previous.env`; the manual rollback restores **that previous tag**, while automatic deployment failures restore the last verified tag. A rollback refuses identical versions or missing images. The rehearsal on 2026-10-10 validated same-version redeployment; live cross-version rollback and post-merge automatic rollout still need evidence. Image rollback does **not** roll back database contents.
 
 **LLM Assistance:** ChatGPT was used for guidance, troubleshooting, and documentation support during deployment.
