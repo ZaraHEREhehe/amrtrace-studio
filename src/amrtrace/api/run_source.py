@@ -14,6 +14,7 @@ from amrtrace.changes import ChangeNotFound, get_change_event
 from amrtrace.changes.service import get_impact_set
 from amrtrace.evaluator import CaseInputs, VersionVector
 from amrtrace.ingest.frozen_v1 import (
+    reference_rules_from_db,
     AST_COLUMNS,
     GENOTYPE_COLUMNS,
     ISOLATE_COLUMNS,
@@ -195,11 +196,14 @@ class DatabaseInputSource:
         organism: str,
         interpretation_rules: tuple[dict, ...],
         mapping_version: str,
+        reference_rules: tuple[dict, ...] | None = None,
     ) -> None:
         self.conn = conn
         self.panel = panel
         self.organism = organism
         self.interpretation_rules = interpretation_rules
+        # the labs' edition, which decides whether a label may be overruled at all (D-21)
+        self.reference_rules = reference_rules
 
         query = (
             f"SELECT {_column_list(MAPPING_COLUMNS)} "
@@ -302,6 +306,7 @@ class DatabaseInputSource:
                 self.organism,
                 interpretation_rules=self.interpretation_rules,
                 case_ids=batch,
+                reference_rules=self.reference_rules,
             )
 
 
@@ -366,6 +371,7 @@ def interpretation_run_context(
             rules_as_dicts(table.rules)
         ),
         mapping_version=versions.mapping_version,
+        reference_rules=reference_rules_from_db(conn),
     )
 
     return RunContext(

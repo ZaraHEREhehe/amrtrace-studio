@@ -12,6 +12,7 @@ from amrtrace.evaluator import constants as c
 from amrtrace.evaluator import evaluate
 from amrtrace.evaluator.types import CaseInputs, EvalResult
 from amrtrace.ingest.frozen_v1 import (
+    reference_rules_for,
     FrozenTables,
     build_case_inputs,
     build_version_vector,
@@ -68,7 +69,11 @@ def evaluate_with_table(
     )
     rules = rules_as_dicts(table.rules)
     for inputs in build_case_inputs(
-        tables, panel, organism, interpretation_rules=rules
+        tables,
+        panel,
+        organism,
+        interpretation_rules=rules,
+        reference_rules=reference_rules_for(table),
     ):
         yield inputs, evaluate(inputs, versions)
 

@@ -1,9 +1,12 @@
 # adapter tests for interpretation mode: measurements and rule keys are handed over only when asked for
 from amrtrace.ingest.frozen_v1 import (
+    LAB_REFERENCE_VERSION,
     FrozenTables,
     build_case_inputs,
     build_version_vector,
+    reference_rules_for,
 )
+from amrtrace.interpretation.models import InterpretationTable, rule_from_dict
 
 PANEL = ("druga", "drugb")
 ORGANISM = "Testus organismus"
@@ -156,3 +159,85 @@ def test_the_version_vector_can_carry_an_interpretation_version():
     )
     assert interpreted.interpretation_version == "TABLE_V1"
     assert interpreted.mapping_version == "MAPPING_X"
+
+
+# D-21: a label is only overruled when the labs' reference edition explains it
+def reference_rule(antibiotic="druga"):
+    data = rule(antibiotic, version="REFERENCE_V1")
+    data["categories"] = [
+        {"label": "susceptible", "op": "<=", "value": 4},
+        {"label": "intermediate", "op": "==", "value": 8},
+        {"label": "resistant", "op": ">=", "value": 16},
+    ]
+    return data
+
+
+def key_with_reference(phenotype, mic, sign="=="):
+    case = only_case(
+        tables(ast("AST_1", mic=mic, sign=sign, phenotype=phenotype)),
+        interpretation_rules=(rule("druga"),),
+        reference_rules=(reference_rule(),),
+    )
+    return case.ast_rows[0]["rule_key"]
+
+
+KEY = "fantasy_std|testus organismus|druga|mic"
+
+
+def test_a_label_the_reference_explains_keeps_its_rule_key():
+    assert key_with_reference("S", 4.0) == KEY
+    assert key_with_reference("I", 8.0) == KEY
+    assert key_with_reference("R", 16.0) == KEY
+
+
+def test_a_censored_value_inside_one_category_still_counts_as_explained():
+    assert key_with_reference("R", 8.0, sign=">") == KEY
+    assert key_with_reference("S", 4.0, sign="<=") == KEY
+
+
+def test_an_undefined_label_is_kept_as_submitted():
+    assert key_with_reference("NOT_DEFINED", 8.0) is None
+
+
+def test_a_label_that_disagrees_with_the_reference_is_kept_as_submitted():
+    assert key_with_reference("I", 4.0) is None
+    assert key_with_reference("R", 8.0) is None
+    assert key_with_reference("S", 16.0, sign=">") is None
+
+
+def test_a_value_that_reaches_two_categories_is_kept_as_submitted():
+    assert key_with_reference("R", 8.0, sign=">=") is None
+
+
+def test_a_kept_row_still_carries_its_measurement():
+    case = only_case(
+        tables(ast("AST_1", mic=8.0, phenotype="NOT_DEFINED")),
+        interpretation_rules=(rule("druga"),),
+        reference_rules=(reference_rule(),),
+    )
+    assert case.ast_rows[0]["mic"] == 8.0
+    assert case.interpretation_rules == ()
+
+
+def test_a_rule_the_reference_does_not_cover_is_left_alone():
+    case = only_case(
+        tables(ast("AST_1", mic=8.0, phenotype="NOT_DEFINED")),
+        interpretation_rules=(rule("druga"),),
+        reference_rules=(reference_rule("drugb"),),
+    )
+    assert case.ast_rows[0]["rule_key"] == KEY
+
+
+def test_as_reported_mode_ignores_the_reference():
+    case = only_case(
+        tables(ast("AST_1", mic=8.0, phenotype="NOT_DEFINED")),
+        reference_rules=(reference_rule(),),
+    )
+    assert case.ast_rows == ({"ast_evidence_id": "AST_1", "phenotype": "NOT_DEFINED"},)
+
+
+def test_only_the_labs_edition_is_used_as_the_reference():
+    rules = (rule_from_dict(reference_rule()),)
+    assert reference_rules_for(InterpretationTable("OTHER_EDITION", "fantasy_std", rules)) is None
+    assert reference_rules_for(InterpretationTable(LAB_REFERENCE_VERSION, "fantasy_std", rules))[0]["rule_key"] == KEY
+    assert reference_rules_for(None) is None

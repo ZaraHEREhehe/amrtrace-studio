@@ -7,7 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from amrtrace.evaluator.types import CaseInputs, VersionVector
-from amrtrace.interpretation.models import make_rule_key
+from amrtrace.interpretation.db import TableNotFound, load_table_from_db
+from amrtrace.interpretation.intervals import touched_categories
+from amrtrace.interpretation.models import make_rule_key, rule_from_dict
 
 # vocabulary of the frozen files, kept here so the engine never sees it
 DETAILED_SOURCE = "MICROBIGGE"
@@ -19,6 +21,10 @@ VALID_ANALYSIS_TYPES = frozenset({"COMBINED", "NUCLEOTIDE"})
 # how a result was measured, as interpretation tables name it
 METHOD_MIC = "MIC"
 METHOD_DISK_DIFFUSION = "disk diffusion"
+# the edition the submitting labs are taken to have used; a label that disagrees with it is kept as submitted (D-21)
+LAB_REFERENCE_VERSION = "CLSI_M100_ED32"
+# table labels written the way the frozen files write them
+REFERENCE_LABELS = {"susceptible": "S", "intermediate": "I", "resistant": "R"}
 
 # a control character that cannot appear in the data, used to glue key parts together
 KEY_SEPARATOR = "\x1f"
@@ -264,17 +270,59 @@ def _rule_key(row: dict, organism: str, antibiotic: str) -> str | None:
     return make_rule_key(row["standard"], organism, antibiotic, method)
 
 
-def _ast_row(row: dict, organism: str, antibiotic: str, with_measurement: bool) -> dict:
+# true when the lab's label is the one category the reference edition gives this measurement
+def _matches_reference(row: dict, rule_key: str, reference: dict) -> bool:
+    rule = reference.get(rule_key)
+    # the reference has nothing to say about this result, so there is nothing to disagree with
+    if rule is None:
+        return True
+    mic = row.get("mic")
+    # without a usable value no rule is applied later anyway
+    if mic is None or mic != mic:
+        return True
+    labels = touched_categories(rule, float(mic), row.get("measurement_sign") or "==")
+    # a censored value that reaches two categories cannot explain any single label
+    if len(labels) != 1:
+        return False
+    return REFERENCE_LABELS[labels[0]] == row.get("phenotype_normalized")
+
+
+def _ast_row(
+    row: dict,
+    organism: str,
+    antibiotic: str,
+    with_measurement: bool,
+    reference: dict | None = None,
+) -> dict:
     neutral = {
         "ast_evidence_id": str(row["ast_evidence_id"]),
         "phenotype": row["phenotype_normalized"],
     }
     # as-reported inputs stay exactly as they were, so their hashes do not move
     if with_measurement:
+        rule_key = _rule_key(row, organism, antibiotic)
+        # a label we cannot explain is never overruled, so the row names no rule and its label stands (D-21)
+        if rule_key and reference and not _matches_reference(row, rule_key, reference):
+            rule_key = None
         neutral["mic"] = row.get("mic")
         neutral["sign"] = row.get("measurement_sign")
-        neutral["rule_key"] = _rule_key(row, organism, antibiotic)
+        neutral["rule_key"] = rule_key
     return neutral
+
+
+# the reference rules as the adapter needs them, or None when none should be checked
+def reference_rules_for(table) -> tuple[dict, ...] | None:
+    if table is None or table.interpretation_version != LAB_REFERENCE_VERSION:
+        return None
+    return tuple(rule.to_dict() for rule in table.rules)
+
+
+# the reference edition as stored in the database, or None when it was never stored there
+def reference_rules_from_db(conn) -> tuple[dict, ...] | None:
+    try:
+        return reference_rules_for(load_table_from_db(conn, LAB_REFERENCE_VERSION))
+    except TableNotFound:
+        return None
 
 
 def build_case_inputs(
@@ -283,6 +331,7 @@ def build_case_inputs(
     organism: str,
     interpretation_rules: tuple[dict, ...] | None = None,
     case_ids: Iterable[str] | None = None,
+    reference_rules: tuple[dict, ...] | None = None,
 ) -> Iterator[CaseInputs]:
     panel_set = frozenset(panel)
     # None means every case; a set of ids builds only those, for selective re-evaluation
@@ -293,6 +342,8 @@ def build_case_inputs(
     rules_by_key = defaultdict(list)
     for rule in interpretation_rules or ():
         rules_by_key[rule["rule_key"]].append(rule)
+    # the edition each label is checked against before any rule may overrule it
+    reference = {rule["rule_key"]: rule_from_dict(rule) for rule in reference_rules or ()}
 
     panel_order = {antibiotic: index for index, antibiotic in enumerate(panel)}
 
@@ -325,7 +376,7 @@ def build_case_inputs(
             raise ValueError(f"AST rows exist for {target} but there is no isolate row")
 
         ast_rows = tuple(
-            _ast_row(row, organism, antibiotic, with_measurement)
+            _ast_row(row, organism, antibiotic, with_measurement, reference)
             for row in sorted(
                 ast_groups[(target, antibiotic)],
                 key=lambda row: str(row["ast_evidence_id"]),
