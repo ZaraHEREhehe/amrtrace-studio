@@ -1,0 +1,20 @@
+# Deployed using prebuilt GitHub Container Registry images.
+# On the VM, install this file as /opt/amrtrace-studio/compose.ghcr.yml.
+# Keep runtime.env and image.env in /opt/amrtrace-studio (never commit secrets).
+services:
+  api:
+    image: ghcr.io/zaraherehehe/amrtrace-studio-api:${AMRTRACE_IMAGE_TAG:?IMAGE_TAG_missing}
+    restart: unless-stopped
+    env_file:
+      - path: ./runtime.env
+        format: raw
+    environment:
+      PORT: "8000"
+
+  web:
+    image: ghcr.io/zaraherehehe/amrtrace-studio-web:${AMRTRACE_IMAGE_TAG:?IMAGE_TAG_missing}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    depends_on:
+      - api
