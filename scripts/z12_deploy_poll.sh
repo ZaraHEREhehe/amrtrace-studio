@@ -8,6 +8,7 @@ ROOT=/opt/amrtrace-studio
 COMPOSE="$ROOT/compose.ghcr.yml"
 CURRENT="$ROOT/image.env"
 LAST_GOOD="$ROOT/image.last-good.env"
+PREVIOUS="$ROOT/image.previous.env"
 BASELINE="$ROOT/main.baseline"
 FAILED="$ROOT/main.failed"
 REPO=https://github.com/ZaraHEREhehe/amrtrace-studio.git
@@ -40,8 +41,8 @@ if [[ ! "$main_sha" =~ ^[0-9a-f]{40}$ ]]; then
 fi
 baseline="$(tr -d '\r\n' < "$BASELINE")"
 current_tag="$(sed -n 's/^AMRTRACE_IMAGE_TAG=//p' "$CURRENT")"
-if [[ -z "$current_tag" ]]; then
-  echo "ERROR: Missing current image tag." >&2
+if [[ ! "$current_tag" =~ ^sha-[0-9a-f]{40}$ ]]; then
+  echo "ERROR: Invalid current image tag." >&2
   exit 1
 fi
 
@@ -94,25 +95,32 @@ healthy() {
   return 1
 }
 
-# Keep a known-good copy before attempting to replace a healthy deployment.
+# Preserve the verified old release for automatic failure recovery.
 if curl -fsS -o /dev/null --max-time 10 "$URL/" &&
    curl -fsS -o /dev/null --max-time 10 "$URL/api/health" &&
    curl -fsS -o /dev/null --max-time 30 "$URL/api/cases?limit=1"; then
   install -m 600 "$CURRENT" "$LAST_GOOD"
 fi
 
+# Save the original pointer independently. The previous-release pointer is
+# committed ONLY if the candidate succeeds, so failed deploys cannot erase it.
+prior="$(mktemp "$ROOT/.image-prior.XXXXXXXX")"
 tmp="$(mktemp "$ROOT/.image.env.XXXXXXXX")"
-trap 'rm -f "$tmp"' EXIT
+trap 'rm -f "$tmp" "$prior"' EXIT
+install -m 600 "$CURRENT" "$prior"
 printf 'AMRTRACE_IMAGE_TAG=%s\n' "$new_tag" > "$tmp"
 chmod 600 "$tmp"
 mv -f "$tmp" "$CURRENT"
 
 if compose_up && healthy; then
-  install -m 600 "$CURRENT" "$LAST_GOOD"
-  printf '%s\n' "$main_sha" > "$BASELINE"
-  rm -f "$FAILED"
-  echo "DEPLOY_SUCCESS=$new_tag"
-  exit 0
+  if install -m 600 "$prior" "$PREVIOUS"; then
+    install -m 600 "$CURRENT" "$LAST_GOOD"
+    printf '%s\n' "$main_sha" > "$BASELINE"
+    rm -f "$FAILED"
+    echo "DEPLOY_SUCCESS=$new_tag"
+    exit 0
+  fi
+  echo "DEPLOY_ERROR: Could not preserve previous release; restoring verified images." >&2
 fi
 
 echo "DEPLOY_FAILED: Restoring the last verified images." >&2
