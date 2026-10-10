@@ -58,6 +58,7 @@ interpreted under two editions of a standard.
   the reported label of other cases may disagree with the table. Interpretation mode can resolve or change
   them. We expect divergences, we do not hide them: I-06 records the divergence counts and reasons in
   `docs/design/ledger_reeval.md` (I-14). The narrow first table (gentamicin, CLSI, exact MIC) limits the scope.
+- Supervisor review 2026-10-10: the divergence is kept and not relabelled (D-21). A visible flag is a team proposal for later work.
 - The size of that divergence is measured in step 14, not assumed here.
 - A table affects a case only when a rule matches its standard, organism, antibiotic and method and the AST row
   has a usable MIC. Cases with another standard (for example EUCAST rows under a CLSI table) or no MIC keep

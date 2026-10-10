@@ -97,8 +97,10 @@ This is the intended behaviour of interpretation mode, not a defect. It does mea
 
 **Point for the supervisor.** Whether a result the laboratory left as `NOT_DEFINED` should be given a category from its MIC is a domain decision. The engine does it because the row states its standard and a rule for that standard applies. If the decision is that such rows must stay unresolved, that belongs in the adapter, which can decline to give those rows a rule key.
 
+**Outcome (2026-10-10).** Discussed with the supervisor. The stored releases are kept as they are. Neither the team nor the supervisor can confirm the classifying laboratories' intent, so these cases are not relabelled. As possible later work, the team proposes a visible flag on these cases. Recorded as D-21.
+
 ## Open points
 
 1. **Storing the release.** The ledger loader needs a path for a full release that is not the first one. This is Insharah's part.
 2. **The selector uses the latest published release only.** This must be fixed before a second release with edges exists.
-3. **The `NOT_DEFINED` decision above** should be confirmed with the supervisor before the release is stored.
+3. **The `NOT_DEFINED` decision**: reviewed with the supervisor on 2026-10-10; releases kept unchanged (D-21).
