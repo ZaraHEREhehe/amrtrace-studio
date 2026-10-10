@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -9,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[2]
 SHA1, SHA2 = "1" * 40, "2" * 40
 
 
+@unittest.skipIf(sys.platform == "win32", "Z-12 deployment scripts run on Linux; native Windows Bash temp paths are incompatible")
 class DeploymentTransitionTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
