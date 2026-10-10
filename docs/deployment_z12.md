@@ -49,11 +49,11 @@ sudo journalctl -u amrtrace-z12-deploy.service -n 30 --no-pager
 
 Loopback app checks should return 200. The public endpoints **without credentials** should return 401, not 200. For a browser demo, use username `demo` and the separately stored demo password. Never send secrets, browser login passwords, signed Blob SAS URLs, or PostgreSQL credentials in logs/screenshots. This is a demo perimeter, not multi-user RBAC.
 
-## Post-merge production acceptance (still pending VM proof)
+## Post-merge production acceptance (Azure observations; final signoff pending)
 
-Aabia approved PR [#111](https://github.com/ZaraHEREhehe/amrtrace-studio/pull/111) after fixing the original same-tag-only manual rollback. The PR was merged on 2026-10-10 as `f8bec6403a2adf9a69e13541420bcbfd97287557`. GitHub shows [main CI success](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077023) and [main image-publishing success](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077052). Neither GitHub run establishes that the VM **actually deployed** the new images or that rollback between two versions **actually ran**.
+Aabia approved PR [#111](https://github.com/ZaraHEREhehe/amrtrace-studio/pull/111) after fixing the original same-tag-only manual rollback. The PR was merged on 2026-10-10 as `f8bec6403a2adf9a69e13541420bcbfd97287557`. GitHub shows [main CI success](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077023) and [main image-publishing success](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077052). GitHub workflow success alone does not prove VM runtime state. The Azure systemd journal and Docker/HTTP observations below provide the separate runtime evidence; the explicit rollback-script completion line is still missing.
 
-**Important:** The timer updates API/web Docker images only. It does **not** update `/usr/local/sbin/amrtrace-z12-deploy` or `/usr/local/sbin/amrtrace-z12-rollback`. Confirm that both installed helpers match the reviewed scripts before running a cross-version rehearsal. From the Azure Bastion shell, obtain the exact merged source and compare without changing anything:
+**Important:** The timer updates API/web Docker images only. It does **not** update `/usr/local/sbin/amrtrace-z12-deploy` or `/usr/local/sbin/amrtrace-z12-rollback`. A read-only byte comparison of both VM-installed helpers with these reviewed scripts is still required for final acceptance; no comparison output has been supplied. Do not assume that image auto-deployment updates host-installed helper scripts. From the Azure Bastion shell, obtain the exact merged source and compare without changing anything:
 
 ```bash
 REV=f8bec6403a2adf9a69e13541420bcbfd97287557
@@ -79,7 +79,19 @@ done
 sudo /usr/local/sbin/amrtrace-z12-rollback --check
 ```
 
-To prove the first automatic main deployment, retain `DEPLOY_SUCCESS=sha-f8bec6403a2adf9a69e13541420bcbfd97287557` from the systemd journal, matching baseline and active image tag, and three loopback HTTP 200 responses. A later merge may legitimately advance the active tag, so use the newer exact SHA and corresponding `DEPLOY_SUCCESS` event if necessary.
+### Azure VM evidence observed on 2026-10-10
+
+Operator-provided Azure Bastion output (no secrets included) established the following:
+
+- **Automatic main deployment:** the systemd deployment journal recorded `Oct 10 06:51:44 ... DEPLOY_SUCCESS=sha-f8bec6403a2adf9a69e13541420bcbfd97287557`. A separate `amrtrace-z12-deploy --check` returned `DEPLOY_CHECK_OK` and equal `MAIN_BASELINE`, `MAIN_REMOTE` and `ACTIVE_IMAGE_TAG` for the merged `f8bec640...` revision.
+- **Healthy V2 before rollback:** the operator saved `image.env` to `/opt/amrtrace-studio/z12-stage/image.before-rollback.env` (`sha-f8bec640...`). The application root `/`, `/api/health` and `/api/cases?limit=1` each returned HTTP 200.
+- **Distinct-release rollback preflight:** `amrtrace-z12-rollback --check` printed `ACTIVE_TAG=sha-f8bec6403a2adf9a69e13541420bcbfd97287557`, `PREVIOUS_TAG=sha-212fa9dfb382ebf2ba05df77978ac8f1f7b67fed` and `ROLLBACK_READY`.
+- **V1 observed running and healthy afterward:** on a subsequent check, `image.env`, `image.last-good.env` and `image.previous.env` all pointed to `sha-212fa9df...`, while the saved V2 recovery pointer still held `sha-f8bec640...`. `docker ps` showed **both** the API and web running `sha-212fa9df...`, and the same three endpoints returned HTTP 200. A later `rollback --apply` attempt refused the identical active/previous tags without changing the release.
+- **Latest reviewed V2 restored:** the operator used the saved pre-rollback V2 pointer and `docker compose ... up -d --no-build --pull never --force-recreate`; the command reported both containers started and `V2_CONTAINERS_RESTARTED`. `docker ps` then showed both API and web at `sha-f8bec640...`; all three endpoints returned HTTP 200. A guarded repeat of those health checks and copy from `image.env` to `image.last-good.env` produced `V2_LAST_GOOD_CONFIRMED`. V2 was therefore restored as the last-known-good application release.
+
+**Evidence boundary:** these observations establish that the system moved from running V2 to running healthy V1 and back to healthy V2, without a PostgreSQL image/schema rollback. However, the terminal transcript provided for the **first** rollback attempt does not contain the script's `ROLLBACK_REDEPLOY_VERIFIED=sha-212fa9df...` success line. Thus this record does **not** claim direct transcript-level proof of successful `--apply` execution. Seek any existing command capture if available; do not repeat a disruptive rollback merely to produce a missing screenshot without reviewer agreement. The two VM helper binaries also still need comparison to the approved merged scripts.
+
+For future production acceptance, retain `DEPLOY_SUCCESS=sha-f8bec6403a2adf9a69e13541420bcbfd97287557` from the systemd journal, matching baseline and active image tag, and three loopback HTTP 200 responses. A later merge may legitimately advance the active tag, so use the newer exact SHA and corresponding `DEPLOY_SUCCESS` event if necessary.
 
 To prove **cross-version** rollback, `--check` must show `ROLLBACK_READY` and distinct `ACTIVE_TAG` / `PREVIOUS_TAG`. Only in an agreed maintenance/demo window (the API/web containers will restart), run:
 
@@ -91,7 +103,7 @@ for path in / /api/health '/api/cases?limit=1'; do
 done
 ```
 
-Retain the `ROLLBACK_REDEPLOY_VERIFIED=sha-...` line, the preflight distinct tags and all three HTTP 200 checks as the rollback evidence. **Important operational consequence:** manual rollback intentionally leaves the previously verified image active; since `main.baseline` does not change, the poller will not automatically restore the latest main revision until a later change is seen. Plan an explicit, health-checked return to the intended version if the demo requires it. This test never rolls back PostgreSQL data or schema. Do not copy `runtime.env`, secrets, credentials or authenticated HTTP headers into review notes.
+For future rollback tests, retain the `ROLLBACK_REDEPLOY_VERIFIED=sha-...` line, distinct preflight tags, Docker image tags and HTTP 200 checks as direct evidence. That explicit completion line is **not available in the supplied 2026-10-10 transcript**; see the evidence boundary above. **Important operational consequence:** manual rollback intentionally leaves the previously verified image active; since `main.baseline` does not change, the poller will not automatically restore the latest main revision until a later change is seen. Plan an explicit, health-checked return to the intended version if the demo requires it. This test never rolls back PostgreSQL data or schema. Do not copy `runtime.env`, secrets, credentials or authenticated HTTP headers into review notes.
 
 The final Z-12 DONE evidence belongs in this runbook, `PROJECT_PLAN.md` Section 14 and `docs/milestones.md`, with a reviewer-approved PR before closing Issue #40.
 
@@ -121,7 +133,8 @@ If the deployment timer repeatedly reports failure, inspect `journalctl -u amrtr
 - Restored database was independently checked for 20 tables, 39 indexes, 19 triggers; 41,858 cases, 83,970 states, 2,442,967 dependency rows.
 - Same-version rollback rehearsal passed on 2026-10-10: both Docker services recreated and all three health endpoints ultimately passed (a transient curl connection reset during startup recovered).
 - Aabia approved the fixed cross-version design in [PR #111](https://github.com/ZaraHEREhehe/amrtrace-studio/pull/111); merged to main. [Main CI](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077023) and [main GHCR publishing](https://github.com/ZaraHEREhehe/amrtrace-studio/actions/runs/38032077052) are green.
-- **Outstanding VM-only proof before DONE:** verify successful automatic deployment of reviewed main images and live cross-version rollback, with distinct tags and health-check evidence. The reviewer approval is already complete; seek final evidence review when these are captured.
+- **Post-merge Azure observations captured (2026-10-10):** `DEPLOY_SUCCESS` for reviewed main, matching baseline/image revision, distinct rollback-ready tags, healthy running V1 after V2, then explicit V2 restoration with three HTTP 200 endpoints and `V2_LAST_GOOD_CONFIRMED`. See acceptance record above.
+- **Before Z-12 DONE / issue #40 closure:** capture/read back the VM-installed helper comparison, present the observed V2-to-V1 transition to the reviewer while explicitly noting the missing first `ROLLBACK_REDEPLOY_VERIFIED` line, and obtain final acceptance/signoff. No further Azure change is implied by this documentation update.
 
 ## CI trust boundary and demo limitations
 
