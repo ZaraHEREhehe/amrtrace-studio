@@ -76,7 +76,7 @@ test("web image contains nginx config and application files", () => {
 
   assert.match(
     dockerfile,
-    /COPY web\/ \/usr\/share\/nginx\/html\//,
+    /COPY --chown=nginx:nginx web\/ \/usr\/share\/nginx\/html\//,
   );
 });
 
