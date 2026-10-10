@@ -72,8 +72,12 @@ If the deployment timer repeatedly reports failure, inspect `journalctl -u amrtr
 - GHCR packages: `ghcr.io/zaraherehehe/amrtrace-studio-api` and `ghcr.io/zaraherehehe/amrtrace-studio-web`.
 - Production app (password protected): https://20-205-38-46.sslip.io
 - Restored database was independently checked for 20 tables, 39 indexes, 19 triggers; 41,858 cases, 83,970 states, 2,442,967 dependency rows.
-- Evidence pending before Z-12 is DONE: successful automatic **main** deployment and logged rollback rehearsal, final PR review by Aabia. Branch protection currently requires PR approval and CI checks.
+- Same-version rollback rehearsal passed on 2026-10-10: both Docker services recreated and all three health endpoints ultimately passed (a transient curl connection reset during startup recovered). Evidence still pending before Z-12 is DONE: successful automatic **main** deployment, cross-version rollback verification, and final PR review by Aabia. Branch protection currently requires PR approval and CI checks.
 
 ## Costs and limitations
 
 Azure for Students credit is finite. Monitor VM, Azure Database for PostgreSQL, reserved public IP and storage costs; remove the temporary blob transfer account/container after backup retention needs are satisfied. Low VM RAM and swap may make intensive exhaustive recomputation impractical. Do not expose write endpoints publicly without password protection. Rotate any exposed keys and keep secrets outside source control.
+
+## LLM assistance
+
+ChatGPT was used for guidance, troubleshooting, and documentation support during deployment.
