@@ -4,7 +4,7 @@ The production demo is served at https://20-205-38-46.sslip.io (HTTPS + HTTP Bas
 
 ## Architecture and operational boundaries
 
-GitHub-hosted Actions (`.github/workflows/cd.yml`) build `api` and `web` images and publish commit-specific `sha-<full SHA>` images to GHCR. On the Azure Ubuntu VM, a root-owned systemd timer runs `scripts/z12_deploy_poll.sh` approximately every 10 minutes. When `main` differs from its saved baseline, the poller fetches both images, recreates the API and frontend, checks `/`, `/api/health`, and `/api/cases?limit=1` via loopback, and either records success or tries to restore the last-good images.
+GitHub-hosted Actions (`.github/workflows/cd.yml`) build `api` and `web` images and publish commit-specific `sha-<full SHA>` images to GHCR. On the Azure Ubuntu VM, a root-owned systemd timer runs `scripts/z12_deploy_poll.sh` approximately every 10 minutes. When `main` differs from its saved baseline, the poller fetches both images, recreates the API and frontend, checks `/`, `/api/health`, and `/api/cases?limit=1` via loopback, and either records success and saves the superseded tag in `image.previous.env`, or tries to restore the last-good images. The `image.previous.env` pointer is updated only for successful promotions, not failed candidates.
 
 The Azure PostgreSQL Flexible Server is accessed privately from the VM. **Do not** run the development `docker-compose.yml` on the production host: it starts an unnecessary local database. Production uses `deploy/compose.ghcr.yml`, installed as `/opt/amrtrace-studio/compose.ghcr.yml`. Its frontend port is bound to `127.0.0.1:8080`, not the public NIC. Caddy runs with host networking and proxies to loopback, terminating TLS and enforcing authentication. SSH access and the Postgres database are restricted to private / explicit network rules. Avoid publishing ports 5432, 8000 or 8080.
 
@@ -15,7 +15,8 @@ VM: `vm-amrtrace-z12` (Ubuntu 24.04, Azure East Asia), resource group `rg-amrtra
 Files on VM:
 - `/opt/amrtrace-studio/runtime.env` — database env variables and password; permissions 0600. **Never commit or print.**
 - `/opt/amrtrace-studio/image.env` — active `AMRTRACE_IMAGE_TAG=sha-...`.
-- `/opt/amrtrace-studio/image.last-good.env` — previously health-checked tag.
+- `/opt/amrtrace-studio/image.last-good.env` — currently verified deployment tag, used for automatic failed-deployment recovery.
+- `/opt/amrtrace-studio/image.previous.env` — last superseded successful deployment; manual cross-version rollback target (absent before the first successful upgrade).
 - `/opt/amrtrace-studio/main.baseline` — most recently considered `main` revision.
 - `/opt/amrtrace-studio/main.failed` — failed revision, if any, to avoid retry loops.
 - `/opt/amrtrace-studio/compose.ghcr.yml` — two app services only.
@@ -50,7 +51,7 @@ Loopback app checks should return 200. The public endpoints **without credential
 
 ## Rollback and disaster recovery
 
-The last-good marker has been saved from a successful GHCR deployment. To check before applying a rollback:
+The last-good marker safeguards automated deployment failures; **manual rollback uses the separate `image.previous.env` release pointer**, created only after a subsequent successful deployment. Before the first upgrade, there is no older release and `--check` deliberately refuses rollback. To check a genuine older release before rollback:
 
 ```sh
 sudo /usr/local/sbin/amrtrace-z12-rollback --check
@@ -62,7 +63,7 @@ After an unsuccessful application deployment, use:
 sudo /usr/local/sbin/amrtrace-z12-rollback --apply
 ```
 
-This restores `image.last-good.env` to `image.env`, recreates both app containers from their previously downloaded commit-tagged images, and requires all three localhost endpoints to return 200. If a suitable image is no longer local, pull it from GHCR before retrying. The implementation acquires the same lock as the timer and does not alter PostgreSQL schema/data. Keep the last-good tag and original verified dump; an application image rollback does not undo database migrations or written reviews.
+This restores `image.previous.env` to `image.env`, recreates both app containers from their previously downloaded commit-tagged images, and requires all three localhost endpoints to return 200. It refuses missing local images or identical current/previous tags and, on rollback health failure, tries to restore the original active version. A successful manual rollback also updates `image.last-good.env` to match the verified running version. If a suitable image is no longer local, pull it from GHCR before retrying. The implementation acquires the same lock as the timer and does not alter PostgreSQL schema/data. Keep the previous-release tag, last-good tag and original verified dump; an application image rollback does not undo database migrations or written reviews.
 
 If the deployment timer repeatedly reports failure, inspect `journalctl -u amrtrace-z12-deploy.service`, `sudo docker compose ... logs --tail=100 api web`, and `main.failed`. After fixing the failed revision or publishing a new revision to `main`, confirm app health again.
 
@@ -72,7 +73,13 @@ If the deployment timer repeatedly reports failure, inspect `journalctl -u amrtr
 - GHCR packages: `ghcr.io/zaraherehehe/amrtrace-studio-api` and `ghcr.io/zaraherehehe/amrtrace-studio-web`.
 - Production app (password protected): https://20-205-38-46.sslip.io
 - Restored database was independently checked for 20 tables, 39 indexes, 19 triggers; 41,858 cases, 83,970 states, 2,442,967 dependency rows.
-- Same-version rollback rehearsal passed on 2026-10-10: both Docker services recreated and all three health endpoints ultimately passed (a transient curl connection reset during startup recovered). Evidence still pending before Z-12 is DONE: successful automatic **main** deployment, cross-version rollback verification, and final PR review by Aabia. Branch protection currently requires PR approval and CI checks.
+- Same-version rollback rehearsal passed on 2026-10-10: both Docker services recreated and all three health endpoints ultimately passed (a transient curl connection reset during startup recovered). Evidence still pending before Z-12 is DONE: successful automatic **main** deployment, live cross-version rollback verification, and re-review by Aabia. Branch protection currently requires PR approval and CI checks.
+
+## CI trust boundary and demo limitations
+
+The container publishing workflow starts after a push to `main`; it does not wait for a second CI workflow. Protected `main` requires the project CI checks and reviewer approval **before** any PR merge, so only reviewed commits are published and picked up by the VM poller. Protect these branch rules and do not bypass them.
+
+Nginx retains the default roughly 60-second upstream read timeout. A full-cohort exhaustive comparison was measured at approximately 73 seconds on a development machine and could exceed this timeout on the small VM. For the live demo, display stored runs instead of re-running exhaustive computation; the existing change `CHG-CLSI-ED33` cannot be executed again because R3 already exists.
 
 ## Costs and limitations
 
