@@ -9,6 +9,8 @@ MECHANISM_APPLICABILITY = "applicability"
 
 # the node type whose new members are found through the recorded rule space
 NODE_MAPPING_RULE = "mapping_rule"
+# the node type whose stored versions can be compared by content (D-22)
+NODE_INTERPRETATION_RULE = "interpretation_rule"
 
 # how a censored measurement is written, and the open range each sign stands for
 SIGN_EXACT = "=="
@@ -88,6 +90,24 @@ def edge_version_matches(node_version: str | None, old_version: str | None) -> b
         return True
     # an edge that names no version is kept: missing a case is worse than one extra
     return node_version is None or node_version == old_version
+
+
+# an edge written under another table version still counts when that version gave the rule the same breakpoints:
+# a case carried past an edition that left its rule alone still depends on the rule the next change edits (D-22)
+def _same_rule_content(conn, cache: dict, node_type: str, node_id: str, version: str | None, old_version: str | None) -> bool:
+    if node_type != NODE_INTERPRETATION_RULE or version is None or old_version is None:
+        return False
+    key = (node_id, version, old_version)
+    if key not in cache:
+        rows = conn.execute(
+            "SELECT interpretation_version, categories FROM interpretation_rule "
+            "WHERE rule_key = %s AND interpretation_version = ANY(%s)",
+            (node_id, [version, old_version]),
+        ).fetchall()
+        found = dict(rows)
+        # both versions must be stored and equal; anything less is left to the plain version check
+        cache[key] = version in found and old_version in found and found[version] == found[old_version]
+    return cache[key]
 
 
 def _latest_published_release(conn) -> str:
@@ -192,6 +212,7 @@ def select_impact_detailed(
     # every stored row that could matter, kept with the release it was recorded under
     edge_hits = []
     applicable_hits = []
+    same_content = {}
     with conn.cursor(row_factory=dict_row) as cursor:
         for entity in changed_entities:
             # one indexed lookup per changed node: from the node back to the cases that depend on it
@@ -203,7 +224,9 @@ def select_impact_detailed(
             )
             old_version = entity.get("old_version")
             for edge in cursor.fetchall():
-                if edge_version_matches(edge["node_version"], old_version):
+                if edge_version_matches(edge["node_version"], old_version) or _same_rule_content(
+                    conn, same_content, edge["node_type"], edge["node_id"], edge["node_version"], old_version
+                ):
                     edge_hits.append((edge, entity))
 
         if use_applicability:

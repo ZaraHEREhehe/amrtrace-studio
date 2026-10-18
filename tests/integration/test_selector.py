@@ -319,3 +319,53 @@ def test_edges_of_a_release_that_is_not_published_do_not_count(conn, seed_cases)
 
     assert selected(conn, "CHG_1") == ["CASE_A"]
     assert selected(conn, "CHG_2") == []
+
+
+# D-22: a case carried past an edition that left its rule alone must still be found by the next change to that rule
+RULE_KEY = "std|testus organismus|drugzol|mic"
+
+
+def add_rule(conn, version, susceptible_up_to):
+    conn.execute(
+        "INSERT INTO interpretation_rule (rule_key, interpretation_version, standard, organism, antibiotic, method, categories) "
+        "VALUES (%s, %s, 'std', 'Testus organismus', 'drugzol', 'MIC', %s)",
+        (RULE_KEY, version, Jsonb([{"label": "susceptible", "op": "<=", "value": susceptible_up_to}])),
+    )
+
+
+@pytest.fixture
+def carried(conn, seed_cases):
+    seed_cases("CASE_A")
+    add_release(conn)
+    rule = {"rule_key": RULE_KEY, "interpretation_version": "TABLE_V1", "standard": "std", "organism": "Testus organismus",
+            "antibiotic": "drugzol", "method": "MIC", "categories": [{"label": "susceptible", "op": "<=", "value": 4}]}
+    inputs = replace(
+        make_inputs("CASE_A", ()),
+        ast_rows=({"ast_evidence_id": "AST_CASE_A", "phenotype": "S", "mic": 2.0, "sign": "==", "rule_keys": [RULE_KEY]},),
+        interpretation_rules=(rule,),
+    )
+    versions = replace(VERSIONS, interpretation_version="TABLE_V1")
+    materialize(conn, RELEASE, [(inputs, evaluate(inputs, versions))], versions)
+    return conn
+
+
+def change_from(conn, old_version):
+    add_change(conn, "CHG_RULE", entity("interpretation_rule", RULE_KEY, old_version=old_version, new_version="TABLE_V3"))
+    return selected(conn, "CHG_RULE")
+
+
+def test_an_edge_from_an_edition_with_the_same_breakpoints_is_still_selected(carried):
+    add_rule(carried, "TABLE_V1", 4)
+    add_rule(carried, "TABLE_V2", 4)
+    assert change_from(carried, "TABLE_V2") == ["CASE_A"]
+
+
+def test_an_edge_from_an_edition_with_other_breakpoints_is_not_matched_by_content(carried):
+    add_rule(carried, "TABLE_V1", 4)
+    add_rule(carried, "TABLE_V2", 8)
+    assert change_from(carried, "TABLE_V2") == []
+
+
+def test_an_edition_that_was_never_stored_is_not_matched_by_content(carried):
+    add_rule(carried, "TABLE_V1", 4)
+    assert change_from(carried, "TABLE_V2") == []
