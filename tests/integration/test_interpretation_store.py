@@ -27,7 +27,7 @@ def tables():
 
 def test_a_table_round_trips_through_the_database(conn, tables):
     ed32, _ = tables
-    assert store_table(conn, ed32) == 1
+    assert store_table(conn, ed32) == 5
     assert load_table_from_db(conn, "CLSI_M100_ED32") == ed32
     assert list_table_versions(conn) == ["CLSI_M100_ED32"]
 
@@ -44,7 +44,7 @@ def test_the_same_version_cannot_be_stored_twice(conn, tables):
     store_table(conn, ed32)
     with pytest.raises(TableAlreadyStored):
         store_table(conn, ed32)
-    assert conn.execute("SELECT count(*) FROM interpretation_rule").fetchone()[0] == 1
+    assert conn.execute("SELECT count(*) FROM interpretation_rule").fetchone()[0] == 5
 
 
 def test_a_failed_store_keeps_nothing(conn):

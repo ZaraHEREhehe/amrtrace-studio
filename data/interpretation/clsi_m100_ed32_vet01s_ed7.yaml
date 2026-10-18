@@ -1,0 +1,225 @@
+# CLSI M100 Ed32 (2022) general rules plus CLSI VET01S Ed7 (2024) host rules, applied to Escherichia coli.
+# Host rules: the VET01S species row where one exists (dog gentamicin), otherwise the VET01S grey human row
+# (VET01S general comment 2). VET01S has no breakpoint for ceftriaxone (not listed) or ciprofloxacin (footnote c),
+# so those drugs have no host rule. MIC in ug/mL; TMP-SMX compares the trimethoprim part only. Data, not code.
+interpretation_version: CLSI_M100_ED32_VET01S_ED7
+standard: CLSI
+rules:
+  - organism: Escherichia coli
+    antibiotic: ceftriaxone
+    method: MIC
+    source: CLSI M100 Ed32 (2022) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: ciprofloxacin
+    method: MIC
+    source: CLSI M100 Ed32 (2022) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 0.25}
+      - {label: intermediate, op: "==", value: 0.5}
+      - {label: resistant, op: ">=", value: 1}
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    source: CLSI M100 Ed32 (2022) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 4}
+      - {label: intermediate, op: "==", value: 8}
+      - {label: resistant, op: ">=", value: 16}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    source: CLSI M100 Ed32 (2022) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    source: CLSI M100 Ed32 (2022) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    host: dog
+    source: CLSI VET01S Ed7 (2024) Table 2A, dogs row
+    breakpoint_species: dog
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: intermediate, op: "==", value: 4}
+      - {label: resistant, op: ">=", value: 8}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    host: dog
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    host: dog
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    host: cat
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: intermediate, op: "==", value: 4}
+      - {label: resistant, op: ">=", value: 8}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    host: cat
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    host: cat
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    host: cattle
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: intermediate, op: "==", value: 4}
+      - {label: resistant, op: ">=", value: 8}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    host: cattle
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    host: cattle
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    host: swine
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: intermediate, op: "==", value: 4}
+      - {label: resistant, op: ">=", value: 8}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    host: swine
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    host: swine
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    host: poultry
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: intermediate, op: "==", value: 4}
+      - {label: resistant, op: ">=", value: 8}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    host: poultry
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    host: poultry
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: gentamicin
+    method: MIC
+    host: other animal
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: intermediate, op: "==", value: 4}
+      - {label: resistant, op: ">=", value: 8}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    host: other animal
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    host: other animal
+    source: CLSI VET01S Ed7 (2024) Table 2A, human (grey) row
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}

@@ -129,9 +129,45 @@ def ed33():
     return load_table(str(DATA / "clsi_m100_ed33.yaml"))
 
 
-def test_real_tables_load_with_one_rule_each(ed32, ed33):
+GENTAMICIN_KEY = "clsi|escherichia coli|gentamicin|mic"
+
+
+def gentamicin(table):
+    return table.by_key()[GENTAMICIN_KEY]
+
+
+def test_real_tables_cover_the_five_panel_drugs_and_differ_only_in_gentamicin(ed32, ed33):
     assert (ed32.interpretation_version, ed33.interpretation_version) == ("CLSI_M100_ED32", "CLSI_M100_ED33")
-    assert len(ed32.rules) == len(ed33.rules) == 1 and ed32.rules[0].rule_key == ed33.rules[0].rule_key
+    assert len(ed32.rules) == len(ed33.rules) == 5 and set(ed32.by_key()) == set(ed33.by_key())
+    changed = [k for k in ed32.by_key() if ed32.by_key()[k].categories != ed33.by_key()[k].categories]
+    assert changed == [GENTAMICIN_KEY]
+    # the general rules carry no host, so they apply to any isolate without a host rule
+    assert all(r.host is None and r.breakpoint_species == "human" for r in ed32.rules + ed33.rules)
+
+
+@pytest.mark.parametrize("edition", ["ed32", "ed33"])
+def test_each_vet01s_table_is_its_m100_table_plus_eighteen_host_rules(edition):
+    plain = load_table(str(DATA / f"clsi_m100_{edition}.yaml"))
+    combined = load_table(str(DATA / f"clsi_m100_{edition}_vet01s_ed7.yaml"))
+    assert combined.interpretation_version == plain.interpretation_version + "_VET01S_ED7"
+    general = {k: r for k, r in combined.by_key().items() if r.host is None}
+    # the general rules must match the plain edition exactly, apart from the version they are stored under
+    assert {k: (r.categories, r.source) for k, r in general.items()} == {k: (r.categories, r.source) for k, r in plain.by_key().items()}
+    hosted = [r for r in combined.rules if r.host is not None]
+    assert len(hosted) == 18
+    assert {r.host for r in hosted} == {"dog", "cat", "cattle", "swine", "poultry", "other animal"}
+    # VET01S gives nothing for ceftriaxone or ciprofloxacin, so no host rule may exist for them
+    assert {r.antibiotic for r in hosted} == {"gentamicin", "meropenem", "trimethoprim-sulfamethoxazole"}
+    # only the dog gentamicin rule comes from a species row, every other host rule is the grey human row
+    species_rows = [(r.host, r.antibiotic) for r in hosted if r.breakpoint_species != "human"]
+    assert species_rows == [("dog", "gentamicin")]
+
+
+def test_the_host_rules_are_the_same_in_both_vet01s_tables():
+    a = load_table(str(DATA / "clsi_m100_ed32_vet01s_ed7.yaml"))
+    b = load_table(str(DATA / "clsi_m100_ed33_vet01s_ed7.yaml"))
+    hosted = lambda t: {k: (r.categories, r.source, r.breakpoint_species) for k, r in t.by_key().items() if r.host}
+    assert hosted(a) == hosted(b)
 
 
 @pytest.mark.parametrize("value,sign,old,new", [
@@ -144,8 +180,8 @@ def test_real_tables_load_with_one_rule_each(ed32, ed33):
     (3, "==", ["susceptible"], []),                      # a value in the new gap
 ])
 def test_the_censored_value_examples_from_the_adr(ed32, ed33, value, sign, old, new):
-    assert touched_categories(ed32.rules[0], value, sign) == old
-    assert touched_categories(ed33.rules[0], value, sign) == new
+    assert touched_categories(gentamicin(ed32), value, sign) == old
+    assert touched_categories(gentamicin(ed33), value, sign) == new
 
 
 # D-22: optional host, source and breakpoint_species on a rule

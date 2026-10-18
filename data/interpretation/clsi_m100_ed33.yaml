@@ -1,12 +1,50 @@
-# CLSI M100 edition 33, gentamicin breakpoints for Enterobacterales, applied to Escherichia coli.
-# Source: CLSI M100 (project references [13] and [14]). MIC in ug/mL. Data, not code.
+# CLSI M100 Ed33 (2023) Enterobacterales breakpoints for the five panel drugs, applied to Escherichia coli.
+# Source: CLSI M100 Table 2A (Table 2A-1 from Ed34). MIC in ug/mL; TMP-SMX compares the trimethoprim part only.
+# Rules here have no host, so they apply to every isolate that has no host rule. Data, not code.
 interpretation_version: CLSI_M100_ED33
 standard: CLSI
 rules:
   - organism: Escherichia coli
+    antibiotic: ceftriaxone
+    method: MIC
+    source: CLSI M100 Ed33 (2023) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: ciprofloxacin
+    method: MIC
+    source: CLSI M100 Ed33 (2023) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 0.25}
+      - {label: intermediate, op: "==", value: 0.5}
+      - {label: resistant, op: ">=", value: 1}
+  - organism: Escherichia coli
     antibiotic: gentamicin
     method: MIC
+    source: CLSI M100 Ed33 (2023) Table 2A
+    breakpoint_species: human
     categories:
       - {label: susceptible, op: "<=", value: 2}
       - {label: intermediate, op: "==", value: 4}
       - {label: resistant, op: ">=", value: 8}
+  - organism: Escherichia coli
+    antibiotic: meropenem
+    method: MIC
+    source: CLSI M100 Ed33 (2023) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 1}
+      - {label: intermediate, op: "==", value: 2}
+      - {label: resistant, op: ">=", value: 4}
+  - organism: Escherichia coli
+    antibiotic: trimethoprim-sulfamethoxazole
+    method: MIC
+    source: CLSI M100 Ed33 (2023) Table 2A
+    breakpoint_species: human
+    categories:
+      - {label: susceptible, op: "<=", value: 2}
+      - {label: resistant, op: ">=", value: 4}
