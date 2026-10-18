@@ -2,11 +2,14 @@ scenario: CLSI-REAL
 description: Real interpretation-table change CLSI M100 Ed32 -> Ed33 for gentamicin, after VET01S. Every human or unrecorded-host
   case with an exact CLSI MIC of 4 labelled S or 8 labelled I must be selected (recall 100%). Animal cases are read by their
   host rules and are not touched by this change.
-authored_by: claude
-authored_on_base_commit: 683b006c55d8e0d4a935832b33a6744a14121117
-author_note: Written by Claude for the D-22 fix and run by Aabia from the raw files; the criteria are the rules in the AMRTrace
-  Breakpoint Reference, and the required set never reads the dependency graph, the selector or the evaluator.
+authored_by: aabia
+authored_on_base_commit: 27b4234ad25122b5e48c4fd35e66047383c6d024
+author_note: D-22 fix of the real-data oracles, generated from the raw files; the criteria are the rules in the AMRTrace Breakpoint
+  Reference, and the required set never reads the dependency graph, the selector or the evaluator.
 real_data: true
+independent_rerun:
+  by: insharah
+  status: pending
 change_event:
   change_id: CHG-CLSI-ED33
   type: INTERPRETATION_VERSION
