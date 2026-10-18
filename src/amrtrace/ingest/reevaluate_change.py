@@ -14,6 +14,7 @@ from amrtrace.ingest.frozen_v1 import (
     build_version_vector,
     read_frozen_tables,
 )
+from amrtrace.ingest.host_groups import load_host_groups
 from amrtrace.ingest.load_frozen_v1 import verify_hashes
 from amrtrace.ingest.materialize_baseline import (
     _conninfo,
@@ -62,6 +63,8 @@ def interpretation_context(
     rules = rules_as_dicts(table.rules)
     # labels are checked against the labs' edition, never against the table now in force (D-21)
     reference = reference_rules_from_db(conn)
+    # animal results look for their host rules first (D-22)
+    host_groups = load_host_groups()
 
     # the new release records the versions of the release the selection was made against, with the table now in force
     base_vector = _stored_version_vector(conn, impact.release_id)
@@ -77,7 +80,8 @@ def interpretation_context(
 
     def inputs_for(case_ids):
         return build_case_inputs(
-            tables, panel, organism, interpretation_rules=rules, case_ids=case_ids, reference_rules=reference
+            tables, panel, organism, interpretation_rules=rules, case_ids=case_ids, reference_rules=reference,
+            host_groups=host_groups,
         )
 
     return ChangeContext(version_vector, versions, inputs_for, impact.release_id)

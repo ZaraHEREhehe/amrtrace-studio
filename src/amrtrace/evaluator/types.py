@@ -54,6 +54,8 @@ class PhenotypeResult:
     phenotype_state: str
     phenotype_values: tuple[str, ...]
     dependency_records: tuple[DependencyRecord, ...]
+    # one entry per result in interpretation mode, saying whether its label was submitted or derived
+    label_flags: tuple[dict, ...] = ()
 
 
 @dataclass(frozen=True)

@@ -1,0 +1,30 @@
+# How the raw host values in the data are grouped for host-specific breakpoints (D-22, agreed 18 Oct 2026).
+# Matching ignores letter case, extra spaces and bracketed tags such as "[NCBITaxon:9031]".
+# A group marked animal: true is read with CLSI VET01S first; human and not-recorded hosts use CLSI M100 only.
+# Group names must match the host field of the interpretation tables.
+host_groups_version: HOST_GROUPS_V1
+# values that name no host at all; Food names a sample source, not an animal
+not_recorded: ["", "Not Provided", "Food"]
+groups:
+  human:
+    animal: false
+    hosts: ["Homo sapiens"]
+  dog:
+    animal: true
+    hosts: ["Canis lupus familiaris"]
+  cat:
+    animal: true
+    hosts: ["Felis catus"]
+  cattle:
+    animal: true
+    hosts: ["veal calf", "Bos taurus", "dairy cow", "bovine"]
+  swine:
+    animal: true
+    hosts: ["Sus scrofa domesticus", "pig", "Swine"]
+  poultry:
+    animal: true
+    hosts: ["Chicken", "broiler", "Gallus gallus domesticus"]
+  # animals VET01S has no rows for; wild birds stay here because VET01S poultry means farmed chickens
+  other animal:
+    animal: true
+    hosts: ["Bucephala", "Rat", "sheep", "Spheniscus magellanicus", "goat", "bird", "Iguana", "Free-range White-tailed deer"]

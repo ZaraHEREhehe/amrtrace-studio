@@ -22,6 +22,7 @@ from amrtrace.ingest.frozen_v1 import (
     FrozenTables,
     build_case_inputs,
 )
+from amrtrace.ingest.host_groups import HostGroups, load_host_groups
 from amrtrace.interpretation import TableNotFound, load_table_from_db
 from amrtrace.interpretation.models import rules_as_dicts
 from amrtrace.reeval import NoImpactSet
@@ -197,6 +198,7 @@ class DatabaseInputSource:
         interpretation_rules: tuple[dict, ...],
         mapping_version: str,
         reference_rules: tuple[dict, ...] | None = None,
+        host_groups: HostGroups | None = None,
     ) -> None:
         self.conn = conn
         self.panel = panel
@@ -204,6 +206,8 @@ class DatabaseInputSource:
         self.interpretation_rules = interpretation_rules
         # the labs' edition, which decides whether a label may be overruled at all (D-21)
         self.reference_rules = reference_rules
+        # how raw hosts are grouped, so animal results look for their host rules first (D-22)
+        self.host_groups = host_groups
 
         query = (
             f"SELECT {_column_list(MAPPING_COLUMNS)} "
@@ -307,6 +311,7 @@ class DatabaseInputSource:
                 interpretation_rules=self.interpretation_rules,
                 case_ids=batch,
                 reference_rules=self.reference_rules,
+                host_groups=self.host_groups,
             )
 
 
@@ -372,6 +377,7 @@ def interpretation_run_context(
         ),
         mapping_version=versions.mapping_version,
         reference_rules=reference_rules_from_db(conn),
+        host_groups=load_host_groups(),
     )
 
     return RunContext(

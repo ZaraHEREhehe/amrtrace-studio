@@ -18,6 +18,7 @@ from amrtrace.ingest.frozen_v1 import (
     build_version_vector,
     read_frozen_tables,
 )
+from amrtrace.ingest.host_groups import HostGroups, load_host_groups
 from amrtrace.ingest.load_frozen_v1 import verify_hashes
 from amrtrace.ingest.materialize_baseline import (
     _conninfo,
@@ -59,6 +60,7 @@ def evaluate_with_table(
     base_vector: dict,
     panel: tuple[str, ...],
     organism: str,
+    host_groups: HostGroups | None = None,
 ) -> Iterator[tuple[CaseInputs, EvalResult]]:
     versions = build_version_vector(
         tables,
@@ -74,6 +76,8 @@ def evaluate_with_table(
         organism,
         interpretation_rules=rules,
         reference_rules=reference_rules_for(table),
+        # the shipped grouping unless a caller hands its own, so animal results look for their host rules (D-22)
+        host_groups=host_groups if host_groups is not None else load_host_groups(),
     ):
         yield inputs, evaluate(inputs, versions)
 
