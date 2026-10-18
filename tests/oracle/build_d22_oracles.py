@@ -127,8 +127,11 @@ def read_inputs(raw_dir):
     return ast_rows, host_by_target, case_by_key
 
 
-NOTE = ("Written by Claude for the D-22 fix and run by Aabia from the raw files; the criteria are the rules in the AMRTrace "
+NOTE = ("D-22 fix of the real-data oracles, generated from the raw files; the criteria are the rules in the AMRTrace "
         "Breakpoint Reference, and the required set never reads the dependency graph, the selector or the evaluator.")
+# the fix was written by the selector's author, so an independent re-run is recorded as still owed
+AUTHOR = "aabia"
+RERUN = {"by": "insharah", "status": "pending"}
 
 
 def vet_fixture(required):
@@ -141,7 +144,8 @@ def vet_fixture(required):
         "description": ("Real interpretation-table change that adds the CLSI VET01S Ed7 host rules. Every animal case for "
                         "gentamicin, meropenem or TMP-SMX with a CLSI MIC whose label M100 Ed32 explains, or which is "
                         "NOT_DEFINED, must be selected (recall 100%)."),
-        "authored_by": "claude", "authored_on_base_commit": "STAMP_ME", "author_note": NOTE, "real_data": True,
+        "authored_by": AUTHOR, "authored_on_base_commit": "STAMP_ME", "author_note": NOTE, "real_data": True,
+        "independent_rerun": dict(RERUN),
         "change_event": {"change_id": "CHG-VET01S-ED7", "type": "INTERPRETATION_VERSION",
                          "old_version": "CLSI_M100_ED32", "new_version": "CLSI_M100_ED32_VET01S_ED7",
                          "changed_entities": sorted(entities, key=lambda e: e["node_id"]),
@@ -157,7 +161,8 @@ def clsi_fixture(required):
         "description": ("Real interpretation-table change CLSI M100 Ed32 -> Ed33 for gentamicin, after VET01S. Every human or "
                         "unrecorded-host case with an exact CLSI MIC of 4 labelled S or 8 labelled I must be selected "
                         "(recall 100%). Animal cases are read by their host rules and are not touched by this change."),
-        "authored_by": "claude", "authored_on_base_commit": "STAMP_ME", "author_note": NOTE, "real_data": True,
+        "authored_by": AUTHOR, "authored_on_base_commit": "STAMP_ME", "author_note": NOTE, "real_data": True,
+        "independent_rerun": dict(RERUN),
         "change_event": {"change_id": "CHG-CLSI-ED33", "type": "INTERPRETATION_VERSION",
                          "old_version": "CLSI_M100_ED32_VET01S_ED7", "new_version": "CLSI_M100_ED33_VET01S_ED7",
                          "changed_entities": [{"node_type": "interpretation_rule", "node_id": key,
