@@ -84,9 +84,9 @@ def test_stops_when_the_release_was_not_evaluated_with_the_old_table(conn):
     assert conn.execute("SELECT count(*) FROM change_event").fetchone()[0] == 0
 
 
-def test_stops_when_a_required_case_is_not_in_the_release(conn):
+def test_stops_when_a_required_case_is_not_in_any_published_release(conn):
     build(conn)
-    with pytest.raises(RealDataSetupError, match="not in release R2"):
+    with pytest.raises(RealDataSetupError, match="not in any published release"):
         run(conn, fixture(required=("M4", "M8", "NOT_HERE")))
 
 
