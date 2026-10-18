@@ -38,9 +38,10 @@ def store_table(conn, table: InterpretationTable, effective_at: Optional[datetim
             for rule in table.rules:
                 conn.execute(
                     "INSERT INTO interpretation_rule (rule_key, interpretation_version, standard, organism, antibiotic, "
-                    "method, categories) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    "method, categories, host, source, breakpoint_species) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
                     (rule.rule_key, rule.interpretation_version, rule.standard, rule.organism, rule.antibiotic,
-                     rule.method, Jsonb([c.to_dict() for c in rule.categories])),
+                     rule.method, Jsonb([c.to_dict() for c in rule.categories]), rule.host, rule.source,
+                     rule.breakpoint_species),
                 )
                 register_version(conn, RULE_NODE_TYPE, rule.rule_key, rule.interpretation_version,
                                  effective_at=effective_at, metadata={"standard": rule.standard})
@@ -51,7 +52,8 @@ def store_table(conn, table: InterpretationTable, effective_at: Optional[datetim
 
 def load_table_from_db(conn, interpretation_version: str) -> InterpretationTable:
     with conn.cursor(row_factory=dict_row) as cur:
-        cur.execute("SELECT rule_key, interpretation_version, standard, organism, antibiotic, method, categories "
+        cur.execute("SELECT rule_key, interpretation_version, standard, organism, antibiotic, method, categories, "
+                    "host, source, breakpoint_species "
                     "FROM interpretation_rule WHERE interpretation_version = %s ORDER BY rule_key", (interpretation_version,))
         rows = cur.fetchall()
     if not rows:

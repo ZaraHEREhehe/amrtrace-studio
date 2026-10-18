@@ -98,3 +98,16 @@ def test_an_event_naming_an_unstored_table_is_rejected(conn, tables):
     event = ChangeEvent("CHG-X", "INTERPRETATION_VERSION", "CLSI_M100_ED32", "CLSI_M100_ED33", tuple(entities), {}, "pytest")
     with pytest.raises(InvalidChangeEvent, match="not a registered version"):
         register_change_event(conn, event)
+
+
+def test_host_fields_round_trip_through_the_database(conn):
+    # a general rule and a host rule for the same drug sit side by side and come back unchanged
+    cats = [{"label": "susceptible", "op": "<=", "value": 1}, {"label": "resistant", "op": ">=", "value": 2}]
+    table = parse_table({"interpretation_version": "V_HOST", "standard": "S", "rules": [
+        {"organism": "o", "antibiotic": "a", "method": "MIC", "categories": cats},
+        {"organism": "o", "antibiotic": "a", "method": "MIC", "host": "unicorn", "source": "Book, row 3",
+         "breakpoint_species": "dragon", "categories": cats}]})
+    assert store_table(conn, table) == 2
+    assert load_table_from_db(conn, "V_HOST") == table
+    keys = [r[0] for r in conn.execute("SELECT rule_key FROM interpretation_rule ORDER BY 1").fetchall()]
+    assert keys == ["s|o|a|mic", "s|o|a|mic|unicorn"]
