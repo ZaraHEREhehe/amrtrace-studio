@@ -35,9 +35,10 @@ pytestmark = pytest.mark.integration
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 COHORT = REPO_ROOT / "tests" / "fixtures" / "mini_cohort"
-OLD_TABLE = REPO_ROOT / "data" / "interpretation" / "clsi_m100_ed32.yaml"
-NEW_TABLE = REPO_ROOT / "data" / "interpretation" / "clsi_m100_ed33.yaml"
-CLSI_FIXTURE = REPO_ROOT / "tests" / "oracle" / "fixtures" / "clsi_real.yaml"
+TABLES = REPO_ROOT / "data" / "interpretation"
+BASE_TABLE = TABLES / "clsi_m100_ed32.yaml"
+VET_TABLE = TABLES / "clsi_m100_ed32_vet01s_ed7.yaml"
+ED33_TABLE = TABLES / "clsi_m100_ed33_vet01s_ed7.yaml"
 
 # the mini-cohort's two synthetic C7 cases carry a determinant that no rule maps yet
 C7_TARGETS = ("Z14_SYN_C7_01", "Z14_SYN_C7_02")
@@ -58,61 +59,62 @@ def cohort(conn):
     return conn, tables, panel, organism
 
 
-def _clsi_event() -> tuple[ChangeEvent, set[str]]:
-    fixture = yaml.safe_load(CLSI_FIXTURE.read_text(encoding="utf-8"))
-    spec = fixture["change_event"]
-    event = ChangeEvent(
-        change_id=spec["change_id"],
-        type=spec["type"],
-        old_version=spec["old_version"],
-        new_version=spec["new_version"],
-        changed_entities=tuple(
-            ChangedEntity(
-                e["node_type"],
-                e["node_id"],
-                e.get("old_version"),
-                e.get("new_version"),
-                e.get("changed_region"),
-            )
-            for e in spec["changed_entities"]
-        ),
-        declared_scope=spec.get("declared_scope") or {},
-        initiator="e2e",
-    )
-    return event, set(fixture["expected"]["required_case_ids"])
+# the oracle's own criteria, applied to the mini-cohort files instead of the full data
+def _required(tables_file=None):
+    from tests.oracle.build_d22_oracles import clsi_required, general_rules, host_rules, read_inputs, vet_required
+
+    ast_rows, host_by_target, case_by_key = read_inputs(COHORT)
+    host_drugs = {r["antibiotic"] for r in host_rules("clsi_m100_ed32_vet01s_ed7.yaml")}
+    vet = vet_required(ast_rows, host_by_target, case_by_key, general_rules("clsi_m100_ed32.yaml"), host_drugs)
+    return vet, clsi_required(ast_rows, host_by_target, case_by_key)
 
 
-def test_clsi_change_end_to_end_is_equivalent_to_an_exhaustive_run(cohort):
-    conn, tables, panel, organism = cohort
-    # the interpretation baseline, then the new edition, as on the real database
-    store_interpretation_release(
-        conn, tables, load_table(str(OLD_TABLE)), "R2", "R1", panel, organism
-    )
-    new_table = load_table(str(NEW_TABLE))
-    if new_table.interpretation_version not in list_table_versions(conn):
-        store_table(conn, new_table)
+def _event(change_id, old, new, entities) -> ChangeEvent:
+    return ChangeEvent(change_id=change_id, type="INTERPRETATION_VERSION", old_version=old.interpretation_version,
+                       new_version=new.interpretation_version, changed_entities=tuple(entities), declared_scope={},
+                       initiator="e2e")
 
-    event, required = _clsi_event()
+
+# one change applied, re-evaluated selectively into a new release, then checked against an exhaustive run
+def _run_change(conn, tables, panel, organism, event, release_id, required):
     applied = apply_change(conn, event)
     selected = {item.case_id for item in applied.items}
-    # every case the oracle requires is selected, and the 154 all sit in the mini-cohort
-    assert len(required) == 154
-    assert required <= selected
+    assert required and required <= selected
 
-    reevaluation = reevaluate_interpretation_change(
-        conn, tables, event.change_id, "R3", panel, organism
-    )
+    reevaluation = reevaluate_interpretation_change(conn, tables, event.change_id, release_id, panel, organism)
     assert reevaluation.status == "COMPLETE"
     assert reevaluation.reevaluated == len(selected)
 
-    report = compare_interpretation_change(
-        conn, tables, event.change_id, panel, organism, store=True
-    )
+    report = compare_interpretation_change(conn, tables, event.change_id, panel, organism, store=True)
     assert report.passed
     assert report.missed == 0
     assert report.recall == 1.0
     assert all(axis.mismatched == 0 for axis in report.axes)
     assert report.total_cases == 660
+    return reevaluation
+
+
+def test_the_d22_release_chain_is_equivalent_to_exhaustive_runs(cohort):
+    conn, tables, panel, organism = cohort
+    base, vet, ed33 = (load_table(str(path)) for path in (BASE_TABLE, VET_TABLE, ED33_TABLE))
+    vet_required, clsi_required = _required()
+
+    # R2: the interpretation baseline reads every explained label again and changes no state
+    stored = store_interpretation_release(conn, tables, base, "R2", "R1", panel, organism)
+    assert stored.state_changed == 0
+    for table in (vet, ed33):
+        if table.interpretation_version not in list_table_versions(conn):
+            store_table(conn, table)
+
+    # R3: the host rules are new, so the cases that looked for them are found through those lookups
+    added = [ChangedEntity("interpretation_rule", r.rule_key, None, vet.interpretation_version, None)
+             for r in vet.rules if r.host]
+    _run_change(conn, tables, panel, organism, _event("CHG-E2E-VET01S", base, vet, added), "R3", vet_required)
+
+    # R4: only the general gentamicin rule moves; animal cases sit on their host rules and are left alone
+    gentamicin = ChangedEntity("interpretation_rule", "clsi|escherichia coli|gentamicin|mic", vet.interpretation_version,
+                               ed33.interpretation_version, {"field": "mic", "intervals": [[4, 4], [8, 8]]})
+    _run_change(conn, tables, panel, organism, _event("CHG-E2E-ED33", vet, ed33, [gentamicin]), "R4", clsi_required)
 
 
 # the mapping table with the C7 determinant now mapped to the drug by a new rule

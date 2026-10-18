@@ -6,7 +6,6 @@ from pathlib import Path
 
 import psycopg
 import pytest
-import yaml
 from fastapi.testclient import TestClient
 
 from amrtrace.api.db import (
@@ -54,37 +53,25 @@ NEW_TABLE = (
     / "interpretation"
     / "clsi_m100_ed33.yaml"
 )
-CHANGE_FIXTURE = (
-    REPO_ROOT
-    / "tests"
-    / "oracle"
-    / "fixtures"
-    / "clsi_real.yaml"
-)
 
 
+# the plain edition change, written here so this test does not follow the oracle fixture through D-22
 def _event_from_fixture() -> ChangeEvent:
-    fixture = yaml.safe_load(
-        CHANGE_FIXTURE.read_text(encoding="utf-8")
-    )
-    spec = fixture["change_event"]
-
     return ChangeEvent(
-        change_id=spec["change_id"],
-        type=spec["type"],
-        old_version=spec["old_version"],
-        new_version=spec["new_version"],
-        changed_entities=tuple(
+        change_id="CHG-CLSI-ED33",
+        type="INTERPRETATION_VERSION",
+        old_version="CLSI_M100_ED32",
+        new_version="CLSI_M100_ED33",
+        changed_entities=(
             ChangedEntity(
-                item["node_type"],
-                item["node_id"],
-                item.get("old_version"),
-                item.get("new_version"),
-                item.get("changed_region"),
-            )
-            for item in spec["changed_entities"]
+                "interpretation_rule",
+                "clsi|escherichia coli|gentamicin|mic",
+                "CLSI_M100_ED32",
+                "CLSI_M100_ED33",
+                {"field": "mic", "intervals": [[4, 4], [8, 8]]},
+            ),
         ),
-        declared_scope=spec.get("declared_scope") or {},
+        declared_scope={"standard": "CLSI", "antibiotic": "gentamicin"},
         initiator="api-e2e",
     )
 

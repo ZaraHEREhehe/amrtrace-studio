@@ -4,7 +4,6 @@ import json
 from pathlib import Path
 
 import pytest
-import yaml
 
 import amrtrace.policies  # noqa: F401
 from amrtrace.changes import ChangedEntity, ChangeEvent
@@ -37,7 +36,6 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 COHORT = REPO_ROOT / "tests" / "fixtures" / "mini_cohort"
 OLD_TABLE = REPO_ROOT / "data" / "interpretation" / "clsi_m100_ed32.yaml"
 NEW_TABLE = REPO_ROOT / "data" / "interpretation" / "clsi_m100_ed33.yaml"
-CLSI_FIXTURE = REPO_ROOT / "tests" / "oracle" / "fixtures" / "clsi_real.yaml"
 
 # the plan asks for at least three identical runs
 RUNS = 3
@@ -85,24 +83,23 @@ def test_the_evaluator_gives_the_same_hashes_on_every_run():
     assert len(set(runs[0].values())) > 600
 
 
+# the plain edition change, written here so this test does not follow the oracle fixture through D-22
 def _clsi_event() -> ChangeEvent:
-    spec = yaml.safe_load(CLSI_FIXTURE.read_text(encoding="utf-8"))["change_event"]
     return ChangeEvent(
-        change_id=spec["change_id"],
-        type=spec["type"],
-        old_version=spec["old_version"],
-        new_version=spec["new_version"],
-        changed_entities=tuple(
+        change_id="CHG-CLSI-ED33",
+        type="INTERPRETATION_VERSION",
+        old_version="CLSI_M100_ED32",
+        new_version="CLSI_M100_ED33",
+        changed_entities=(
             ChangedEntity(
-                e["node_type"],
-                e["node_id"],
-                e.get("old_version"),
-                e.get("new_version"),
-                e.get("changed_region"),
-            )
-            for e in spec["changed_entities"]
+                "interpretation_rule",
+                "clsi|escherichia coli|gentamicin|mic",
+                "CLSI_M100_ED32",
+                "CLSI_M100_ED33",
+                {"field": "mic", "intervals": [[4, 4], [8, 8]]},
+            ),
         ),
-        declared_scope=spec.get("declared_scope") or {},
+        declared_scope={"standard": "CLSI", "antibiotic": "gentamicin"},
         initiator="determinism",
     )
 
