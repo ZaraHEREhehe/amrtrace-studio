@@ -249,3 +249,43 @@ export function exportUrl(releaseId, format = "json") {
 
   return `${API_ROOT}/export?${params.toString()}`;
 }
+
+
+// turns a short case id, or an accession and drug, into the one full case id it names
+export function resolveCase(query, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({ q: query });
+
+  return requestJson(
+    `/cases/resolve?${params.toString()}`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+// cases whose id or accession starts with what was typed, for the suggestions under the case box
+export function searchCases(query, limit = 10, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({ q: query, limit: String(limit) });
+
+  return requestJson(
+    `/cases?${params.toString()}`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+// stored runs, newest first, optionally only those of one change
+export function listRuns(changeId = null, limit = 50, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({ limit: String(limit) });
+
+  if (changeId) {
+    params.set("change_id", changeId);
+  }
+
+  return requestJson(
+    `/runs?${params.toString()}`,
+    {},
+    fetchImpl,
+  );
+}

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import amrtrace.policies  # noqa: F401
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from amrtrace.changes import ChangeNotFound
 from amrtrace.evaluator import evaluate
@@ -317,6 +317,30 @@ def run_change(
         selective_run=selective_view,
         equivalence=_report_view(conn, report),
     )
+
+
+# stored runs, newest first, so a person can pick one instead of typing its id
+@router.get(
+    "/runs",
+    response_model=list[RunView],
+)
+def list_runs(
+    change_id: str | None = Query(default=None, min_length=1),
+    limit: int = Query(default=50, ge=1, le=200),
+    conn=Depends(get_connection),
+) -> list[RunView]:
+    rows = conn.execute(
+        _RUN_SQL.replace("WHERE run_id = %s", "WHERE (%s::text IS NULL OR change_id = %s)")
+        + " ORDER BY started_at DESC NULLS LAST, run_id DESC LIMIT %s",
+        (change_id, change_id, limit),
+    ).fetchall()
+    return [
+        RunView(
+            run_id=row[0], change_id=row[1], mode=row[2], status=row[3], selected_count=row[4],
+            reevaluated_count=row[5], release_id=row[6], started_at=row[7], finished_at=row[8], error=row[9],
+        )
+        for row in rows
+    ]
 
 
 @router.get(

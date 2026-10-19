@@ -341,3 +341,23 @@ test("exportUrl targets same-origin reproducible export", () => {
     /Unsupported export format/,
   );
 });
+
+
+test("case lookups and the run list use query parameters", async () => {
+  const seen = [];
+  const fake = async (url) => {
+    seen.push(url);
+    return { ok: true, status: 200, text: async () => "[]" };
+  };
+  const { listRuns, resolveCase, searchCases } = await import("../api.mjs");
+  await resolveCase("PDT1 · gentamicin", fake);
+  await searchCases("CASE_12", 5, fake);
+  await listRuns("CHG-1", 20, fake);
+  await listRuns(null, 50, fake);
+  assert.deepEqual(seen, [
+    "/api/cases/resolve?q=PDT1+%C2%B7+gentamicin",
+    "/api/cases?q=CASE_12&limit=5",
+    "/api/runs?limit=20&change_id=CHG-1",
+    "/api/runs?limit=50",
+  ]);
+});

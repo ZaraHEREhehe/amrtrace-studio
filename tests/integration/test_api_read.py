@@ -458,3 +458,28 @@ def test_the_dossier_shows_label_flags_with_their_source_and_species(client, api
 def test_a_case_without_flags_has_an_empty_interpretation_list(client):
     body = client.get("/cases/CASE_A").json()
     assert body["interpretation"] == [] and body["labels_changed"] is None
+
+
+# short ids: a person can type the start of a case id, or an accession and drug, instead of the whole hash
+def test_a_short_case_id_or_an_accession_and_drug_resolve_to_the_full_id(client, api_database):
+    conn = api_database
+    conn.execute(
+        'INSERT INTO isolate (target_acc) VALUES (%s), (%s)', ("PDT000777001.1", "PDT000777002.1"))
+    conn.execute(
+        'INSERT INTO "case" (case_id, target_acc, antibiotic, panel_id) VALUES '
+        "('CASE_abcdef111111', 'PDT000777001.1', 'gentamicin', 'P'), "
+        "('CASE_abcdef222222', 'PDT000777002.1', 'gentamicin', 'P')")
+    one = client.get("/cases/resolve", params={"q": "abcdef1111"})
+    assert one.status_code == 200 and one.json()["case_id"] == "CASE_abcdef111111"
+    assert client.get("/cases/resolve", params={"q": "CASE_ABCDEF2222"}).json()["case_id"] == "CASE_abcdef222222"
+    by_name = client.get("/cases/resolve", params={"q": "pdt000777002.1 · Gentamicin"})
+    assert by_name.json()["case_id"] == "CASE_abcdef222222"
+    both = client.get("/cases/resolve", params={"q": "abcdef"})
+    assert both.status_code == 409 and len(both.json()["details"]["candidates"]) == 2
+    assert client.get("/cases/resolve", params={"q": "abc"}).status_code == 404
+    assert client.get("/cases/resolve", params={"q": "nothing here"}).status_code == 404
+
+
+def test_the_case_list_can_be_searched_by_id_start_or_accession(client):
+    assert [r["case_id"] for r in client.get("/cases", params={"q": "CASE_B"}).json()] == ["CASE_B"]
+    assert [r["case_id"] for r in client.get("/cases", params={"q": "PDT_CASE_E"}).json()] == ["CASE_EMPTY"]

@@ -13,8 +13,20 @@ import {
   getRun,
   getRunEquivalence,
   listChanges,
+  listRuns,
+  resolveCase,
+  searchCases,
   startReevaluation,
 } from "./api.mjs";
+
+import {
+  caseName,
+  parseRoute,
+  routeHash,
+  runOptionLabel,
+  shortCaseId,
+  shortId,
+} from "./ids.mjs";
 
 import {
   buildGraphModel,
@@ -74,6 +86,14 @@ function definitionList(values) {
   const list = make("dl", { className: "definition-list" });
 
   for (const [label, value] of Object.entries(values)) {
+    // a link or other element is placed as it is; plain values are shown as text
+    if (value instanceof Node) {
+      const cell = make("dd");
+      cell.append(value);
+      list.append(make("dt", { text: label }), cell);
+      continue;
+    }
+
     list.append(
       make("dt", { text: label }),
       make("dd", {
@@ -131,6 +151,101 @@ function humanDate(value) {
 }
 
 
+// opens a page by changing the address, so links can be shared and the back button works
+function navigate(view, id = null) {
+  const hash = routeHash(view, id);
+
+  if (window.location.hash === hash) {
+    void applyRoute();
+    return;
+  }
+
+  window.location.hash = hash;
+}
+
+
+// a short, clickable case id that opens the dossier, with the full id on hover
+function caseLink(caseId) {
+  const wrap = make("span", {
+    className: "id-link-group",
+  });
+
+  const link = make("a", {
+    className: "id-link",
+    text: shortCaseId(caseId),
+    attributes: {
+      href: routeHash("dossier", caseId),
+      title: `${caseId} (open dossier)`,
+    },
+  });
+
+  const graph = make("a", {
+    className: "id-link-secondary",
+    text: "graph",
+    attributes: {
+      href: routeHash("dependencies", caseId),
+      title: "Open dependency graph",
+    },
+  });
+
+  wrap.append(link, graph);
+  return wrap;
+}
+
+
+// a link to another page for ids that are already short, such as change and run ids
+function pageLink(view, id) {
+  if (!id) {
+    return "—";
+  }
+
+  return make("a", {
+    className: "id-link",
+    text: id,
+    attributes: {
+      href: routeHash(view, id),
+    },
+  });
+}
+
+
+// copies the full id so it can still be pasted elsewhere when needed
+function copyButton(value) {
+  const button = make("button", {
+    className: "copy-button",
+    text: "Copy full ID",
+    attributes: {
+      type: "button",
+      title: value,
+    },
+  });
+
+  button.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      button.textContent = "Copied";
+    } catch {
+      button.textContent = "Copy failed";
+    }
+    window.setTimeout(() => {
+      button.textContent = "Copy full ID";
+    }, 1500);
+  });
+
+  return button;
+}
+
+
+// a long evidence id shown short, with the full id on hover
+function shortIdCell(id) {
+  return make("code", {
+    className: "short-id",
+    text: shortId(id),
+    attributes: { title: id },
+  });
+}
+
+
 function renderChangeRows(changes) {
   const container = byId("change-list");
   clear(container);
@@ -172,7 +287,7 @@ function renderChangeRows(changes) {
     button.append(top, meta, created);
 
     button.addEventListener("click", () => {
-      void loadChangeDetail(event.change_id);
+      navigate("changes", event.change_id);
     });
 
     container.append(button);
@@ -256,8 +371,10 @@ function renderImpact(impact) {
 
   for (const item of impact.items) {
     const row = make("tr");
+    const caseCell = make("td");
+    caseCell.append(caseLink(item.case_id));
     row.append(
-      make("td", { text: item.case_id }),
+      caseCell,
       make("td", { text: item.mechanism }),
       make("td", { text: item.reason }),
     );
@@ -659,13 +776,7 @@ function renderRuleSpace(rows) {
 }
 
 
-async function submitDependencyLookup(event) {
-  event.preventDefault();
-
-  const caseId = String(
-    new FormData(event.currentTarget).get("case_id") ?? "",
-  ).trim();
-
+async function loadDependencies(caseId) {
   const status = byId("dependency-status");
   const summary = byId("dependency-summary");
 
@@ -673,16 +784,12 @@ async function submitDependencyLookup(event) {
   clear(byId("rule-space"));
   clear(byId("node-inspector"));
   clear(summary);
-
-  if (!caseId) {
-    setStatus(status, "error", "Enter a case ID.");
-    return;
-  }
+  byId("case-id").value = caseId;
 
   setStatus(
     status,
     "loading",
-    `Loading dependencies for ${caseId}…`,
+    `Loading dependencies for ${shortCaseId(caseId)}…`,
   );
 
   try {
@@ -690,7 +797,7 @@ async function submitDependencyLookup(event) {
 
     summary.append(
       definitionList({
-        Case: subgraph.case_id,
+        Case: caseLink(subgraph.case_id),
         Release: subgraph.release_id,
         Nodes: subgraph.nodes.length,
         Edges: subgraph.edges.length,
@@ -703,6 +810,21 @@ async function submitDependencyLookup(event) {
     hideStatus(status);
   } catch (error) {
     setStatus(status, "error", errorText(error));
+  }
+}
+
+
+async function submitDependencyLookup(event) {
+  event.preventDefault();
+
+  const text = String(
+    new FormData(event.currentTarget).get("case_id") ?? "",
+  ).trim();
+
+  const caseId = await resolveTypedCase(text, byId("dependency-status"));
+
+  if (caseId) {
+    navigate("dependencies", caseId);
   }
 }
 
@@ -744,7 +866,7 @@ function renderRunDetail(run) {
   container.append(
     heading,
     definitionList({
-      "Change ID": run.change_id,
+      "Change ID": pageLink("changes", run.change_id),
       Mode: run.mode,
       Status: run.status,
       Release: run.release_id,
@@ -879,10 +1001,11 @@ function renderAxisReport(axis) {
     selectiveCell.append(selective);
     exhaustiveCell.append(exhaustive);
 
+    const caseCell = make("td");
+    caseCell.append(caseLink(example.case_id));
+
     row.append(
-      make("td", {
-        text: example.case_id,
-      }),
+      caseCell,
       selectiveCell,
       exhaustiveCell,
     );
@@ -951,8 +1074,8 @@ function renderEquivalence(report) {
   );
 
   const summary = definitionList({
-    "Change ID": report.change_id,
-    "Selective run": report.selective_run_id,
+    "Change ID": pageLink("changes", report.change_id),
+    "Selective run": pageLink("runs", report.selective_run_id),
     "Exhaustive run": report.exhaustive_run_id,
     Release: report.release_id,
     "Gate status": gate,
@@ -1047,6 +1170,7 @@ async function submitReevaluation(event) {
 
     renderRunDetail(result.selective_run);
 
+    await loadRunPickers();
     byId("run-id").value =
       result.selective_run.run_id;
 
@@ -1137,12 +1261,48 @@ async function submitRunLookup(event) {
     setStatus(
       byId("run-lookup-status"),
       "error",
-      "Enter a run ID.",
+      "Choose a run.",
     );
     return;
   }
 
-  await loadRunAndEquivalence(runId);
+  navigate("runs", runId);
+}
+
+
+// fills a select with options, keeping the current choice when it is still there
+function fillSelect(select, placeholder, items, valueOf, labelOf) {
+  const current = select.value;
+  clear(select);
+  select.append(make("option", { text: placeholder, attributes: { value: "" } }));
+
+  for (const item of items) {
+    select.append(
+      make("option", {
+        text: labelOf(item),
+        attributes: { value: valueOf(item) },
+      }),
+    );
+  }
+
+  if ([...select.options].some((option) => option.value === current)) {
+    select.value = current;
+  }
+}
+
+
+// the run picker and the change picker are filled from what is stored, so nobody types an id
+async function loadRunPickers() {
+  try {
+    const [runs, changes] = await Promise.all([listRuns(null, 100), listChanges(100)]);
+
+    fillSelect(byId("run-id"), "Choose a stored run", runs, (run) => run.run_id,
+      (run) => `${run.run_id} · ${runOptionLabel(run)}`);
+    fillSelect(byId("run-change-id"), "Choose a registered change", changes, (change) => change.change_id,
+      (change) => `${change.change_id} · ${change.old_version ?? "∅"} → ${change.new_version ?? "∅"}`);
+  } catch (error) {
+    setStatus(byId("run-lookup-status"), "error", errorText(error));
+  }
 }
 
 
@@ -1220,7 +1380,10 @@ function renderDataTable(
 
       const cell = make("td");
 
-      if (
+      // a short id with its full form on hover is placed as it is
+      if (value instanceof Node) {
+        cell.append(value);
+      } else if (
         typeof value === "object" &&
         value !== null
       ) {
@@ -1304,14 +1467,32 @@ function renderDossierOverview(dossier) {
 
   const headingText = make("div");
 
+  const idLine = make("div", {
+    className: "id-line",
+  });
+
+  idLine.append(
+    make("code", {
+      text: shortCaseId(dossier.case_id),
+      attributes: { title: dossier.case_id },
+    }),
+    copyButton(dossier.case_id),
+    make("a", {
+      className: "id-link-secondary",
+      text: "Open dependency graph",
+      attributes: { href: routeHash("dependencies", dossier.case_id) },
+    }),
+  );
+
   headingText.append(
     make("p", {
       className: "eyebrow",
       text: "Case dossier",
     }),
     make("h3", {
-      text: dossier.case_id,
+      text: caseName(dossier.target_acc, dossier.antibiotic) || shortCaseId(dossier.case_id),
     }),
+    idLine,
   );
 
   heading.append(headingText);
@@ -1330,7 +1511,7 @@ function renderDossierOverview(dossier) {
   container.append(
     heading,
     definitionList({
-      "Case ID": dossier.case_id,
+      "Case ID": shortIdCell(dossier.case_id),
       "Target accession": dossier.target_acc,
       Antibiotic: dossier.antibiotic,
       Panel: dossier.panel_id,
@@ -1348,7 +1529,7 @@ function renderDossierOverview(dossier) {
     }),
     renderDataTable(
       [
-        ["Evidence ID", "ast_evidence_id"],
+        ["Evidence ID", (row) => shortIdCell(row.ast_evidence_id)],
         ["Phenotype", "phenotype"],
         ["Normalized", "phenotype_normalized"],
         ["Sign", "measurement_sign"],
@@ -1364,7 +1545,7 @@ function renderDossierOverview(dossier) {
     }),
     renderDataTable(
       [
-        ["Evidence ID", "evidence"],
+        ["Evidence ID", (row) => shortIdCell(row.evidence)],
         ["Host", "host"],
         ["Lab label", "labLabel"],
         ["Label used", "shownLabel"],
@@ -1382,7 +1563,7 @@ function renderDossierOverview(dossier) {
     }),
     renderDataTable(
       [
-        ["Evidence ID", "genotype_evidence_id"],
+        ["Evidence ID", (row) => shortIdCell(row.genotype_evidence_id)],
         ["Source", "representation_source"],
         ["Element", "element_raw"],
         ["Subtype", "subtype_raw"],
@@ -1696,17 +1877,77 @@ async function submitDossierLookup(event) {
       .get("case_id") ?? "",
   ).trim();
 
-  if (!caseId) {
-    setStatus(
-      byId("dossier-status"),
-      "error",
-      "Enter a case ID.",
-    );
+  const resolved = await resolveTypedCase(caseId, byId("dossier-status"));
 
-    return;
+  if (resolved) {
+    navigate("dossier", resolved);
+  }
+}
+
+
+const FULL_CASE_ID = /^CASE_[0-9a-f]{64}$/;
+
+
+// accepts a full id, a short id or an accession and drug, and says plainly when it cannot pick one case
+async function resolveTypedCase(text, status) {
+  if (!text) {
+    setStatus(status, "error", "Enter a case ID, a short ID, or an accession and drug.");
+    return null;
   }
 
-  await loadDossier(caseId);
+  if (FULL_CASE_ID.test(text)) {
+    return text;
+  }
+
+  try {
+    const found = await resolveCase(text);
+    return found.case_id;
+  } catch (error) {
+    if (error instanceof ApiError && error.errorCode === "case_ambiguous") {
+      const options = (error.details?.candidates ?? []).map(shortCaseId).join(", ");
+      setStatus(status, "error", `More than one case matches. Type more characters (for example ${options}).`);
+    } else if (error instanceof ApiError && error.errorCode === "case_not_found") {
+      setStatus(status, "error", `No case matches "${text}".`);
+    } else {
+      setStatus(status, "error", errorText(error));
+    }
+    return null;
+  }
+}
+
+
+let suggestionTimer = null;
+
+
+// suggestions under the case boxes: the cases whose id or accession starts with what was typed
+function bindCaseSuggestions(input) {
+  input.addEventListener("input", () => {
+    window.clearTimeout(suggestionTimer);
+    const text = input.value.trim();
+
+    if (text.length < 3 || FULL_CASE_ID.test(text)) {
+      return;
+    }
+
+    suggestionTimer = window.setTimeout(async () => {
+      try {
+        const cases = await searchCases(text, 10);
+        const list = byId("case-suggestions");
+        clear(list);
+
+        for (const item of cases) {
+          list.append(
+            make("option", {
+              text: `${caseName(item.target_acc, item.antibiotic)} · ${item.current_state ?? "no state"}`,
+              attributes: { value: item.case_id },
+            }),
+          );
+        }
+      } catch {
+        // suggestions are a convenience, so a failed lookup simply shows none
+      }
+    }, 250);
+  });
 }
 
 
@@ -1893,8 +2134,37 @@ function activateView(name) {
 function bindNavigation() {
   for (const button of document.querySelectorAll("[data-nav]")) {
     button.addEventListener("click", () => {
-      activateView(button.dataset.nav);
+      navigate(button.dataset.nav);
     });
+  }
+
+  window.addEventListener("hashchange", () => void applyRoute());
+}
+
+
+// shows the page the address names and loads the id in it, so a link opens the case or run directly
+async function applyRoute() {
+  const { view, id } = parseRoute(window.location.hash);
+  activateView(view);
+
+  if (view === "runs") {
+    await loadRunPickers();
+  }
+
+  if (!id) {
+    return;
+  }
+
+  if (view === "dossier") {
+    byId("dossier-case-id").value = id;
+    await loadDossier(id);
+  } else if (view === "dependencies") {
+    await loadDependencies(id);
+  } else if (view === "runs") {
+    byId("run-id").value = id;
+    await loadRunAndEquivalence(id);
+  } else if (view === "changes") {
+    await loadChangeDetail(id);
   }
 }
 
@@ -1954,9 +2224,11 @@ function boot() {
 
   syncGateControl();
   syncReviewCorrection();
+  bindCaseSuggestions(byId("case-id"));
+  bindCaseSuggestions(byId("dossier-case-id"));
 
-  activateView("changes");
   void loadChanges();
+  void applyRoute();
 }
 
 

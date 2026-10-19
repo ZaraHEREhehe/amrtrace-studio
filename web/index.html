@@ -247,7 +247,8 @@
                 name="case_id"
                 required
                 autocomplete="off"
-                placeholder="Enter a case ID"
+                list="case-suggestions"
+                placeholder="Short or full case ID, or accession and drug"
               >
             </div>
 
@@ -337,13 +338,13 @@
                   <label for="run-change-id">
                     Change ID
                   </label>
-                  <input
+                  <select
                     id="run-change-id"
                     name="change_id"
                     required
-                    autocomplete="off"
-                    placeholder="Registered change ID"
                   >
+                    <option value="">Choose a registered change</option>
+                  </select>
                 </div>
 
                 <div class="field">
@@ -419,13 +420,13 @@
                 <label for="run-id">
                   Run ID
                 </label>
-                <input
+                <select
                   id="run-id"
                   name="run_id"
                   required
-                  autocomplete="off"
-                  placeholder="RUN-..."
                 >
+                  <option value="">Choose a stored run</option>
+                </select>
               </div>
 
               <button
@@ -503,7 +504,8 @@
                 name="case_id"
                 required
                 autocomplete="off"
-                placeholder="Enter a case ID"
+                list="case-suggestions"
+                placeholder="Short or full case ID, or accession and drug"
               >
             </div>
 
@@ -780,6 +782,7 @@
     </main>
   </div>
 
+  <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>
 </body>
 </html>
