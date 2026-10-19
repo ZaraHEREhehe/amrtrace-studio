@@ -1,3 +1,5 @@
+import { shortCaseId, shortId } from "./ids.mjs";
+
 const MIN_HEIGHT = 320;
 const NODE_GAP = 82;
 const TOP_PADDING = 62;
@@ -34,12 +36,13 @@ function edgeOrder(a, b) {
 }
 
 
+// long ids are cut in the drawing so they fit their box; the inspector still shows them in full
 function nodeLabel(node) {
   if (node.node_type === "case") {
-    return node.node_id;
+    return shortCaseId(node.node_id);
   }
 
-  return node.node_id;
+  return shortId(node.node_id);
 }
 
 

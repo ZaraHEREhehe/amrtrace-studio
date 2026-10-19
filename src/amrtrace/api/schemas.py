@@ -8,6 +8,13 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 
+# the full case id behind a short form a person typed, with what the id stands for
+class CaseResolution(BaseModel):
+    case_id: str
+    target_acc: str
+    antibiotic: str
+
+
 class CaseSummary(BaseModel):
     case_id: str
     target_acc: str

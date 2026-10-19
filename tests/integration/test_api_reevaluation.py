@@ -174,6 +174,7 @@ def test_run_routes_are_registered():
 
     assert "/changes/{change_id}/reevaluate" in paths
     assert "/runs/{run_id}" in paths
+    assert "/runs" in paths
     assert "/runs/{run_id}/equivalence" in paths
 
 
@@ -285,6 +286,12 @@ def test_selective_and_exhaustive_run_through_http(
 
     assert equivalence_response.status_code == 200
     assert equivalence_response.json() == report
+
+    # the run list offers the stored runs, newest first, filtered by change when asked
+    listed = client.get("/runs", params={"change_id": event.change_id}).json()
+    assert {run["mode"] for run in listed} == {"SELECTIVE", "EXHAUSTIVE"}
+    assert selective in listed
+    assert client.get("/runs", params={"change_id": "NO_SUCH_CHANGE"}).json() == []
 
 
 def test_unknown_run_is_structured_404(

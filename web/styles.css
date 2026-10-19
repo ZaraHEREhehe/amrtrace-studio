@@ -840,3 +840,46 @@ select {
   background: #fff1d6;
   color: #7a4b00;
 }
+
+/* short ids that open another page, with a quieter second link beside them */
+.id-link-group {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.id-link {
+  color: #1d4f7a;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.id-link-secondary {
+  color: #5f6f7d;
+  font-size: 0.78rem;
+}
+
+.id-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.copy-button {
+  padding: 3px 8px;
+  border: 1px solid #ccd6df;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #31516d;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+/* a shortened id stays on one line so table columns do not wrap mid-hash */
+.short-id {
+  white-space: nowrap;
+}

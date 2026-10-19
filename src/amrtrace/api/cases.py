@@ -23,6 +23,7 @@ from .schemas import (
     AstEvidenceView,
     CaseDossier,
     CaseEvidence,
+    CaseResolution,
     CaseStateView,
     CaseSubgraphView,
     CaseSummary,
@@ -31,6 +32,12 @@ from .schemas import (
 )
 
 router = APIRouter()
+
+CASE_PREFIX = "CASE_"
+# the shortest hash prefix accepted, so a stray digit or two never matches thousands of cases
+MIN_SHORT_HASH = 6
+# how many candidates an ambiguous lookup names, enough to choose from without flooding the reply
+AMBIGUOUS_SHOWN = 5
 
 
 def _case_row(conn: psycopg.Connection, case_id: str) -> dict | None:
@@ -151,10 +158,55 @@ def _interpretation_for_state(conn: psycopg.Connection, case_id: str, release_id
     return views
 
 
+# the rows a typed text could mean: a full or short case id, or an accession followed by a drug
+def _resolution_candidates(conn: psycopg.Connection, text: str) -> list[dict]:
+    query = text.strip()
+    hash_part = query[len(CASE_PREFIX):] if query.upper().startswith(CASE_PREFIX) else query
+    rows: list[dict] = []
+    with conn.cursor(row_factory=dict_row) as cur:
+        if len(hash_part) >= MIN_SHORT_HASH and all(ch in "0123456789abcdefABCDEF" for ch in hash_part):
+            cur.execute(
+                'SELECT case_id, target_acc, antibiotic FROM "case" WHERE case_id LIKE %s ORDER BY case_id LIMIT %s',
+                (CASE_PREFIX + hash_part.lower() + "%", AMBIGUOUS_SHOWN + 1),
+            )
+            rows = cur.fetchall()
+        if not rows:
+            # "PDT000368001.1 gentamicin" or "PDT000368001.1 · gentamicin" both name one case
+            parts = query.replace("·", " ").split()
+            if len(parts) >= 2:
+                cur.execute(
+                    'SELECT case_id, target_acc, antibiotic FROM "case" '
+                    "WHERE lower(target_acc) = lower(%s) AND lower(antibiotic) = lower(%s) ORDER BY case_id",
+                    (parts[0], " ".join(parts[1:])),
+                )
+                rows = cur.fetchall()
+    return rows
+
+
+# turns a short case id, or an accession and drug, into the one full case id it names
+@router.get("/cases/resolve", response_model=CaseResolution)
+def resolve_case(
+    q: str = Query(min_length=1),
+    conn: psycopg.Connection = Depends(get_connection),
+) -> CaseResolution:
+    rows = _resolution_candidates(conn, q)
+    if not rows:
+        raise ApiError(404, "case_not_found", f"No case matches {q!r}", {"q": q})
+    if len(rows) > 1:
+        raise ApiError(
+            409,
+            "case_ambiguous",
+            f"{q!r} matches more than one case; type more characters",
+            {"q": q, "candidates": [row["case_id"] for row in rows[:AMBIGUOUS_SHOWN]]},
+        )
+    return CaseResolution(**rows[0])
+
+
 @router.get("/cases", response_model=list[CaseSummary])
 def list_cases(
     drug: str | None = Query(default=None, min_length=1),
     state: str | None = Query(default=None, min_length=1),
+    q: str | None = Query(default=None, min_length=2),
     limit: int = Query(default=100, ge=1, le=500),
     conn: psycopg.Connection = Depends(get_connection),
 ) -> list[CaseSummary]:
@@ -181,12 +233,18 @@ def list_cases(
     ) current_state ON TRUE
     WHERE (%s::text IS NULL OR c.antibiotic = %s)
       AND (%s::text IS NULL OR current_state.state_code = %s)
+      AND (%s::text IS NULL OR c.case_id ILIKE %s OR c.target_acc ILIKE %s)
     ORDER BY c.case_id
     LIMIT %s
     """
 
+    # q searches as you type: a case id that starts with it (CASE_ may be left out) or an accession that does
+    search = None if q is None else q.strip()
+    by_id = None if search is None else (search if search.upper().startswith(CASE_PREFIX) else CASE_PREFIX + search) + "%"
+    by_accession = None if search is None else search + "%"
+
     with conn.cursor(row_factory=dict_row) as cur:
-        cur.execute(sql, (drug, drug, state, state, limit))
+        cur.execute(sql, (drug, drug, state, state, search, by_id, by_accession, limit))
         rows = cur.fetchall()
 
     return [CaseSummary(**row) for row in rows]
