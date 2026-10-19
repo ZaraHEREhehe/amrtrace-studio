@@ -1,5 +1,7 @@
 # Selector performance evidence (A-07)
 
+> **Note (2026-10-19, D-22):** the numbers below describe the release chain before D-21 and D-22 (R2 gentamicin-only baseline, R3 Ed33, CLSI-REAL with 154 required cases). The chain was rebuilt: R2 Ed32 baseline for five drugs, R3 VET01S, R4 Ed33, and CLSI-REAL now requires 112 cases. Current results are in `docs/design/d22_host_breakpoints.md`.
+
 Measured by Aabia on 2026-10-07 against release `R1` in PostgreSQL 16.15, on one development machine.
 The graph is the one described in `graph_metrics.md`: 41,858 cases, 1,196,148 dependency rows, 344,526 applicability rows.
 
