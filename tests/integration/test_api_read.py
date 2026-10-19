@@ -411,3 +411,50 @@ def test_invalid_limit_uses_the_project_error_shape(client):
     assert body["message"] == "Request validation failed"
     assert isinstance(body["details"], list)
     assert body["details"]
+
+
+# D-22: the dossier shows each result's label flag, with the table row its rule edge points at
+def test_the_dossier_shows_label_flags_with_their_source_and_species(client, api_database):
+    conn = api_database
+    rule_key = "clsi|escherichia coli|ciprofloxacin|mic|dog"
+    conn.execute(
+        "INSERT INTO interpretation_rule (rule_key, interpretation_version, standard, organism, antibiotic, method, "
+        "categories, host, source, breakpoint_species) VALUES (%s, 'TABLE_VET', 'CLSI', 'Escherichia coli', "
+        "'ciprofloxacin', 'MIC', '[]'::jsonb, 'dog', 'Vet book, dogs row', 'dog')",
+        (rule_key,),
+    )
+    create_release(conn, "R4", {"interpretation_version": "TABLE_VET"})
+    flags = [
+        {"ast_evidence_id": "AST_B1", "submitted_label": "S", "host_group": "dog", "label_source": "derived",
+         "derived_label": "I", "label_changed": True, "rule_key": rule_key},
+        {"ast_evidence_id": "AST_B2", "submitted_label": "R", "host_group": "dog", "label_source": "submitted"},
+    ]
+    append_case_state(
+        conn, case_id="CASE_B", release_id="R4", state_code="UNRESOLVED",
+        explanation={"phenotype_values": ["I", "R"], "label_flags": flags, "labels_changed": 1},
+        verification_status="STATE_CHANGED", evaluator_version="TEST_EVALUATOR",
+    )
+    conn.execute(
+        "INSERT INTO dependency (case_id, release_id, dep_type, edge_type, node_type, node_id, node_version, node_context) "
+        "VALUES ('CASE_B', 'R4', 'input_evidence', 'derived_from', 'interpretation_rule', %s, 'TABLE_VET', "
+        "'{\"mic\": 4.0, \"sign\": \"==\"}'::jsonb)",
+        (rule_key,),
+    )
+    validate_release(conn, "R4")
+    publish_release(conn, "R4")
+
+    body = client.get("/cases/CASE_B").json()
+    assert body["labels_changed"] == 1
+    derived, kept = body["interpretation"]
+    assert derived["label_changed"] is True and derived["derived_label"] == "I"
+    assert (derived["source"], derived["breakpoint_species"], derived["table_version"]) == ("Vet book, dogs row", "dog", "TABLE_VET")
+    assert kept["label_source"] == "submitted" and kept["source"] is None
+
+    listed = {row["case_id"]: row for row in client.get("/cases").json()}
+    assert listed["CASE_B"]["labels_changed"] == 1
+    assert listed["CASE_A"]["labels_changed"] is None
+
+
+def test_a_case_without_flags_has_an_empty_interpretation_list(client):
+    body = client.get("/cases/CASE_A").json()
+    assert body["interpretation"] == [] and body["labels_changed"] is None

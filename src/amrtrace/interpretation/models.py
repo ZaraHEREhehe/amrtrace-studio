@@ -17,9 +17,11 @@ def _norm(text: str) -> str:
     return " ".join(str(text).split()).lower()
 
 
-def make_rule_key(standard: str, organism: str, antibiotic: str, method: str) -> str:
+def make_rule_key(standard: str, organism: str, antibiotic: str, method: str, host: Optional[str] = None) -> str:
     """Canonical key of a rule: the four matching fields, trimmed and lower-cased, joined with '|'."""
-    return "|".join(_norm(x) for x in (standard, organism, antibiotic, method))
+    base = "|".join(_norm(x) for x in (standard, organism, antibiotic, method))
+    # a host-specific rule gets the host as a fifth part, so a rule with no host keeps the key it always had
+    return f"{base}|{_norm(host)}" if host is not None and str(host).strip() else base
 
 
 @dataclass(frozen=True)
@@ -40,14 +42,20 @@ class InterpretationRule:
     antibiotic: str
     method: str
     categories: tuple[Category, ...]
+    # the three fields below are optional, a rule without them reads exactly as before
+    host: Optional[str] = None
+    # which document and row the numbers were copied from, shown to users in the flag
+    source: Optional[str] = None
+    # the species the breakpoint was set for, which can differ from the host when a fallback row is used
+    breakpoint_species: Optional[str] = None
 
     @property
     def rule_key(self) -> str:
-        return make_rule_key(self.standard, self.organism, self.antibiotic, self.method)
+        return make_rule_key(self.standard, self.organism, self.antibiotic, self.method, self.host)
 
     def to_dict(self) -> dict:
         """The shape handed to the evaluator in CaseInputs.interpretation_rules (and stored in the database)."""
-        return {
+        data = {
             "rule_key": self.rule_key,
             "interpretation_version": self.interpretation_version,
             "standard": self.standard,
@@ -56,6 +64,12 @@ class InterpretationRule:
             "method": self.method,
             "categories": [c.to_dict() for c in self.categories],
         }
+        # optional fields are added only when set, so older rules keep the exact same shape and hashes
+        for field in ("host", "source", "breakpoint_species"):
+            value = getattr(self, field)
+            if value is not None:
+                data[field] = value
+        return data
 
 
 @dataclass(frozen=True)
@@ -75,12 +89,13 @@ def find_rules(
     organism: str,
     antibiotic: str,
     method: str = "MIC",
+    host: Optional[str] = None,
 ) -> list[InterpretationRule]:
     """Rules that apply to a case: all four fields match (case and spacing ignored). A case with no standard
     matches nothing, so a table never touches a result that does not say which standard it used."""
     if not standard:
         return []
-    wanted = make_rule_key(standard, organism, antibiotic, method)
+    wanted = make_rule_key(standard, organism, antibiotic, method, host)
     return sorted((r for r in rules if r.rule_key == wanted), key=lambda r: r.interpretation_version)
 
 
@@ -96,4 +111,7 @@ def rule_from_dict(data: dict[str, Any]) -> InterpretationRule:
         antibiotic=data["antibiotic"],
         method=data["method"],
         categories=tuple(Category(c["label"], c["op"], c["value"]) for c in data["categories"]),
+        host=data.get("host"),
+        source=data.get("source"),
+        breakpoint_species=data.get("breakpoint_species"),
     )

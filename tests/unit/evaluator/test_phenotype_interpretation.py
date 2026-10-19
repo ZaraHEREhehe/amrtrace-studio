@@ -256,3 +256,61 @@ def test_row_order_does_not_change_the_result(make_inputs, versions):
     )
     assert forward.output_hash == backward.output_hash
     assert forward.dependency_records == backward.dependency_records
+
+
+# D-22: a row may name several rules in order, and every result in interpretation mode carries a flag
+HOST_KEY = RULE_KEY + "|unicorn"
+HOST_RULE = dict(rule("TABLE_V2", 2, 4, 8, rule_key=HOST_KEY), host="unicorn")
+
+
+def keyed_row(mic, keys, reported="S", ast_id="AST_0", sign="=="):
+    return {"ast_evidence_id": ast_id, "phenotype": reported, "mic": mic, "sign": sign, "rule_keys": list(keys),
+            "host_group": "unicorn"}
+
+
+def rule_edges(result):
+    return sorted((r.dep_type, r.node_id) for r in result.dependency_records if r.node_type == c.NODE_INTERPRETATION_RULE)
+
+
+def test_the_first_rule_that_exists_is_used_and_the_missing_one_is_remembered(interpret):
+    result = interpret([keyed_row(4, [HOST_KEY, RULE_KEY])], "TABLE_V1", rules=(OLD,))
+    assert result.phenotype_values == ("S",)
+    assert rule_edges(result) == [(c.DEP_APPLICABILITY, HOST_KEY), (c.DEP_INPUT_EVIDENCE, RULE_KEY)]
+
+
+def test_when_the_host_rule_exists_the_general_rule_is_not_looked_at(interpret):
+    result = interpret([keyed_row(4, [HOST_KEY, RULE_KEY])], "TABLE_V2", rules=(NEW, HOST_RULE))
+    assert result.phenotype_values == ("I",)
+    assert rule_edges(result) == [(c.DEP_INPUT_EVIDENCE, HOST_KEY)]
+
+
+def test_a_host_rule_only_row_keeps_its_label_until_the_host_rule_exists(interpret):
+    before = interpret([keyed_row(4, [HOST_KEY], reported="NOT_DEFINED")], "TABLE_V1", rules=(OLD,))
+    after = interpret([keyed_row(4, [HOST_KEY], reported="NOT_DEFINED")], "TABLE_V2", rules=(NEW, HOST_RULE))
+    assert before.phenotype_values == ("NOT_DEFINED",) and rule_edges(before) == [(c.DEP_APPLICABILITY, HOST_KEY)]
+    assert after.phenotype_values == ("I",)
+
+
+def test_the_flag_says_where_each_label_came_from(interpret):
+    result = interpret([keyed_row(4, [HOST_KEY, RULE_KEY], ast_id="AST_1"),
+                        keyed_row(4, [], reported="R", ast_id="AST_2")], "TABLE_V2", rules=(NEW, HOST_RULE))
+    derived, kept = result.label_flags
+    assert derived == {"ast_evidence_id": "AST_1", "submitted_label": "S", "host_group": "unicorn",
+                       "label_source": c.LABEL_SOURCE_DERIVED, "derived_label": "I", "label_changed": True,
+                       "rule_key": HOST_KEY}
+    assert kept == {"ast_evidence_id": "AST_2", "submitted_label": "R", "host_group": "unicorn",
+                    "label_source": c.LABEL_SOURCE_SUBMITTED}
+
+
+def test_a_derived_label_that_matches_the_lab_is_flagged_as_unchanged(interpret):
+    (flag,) = interpret([keyed_row(1, [RULE_KEY])], "TABLE_V1", rules=(OLD,)).label_flags
+    assert flag["label_source"] == c.LABEL_SOURCE_DERIVED and flag["label_changed"] is False
+
+
+def test_the_explanation_carries_the_flags_only_in_interpretation_mode(make_inputs, versions):
+    inputs = replace(make_inputs(), ast_rows=(keyed_row(4, [RULE_KEY]),), interpretation_rules=(OLD, NEW))
+    interpreted = evaluate(inputs, replace(versions, interpretation_version="TABLE_V2"))
+    assert interpreted.explanation["labels_changed"] == 1
+    assert interpreted.explanation["label_flags"][0]["derived_label"] == "I"
+    plain = evaluate(inputs, versions)
+    assert "label_flags" not in plain.explanation and "labels_changed" not in plain.explanation

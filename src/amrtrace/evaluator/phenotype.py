@@ -89,24 +89,55 @@ def _rule_record(
     )
 
 
+# the rules a row may be read by, in order; an older single rule_key is still understood
+def _candidate_keys(row: dict) -> list[str]:
+    keys = row.get("rule_keys")
+    if keys is None:
+        keys = [row["rule_key"]] if row.get("rule_key") else []
+    return [key for key in keys if key]
+
+
+# what the case tells users about one result: whose label it is and, if ours, which rule gave it
+# the rule's source and species are read from the table through the derived_from edge, because the edition
+# a carried case was read by must not change when a later edition with the same breakpoints is published
+def _label_flag(row: dict, reported: str | None, derived: str | None, rule: InterpretationRule | None) -> dict:
+    flag = {"ast_evidence_id": str(row["ast_evidence_id"]), "submitted_label": reported}
+    if row.get("host_group") is not None:
+        flag["host_group"] = row["host_group"]
+    if derived is None:
+        flag["label_source"] = c.LABEL_SOURCE_SUBMITTED
+        return flag
+    flag.update(
+        label_source=c.LABEL_SOURCE_DERIVED,
+        derived_label=derived,
+        label_changed=derived != reported,
+        rule_key=rule.rule_key,
+    )
+    return flag
+
+
 def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> PhenotypeResult:
     rules = _rules_in_force(inputs, versions)
     version = versions.interpretation_version
 
     values = set()
     rule_records = {}
+    flags = []
     # rows are walked in a fixed order so the output never depends on the input order
     for row in sorted(inputs.ast_rows, key=lambda row: str(row["ast_evidence_id"])):
-        value = _reported_label(row)
+        reported = _reported_label(row)
+        value = reported
+        derived, used = None, None
 
         # in as-reported mode the reported label is the whole story
-        rule_key = row.get("rule_key") if version is not None else None
-        if rule_key:
+        keys = _candidate_keys(row) if version is not None else []
+        measured = _measured_value(row)
+        for rule_key in keys:
             rule = rules.get(rule_key)
-            measured = _measured_value(row)
             if rule is not None and measured is not None:
                 sign = row.get("sign") or c.SIGN_EXACT
-                value = _derived_category(rule, measured, sign)
+                derived, used = _derived_category(rule, measured, sign), rule
+                value = derived
                 # the measurement is kept on the edge so a later change can be narrowed to its region
                 record = _rule_record(
                     c.DEP_INPUT_EVIDENCE,
@@ -116,7 +147,7 @@ def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> Phenotype
                     {"mic": measured, "sign": sign},
                 )
             else:
-                # no rule applied, so the reported label stands, and the case remembers which rule it looked for
+                # this rule was not used, and the case remembers it looked for it so a later edition can find it
                 record = _rule_record(
                     c.DEP_APPLICABILITY,
                     c.EDGE_EVALUATED_AGAINST,
@@ -127,7 +158,12 @@ def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> Phenotype
             rule_records[
                 (record.dep_type, record.node_id, canonical_json(record.node_context))
             ] = record
+            # the first rule that could be applied wins; a rule found without a measurement ends the search too
+            if used is not None or rule is not None:
+                break
 
+        if version is not None:
+            flags.append(_label_flag(row, reported, derived, used))
         if value is not None:
             values.add(value)
 
@@ -152,4 +188,5 @@ def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> Phenotype
         phenotype_state=_state_from_values(ordered_values),
         phenotype_values=ordered_values,
         dependency_records=tuple(records),
+        label_flags=tuple(flags),
     )

@@ -49,7 +49,8 @@ def test_every_case_gets_a_state_that_supersedes_its_earlier_one(loaded):
     report = store(loaded)
     assert report.loaded == COHORT_CASES
     assert report.state_changed + report.re_verified == COHORT_CASES
-    assert report.state_changed > 0
+    # every label Ed32 cannot explain is kept as submitted, so the baseline reproduces R1 exactly (D-21)
+    assert report.state_changed == 0
     assert (
         count(
             loaded,

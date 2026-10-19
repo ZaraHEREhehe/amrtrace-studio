@@ -6,6 +6,9 @@
       - organism: <organism>
         antibiotic: <drug>
         method: MIC
+        host: <optional host group, e.g. dog>
+        source: <optional document and row the numbers came from>
+        breakpoint_species: <optional species the breakpoint was set for>
         categories:
           - {label: susceptible, op: "<=", value: 2}
 """
@@ -19,6 +22,9 @@ import yaml
 
 from .intervals import categories_overlap
 from .models import LABELS, OPS, Category, InterpretationRule, InterpretationTable, make_rule_key
+
+
+OPTIONAL_FIELDS = ("host", "source", "breakpoint_species")
 
 
 class InvalidTable(Exception):
@@ -53,6 +59,10 @@ def parse_table(data: Any) -> InterpretationTable:
         for field in ("organism", "antibiotic", "method"):
             if _blank(raw.get(field)):
                 problems.append(f"{label}: {field} must be a non-empty string")
+        # optional fields may be left out, but when given they must say something
+        for field in OPTIONAL_FIELDS:
+            if field in raw and _blank(raw.get(field)):
+                problems.append(f"{label}: {field} must be a non-empty string when given")
         raw_categories = raw.get("categories")
         if not isinstance(raw_categories, list) or not raw_categories:
             problems.append(f"{label}: categories must be a non-empty list")
@@ -76,12 +86,13 @@ def parse_table(data: Any) -> InterpretationTable:
             if categories_overlap(categories):
                 problems.append(f"{label}: categories overlap, so one measurement could belong to two of them")
             if not any(_blank(raw.get(f)) for f in ("organism", "antibiotic", "method")) and not _blank(standard):
-                key = make_rule_key(standard, raw["organism"], raw["antibiotic"], raw["method"])
+                key = make_rule_key(standard, raw["organism"], raw["antibiotic"], raw["method"], raw.get("host"))
                 if key in seen:
                     problems.append(f"{label}: duplicate rule for {key}")
                 seen.add(key)
                 if not _blank(version):
-                    rules.append(InterpretationRule(version, standard, raw["organism"], raw["antibiotic"], raw["method"], tuple(categories)))
+                    rules.append(InterpretationRule(version, standard, raw["organism"], raw["antibiotic"], raw["method"],
+                                                    tuple(categories), **{f: raw.get(f) for f in OPTIONAL_FIELDS}))
     if problems:
         raise InvalidTable(problems)
     return InterpretationTable(version, standard, tuple(rules))

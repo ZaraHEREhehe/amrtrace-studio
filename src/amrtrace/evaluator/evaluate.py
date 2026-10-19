@@ -71,6 +71,10 @@ def evaluate(inputs: CaseInputs, versions: VersionVector) -> EvalResult:
     # only added when it applies, so every other case keeps the hash it already has
     if c.CATEGORY_NO_CATEGORY in phenotype.phenotype_values:
         explanation["phenotype_sub_reason"] = c.SUB_REASON_NO_CATEGORY
+    # the flag exists only in interpretation mode, so as-reported cases keep their hashes too
+    if phenotype.label_flags:
+        explanation["label_flags"] = [dict(flag) for flag in phenotype.label_flags]
+        explanation["labels_changed"] = sum(1 for flag in phenotype.label_flags if flag.get("label_changed"))
 
     input_hash = sha256_of({"inputs": asdict(inputs), "versions": asdict(versions)})
     output_hash = sha256_of(

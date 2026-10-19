@@ -59,6 +59,10 @@ def test_rows_that_name_no_rule_are_untouched_by_interpretation_mode(
 ):
     inputs = make_inputs(phenotypes=("I", "R"))
     interpreted = replace(versions, interpretation_version="TABLE_X")
-    assert evaluate_phenotype(inputs, interpreted) == evaluate_phenotype(
-        inputs, versions
+    a, b = evaluate_phenotype(inputs, interpreted), evaluate_phenotype(inputs, versions)
+    assert (a.phenotype_state, a.phenotype_values, a.dependency_records) == (
+        b.phenotype_state, b.phenotype_values, b.dependency_records
     )
+    # interpretation mode still says, for every result, that its label is the submitted one
+    assert [f["label_source"] for f in a.label_flags] == [c.LABEL_SOURCE_SUBMITTED] * 2
+    assert b.label_flags == ()

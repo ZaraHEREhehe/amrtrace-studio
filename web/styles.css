@@ -834,3 +834,9 @@ select {
     flex-direction: column;
   }
 }
+
+/* marks a case whose label was changed by interpretation (D-22) */
+.label-changed-badge {
+  background: #fff1d6;
+  color: #7a4b00;
+}

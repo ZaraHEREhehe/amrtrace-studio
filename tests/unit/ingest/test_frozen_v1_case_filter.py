@@ -61,4 +61,4 @@ def test_the_filter_also_works_in_interpretation_mode(tables, every_case):
         )
     )
     assert [inputs.case_id for inputs in built] == chosen
-    assert "rule_key" in built[0].ast_rows[0]
+    assert "rule_keys" in built[0].ast_rows[0]

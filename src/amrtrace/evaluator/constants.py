@@ -49,6 +49,10 @@ REASON_CONTEXTUAL_GENOTYPE_EVIDENCE = "CONTEXTUAL_GENOTYPE_EVIDENCE"
 # finer detail kept in the explanation, so a gap in the table is not mistaken for intermediate
 SUB_REASON_NO_CATEGORY = "no_category"
 
+# where a result's label came from, written in the flag of every result in interpretation mode
+LABEL_SOURCE_SUBMITTED = "submitted"
+LABEL_SOURCE_DERIVED = "derived"
+
 # dependency vocabulary shared with the materializer
 DEP_INPUT_EVIDENCE = "input_evidence"
 DEP_POSITIVE_SUPPORT = "positive_support"

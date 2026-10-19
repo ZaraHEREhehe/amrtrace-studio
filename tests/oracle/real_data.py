@@ -105,12 +105,14 @@ def check_setup(conn, fx: dict) -> str:
             "against an as-reported release the selector has no interpretation edges to find."
         )
     required = list(fx["expected"]["required_case_ids"])
+    # a partial release holds only the cases it re-evaluated, so a case counts when any published release holds it (D-22)
     present = {r[0] for r in conn.execute(
-        "SELECT case_id FROM case_state WHERE release_id = %s AND case_id = ANY(%s)", (release_id, required))}
+        "SELECT DISTINCT cs.case_id FROM case_state cs JOIN release r ON r.release_id = cs.release_id "
+        "WHERE r.status = 'PUBLISHED' AND cs.case_id = ANY(%s)", (required,))}
     absent = sorted(set(required) - present)
     if absent:
         raise RealDataSetupError(
-            f"{len(absent)} of the {len(required)} required cases are not in release {release_id} "
+            f"{len(absent)} of the {len(required)} required cases are not in any published release "
             f"(first: {absent[0]}). This database does not hold the cohort the fixture was built from."
         )
     unregistered = sorted({

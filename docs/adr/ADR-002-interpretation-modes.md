@@ -5,7 +5,7 @@
 - Deciders: Insharah (scribe), Zara, Aabia
 - Task: G-01 (step 3)
 - Related plan items: D-12, section 5.5
-- Amended: 2026-10-05 (amendment 1, censored MIC handling)
+- Amended: 2026-10-05 (amendment 1, censored MIC handling); 2026-10-19 (amendment 2, lab edition check and host-specific rules)
 
 ## Context
 
@@ -82,3 +82,19 @@ the Consequences ("no exact MIC is unaffected") and would turn many clearly susc
 `UNRESOLVED`: only 13,109 of 57,228 AST rows have an exact MIC, and 36,841 are `<=`. Alternative rejected:
 fall back to the submitted label for censored MICs, because it hides uncertainty where a standard change
 matters (`<=4` would stay susceptible under Ed33). Adopted: classify by the categories the MIC range touches.
+## Amendment 2 (2026-10-19)
+
+Written by Aabia for D-21 and D-22; details in `docs/design/d22_host_breakpoints.md`.
+
+1. **A label is re-read only when the lab's edition explains it (D-21).** The adapter checks each labelled result
+   against CLSI M100 Ed32, the edition the submitting laboratories are taken to have used. A label that edition
+   cannot explain (for example `I` at MIC 4) is kept as submitted, so interpretation never overrules a label it
+   cannot account for.
+2. **Rules may be host-specific (D-22).** A rule may name a host group; its key gets the host as a fifth part.
+   Each result receives an ordered list of keys and the evaluator uses the first rule that exists, recording an
+   applicability edge for every key it looked for and did not find. Animal results try their host rule before the
+   general rule; an animal result labelled `NOT_DEFINED` may be read by its host rule only.
+3. **Every interpreted result carries a flag** in the explanation (submitted or derived, the labels, whether the
+   label changed, the rule key and host group). The rule's source and species are read through the rule edge.
+4. Decision 5 is superseded: the tables now hold all five panel drugs, and two further tables add the CLSI VET01S
+   Ed7 host rules. The engine still names no drug, standard or host.

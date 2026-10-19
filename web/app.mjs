@@ -30,6 +30,11 @@ import {
   orderedAxes,
 } from "./run_view.mjs";
 
+import {
+  interpretationRows,
+  labelsChangedBadge,
+} from "./interpretation.mjs";
+
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -1311,6 +1316,17 @@ function renderDossierOverview(dossier) {
 
   heading.append(headingText);
 
+  // a visible marker when interpretation gave a result a different label from the lab's (D-22)
+  const badgeText = labelsChangedBadge(dossier.labels_changed);
+  if (badgeText) {
+    heading.append(
+      make("span", {
+        className: "outcome-badge label-changed-badge",
+        text: badgeText,
+      }),
+    );
+  }
+
   container.append(
     heading,
     definitionList({
@@ -1342,6 +1358,24 @@ function renderDossierOverview(dossier) {
       ],
       dossier.evidence.ast,
       "No AST evidence is referenced by the current published state.",
+    ),
+    make("h4", {
+      text: "Interpretation of each result",
+    }),
+    renderDataTable(
+      [
+        ["Evidence ID", "evidence"],
+        ["Host", "host"],
+        ["Lab label", "labLabel"],
+        ["Label used", "shownLabel"],
+        ["Origin", "origin"],
+        ["Changed", "changed"],
+        ["Breakpoint from", "breakpoint"],
+        ["Breakpoint species", "species"],
+        ["Table version", "table"],
+      ],
+      interpretationRows(dossier.interpretation),
+      "This state was not interpreted from measurements, so every label is the lab's own.",
     ),
     make("h4", {
       text: "Current genotype evidence",

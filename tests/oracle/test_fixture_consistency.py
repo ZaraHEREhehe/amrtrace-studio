@@ -12,7 +12,12 @@ SELECTOR_AUTHORS = {"aabia", "aabiaali", "aabia ali"}
 def test_fixture_is_consistent(path):
     fx = load_fixture(path)
     assert fx["scenario"] and fx["description"]
-    assert str(fx["authored_by"]).strip().lower() not in SELECTOR_AUTHORS, "the oracle author must not be the selector author"
+    if str(fx["authored_by"]).strip().lower() in SELECTOR_AUTHORS:
+        # a fix by the selector's author is allowed only on real data, and only with a named independent re-run (D-22)
+        rerun = fx.get("independent_rerun") or {}
+        assert fx.get("real_data"), "the oracle author must not be the selector author"
+        assert rerun.get("by") and str(rerun["by"]).strip().lower() not in SELECTOR_AUTHORS, (
+            "a fix by the selector author must name someone else to re-run it independently")
     expected = fx["expected"]
     required = set(expected["required_case_ids"])
     extra = set(expected.get("allowed_extra_case_ids") or [])
