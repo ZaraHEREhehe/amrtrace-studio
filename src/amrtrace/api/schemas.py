@@ -15,6 +15,8 @@ class CaseSummary(BaseModel):
     panel_id: str
     current_state: str | None
     current_release_id: str | None
+    # how many results in the current state got a different label from interpretation (None = not interpreted)
+    labels_changed: int | None = None
 
 
 class CaseStateView(BaseModel):
@@ -68,6 +70,20 @@ class CaseEvidence(BaseModel):
     genotype: list[GenotypeEvidenceView]
 
 
+# one result's label flag (D-22), with the table row it came from looked up through the case's rule edge
+class InterpretationFlagView(BaseModel):
+    ast_evidence_id: str
+    label_source: str
+    submitted_label: str | None
+    derived_label: str | None = None
+    label_changed: bool | None = None
+    host_group: str | None = None
+    rule_key: str | None = None
+    table_version: str | None = None
+    source: str | None = None
+    breakpoint_species: str | None = None
+
+
 class CaseDossier(BaseModel):
     case_id: str
     target_acc: str
@@ -76,6 +92,8 @@ class CaseDossier(BaseModel):
     current_state: CaseStateView | None
     evidence: CaseEvidence
     version_vector: dict[str, Any] | None
+    interpretation: list[InterpretationFlagView] = []
+    labels_changed: int | None = None
 
 
 class GraphNodeView(BaseModel):
