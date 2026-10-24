@@ -18,13 +18,13 @@ export function interpretationRows(flags) {
     return {
       evidence: flag.ast_evidence_id,
       host: flag.host_group ?? "not recorded",
-      labLabel: flag.submitted_label ?? "?",
-      shownLabel: derived ? flag.derived_label : flag.submitted_label ?? "?",
+      labLabel: flag.submitted_label ?? "—",
+      shownLabel: derived ? flag.derived_label : flag.submitted_label ?? "—",
       origin: derived ? "Derived from breakpoint" : "Submitted by lab (kept)",
-      changed: derived ? (flag.label_changed ? "Yes" : "No") : "-",
-      breakpoint: derived ? flag.source ?? "unknown source" : "-",
-      species: derived ? flag.breakpoint_species ?? "?" : "-",
-      table: derived ? flag.table_version ?? "?" : "-",
+      changed: derived ? (flag.label_changed ? "Yes" : "No") : "—",
+      breakpoint: derived ? flag.source ?? "unknown source" : "—",
+      species: derived ? flag.breakpoint_species ?? "—" : "—",
+      table: derived ? flag.table_version ?? "—" : "—",
     };
   });
 }

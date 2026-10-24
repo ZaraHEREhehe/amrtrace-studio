@@ -114,3 +114,15 @@ test("dossier keeps API-derived values text-only", () => {
   assert.doesNotMatch(app, /insertAdjacentHTML/);
   assert.match(app, /textContent/);
 });
+
+
+test("the shell has the prototype's dashboard and case explorer pages", () => {
+  assert.match(index, /data-nav="dashboard"/);
+  assert.match(index, /data-nav="explorer"/);
+  assert.match(index, /id="dashboard-kpis"/);
+  assert.match(index, /id="explorer-form"/);
+  assert.match(index, /id="topbar-search"/);
+
+  assert.match(app, /getSummary/);
+  assert.match(app, /listCases/);
+});
