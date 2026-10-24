@@ -36,11 +36,11 @@ test("a case is named by its accession and drug", () => {
 });
 
 
-test("routes round-trip and unknown routes open the change list", () => {
+test("routes round-trip and unknown routes open the dashboard", () => {
   assert.deepEqual(parseRoute(routeHash("dossier", FULL)), { view: "dossier", id: FULL });
   assert.deepEqual(parseRoute("#/runs"), { view: "runs", id: null });
-  assert.deepEqual(parseRoute("#/nowhere/x"), { view: "changes", id: null });
-  assert.deepEqual(parseRoute(""), { view: "changes", id: null });
+  assert.deepEqual(parseRoute("#/nowhere/x"), { view: "dashboard", id: null });
+  assert.deepEqual(parseRoute(""), { view: "dashboard", id: null });
 });
 
 

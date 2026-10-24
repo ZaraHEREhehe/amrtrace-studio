@@ -4,7 +4,7 @@ const CASE_PREFIX = "CASE_";
 // twelve hex characters, like a git short hash, are unique across the whole cohort
 const SHORT_HASH = 12;
 // the views that can be opened straight from a link, and what kind of id each one takes
-export const ROUTED_VIEWS = ["changes", "dependencies", "runs", "dossier"];
+export const ROUTED_VIEWS = ["dashboard", "explorer", "changes", "dependencies", "runs", "dossier"];
 
 
 // CASE_ plus the first twelve hash characters, with an ellipsis when something was cut
@@ -42,14 +42,14 @@ export function caseName(targetAcc, antibiotic) {
 }
 
 
-// "#/dossier/CASE_..." becomes { view: "dossier", id: "CASE_..." }; anything unknown opens the change list
+// "#/dossier/CASE_..." becomes { view: "dossier", id: "CASE_..." }; anything unknown opens the dashboard
 export function parseRoute(hash) {
   const text = String(hash ?? "").replace(/^#\/?/, "");
   const [view, ...rest] = text.split("/");
   const id = rest.join("/");
 
   if (!ROUTED_VIEWS.includes(view)) {
-    return { view: "changes", id: null };
+    return { view: "dashboard", id: null };
   }
 
   return { view, id: id ? decodeURIComponent(id) : null };

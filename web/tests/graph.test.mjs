@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  NODE_W,
   buildGraphModel,
   formatEdgeLabel,
   formatNodeDetails,
+  legendKinds,
+  nodeKind,
 } from "../graph.mjs";
 
 
@@ -64,7 +67,7 @@ test("graph layout is deterministic regardless of input order", () => {
 });
 
 
-test("case node is separated from dependency nodes", () => {
+test("the case node sits above every dependency node", () => {
   const model = buildGraphModel(graph);
   const caseNode = model.nodes.find(
     (node) => node.node_type === "case",
@@ -76,8 +79,50 @@ test("case node is separated from dependency nodes", () => {
   assert.ok(caseNode);
 
   for (const node of dependencyNodes) {
-    assert.ok(node.x > caseNode.x);
+    assert.ok(node.y > caseNode.y);
   }
+});
+
+
+test("evidence, rules and versions are drawn in separate lanes from top to bottom", () => {
+  const model = buildGraphModel({
+    ...graph,
+    nodes: [
+      ...graph.nodes,
+      { key: "mapping_rule|MAP_1|M1", node_type: "mapping_rule", node_id: "MAP_1", node_version: "M1" },
+      { key: "panel_id|PANEL|", node_type: "panel_id", node_id: "PANEL", node_version: null },
+    ],
+  });
+  const yOf = (type) => model.nodes.find((node) => node.node_type === type).y;
+
+  assert.ok(yOf("ast_evidence") < yOf("mapping_rule"));
+  assert.ok(yOf("mapping_rule") < yOf("panel_id"));
+  assert.deepEqual(model.lanes.map((lane) => lane.key), ["case", "evidence", "rules", "versions"]);
+});
+
+
+test("a wide lane wraps into rows that stay inside the drawing", () => {
+  const many = Array.from({ length: 12 }, (_, index) => ({
+    key: `genotype_evidence|G${String(index).padStart(2, "0")}|V1`,
+    node_type: "genotype_evidence",
+    node_id: `G${String(index).padStart(2, "0")}`,
+    node_version: "V1",
+  }));
+  const model = buildGraphModel({ ...graph, nodes: [graph.nodes[1], ...many], edges: [] });
+
+  for (const node of model.nodes) {
+    assert.ok(node.x - NODE_W / 2 >= 0);
+    assert.ok(node.x + NODE_W / 2 <= model.width);
+  }
+  assert.ok(new Set(model.nodes.filter((node) => node.node_type !== "case").map((node) => node.y)).size > 1);
+});
+
+
+test("every kind of node gets a colour, and unknown version types fall back to a version colour", () => {
+  assert.equal(nodeKind("ast_evidence").label, "AST evidence");
+  assert.equal(nodeKind("mapping_version").label, "Rule set & panel");
+  assert.equal(nodeKind("refgene_db_version").label, "Tool & data version");
+  assert.equal(legendKinds().length, 7);
 });
 
 

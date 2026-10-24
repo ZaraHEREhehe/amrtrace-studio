@@ -2,14 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1"
-  >
-  <meta
-    name="description"
-    content="AMRTrace Studio change-impact and dependency review interface"
-  >
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="AMRTrace Studio change-impact and dependency review interface">
   <title>AMRTrace Studio</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
@@ -18,768 +12,566 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">AMR</div>
-        <h1>AMRTrace Studio</h1>
-        <p>Evidence-aware change tracing</p>
+        <div class="brand-mark" aria-hidden="true">A</div>
+        <div>
+          <h1>AMRTrace Studio</h1>
+          <p>Research workbench</p>
+        </div>
       </div>
 
       <nav class="nav-stack" aria-label="Primary">
-        <button
-          class="nav-button active"
-          type="button"
-          data-nav="changes"
-        >
-          Change Events
-        </button>
+        <div class="nav-group">
+          <div class="nav-group-label">Overview</div>
+          <button class="nav-button" type="button" data-nav="dashboard">
+            <span class="nav-icon" aria-hidden="true">⬡</span>Dashboard
+          </button>
+        </div>
 
-        <button
-          class="nav-button"
-          type="button"
-          data-nav="dependencies"
-        >
-          Dependency View
-        </button>
+        <div class="nav-group">
+          <div class="nav-group-label">Data</div>
+          <button class="nav-button" type="button" data-nav="explorer">
+            <span class="nav-icon" aria-hidden="true">⊞</span>Case Explorer
+          </button>
+          <button class="nav-button" type="button" data-nav="dossier">
+            <span class="nav-icon" aria-hidden="true">◧</span>Case Dossier
+          </button>
+          <button class="nav-button" type="button" data-nav="dependencies">
+            <span class="nav-icon" aria-hidden="true">◈</span>Dependency View
+          </button>
+        </div>
 
-        <button
-          class="nav-button"
-          type="button"
-          data-nav="runs"
-        >
-          Runs & Equivalence
-        </button>
-
-        <button
-          class="nav-button"
-          type="button"
-          data-nav="dossier"
-        >
-          Case Dossier
-        </button>
+        <div class="nav-group">
+          <div class="nav-group-label">Workflow</div>
+          <button class="nav-button" type="button" data-nav="changes">
+            <span class="nav-icon" aria-hidden="true">⊛</span>Change Events
+          </button>
+          <button class="nav-button" type="button" data-nav="runs">
+            <span class="nav-icon" aria-hidden="true">↺</span>Runs &amp; Equivalence
+          </button>
+        </div>
       </nav>
+
+      <div class="sidebar-foot">FYP F26-118 · research prototype</div>
     </aside>
 
-    <main class="main">
-      <section class="page" data-view="changes">
-        <header class="page-header">
-          <div>
-            <p class="eyebrow">Change registry</p>
-            <h2>Change Events</h2>
-            <p class="muted">
-              Register a typed change and inspect its stored impact set.
-            </p>
-          </div>
-
-          <button
-            id="refresh-changes"
-            class="button"
-            type="button"
-          >
-            Refresh
-          </button>
-        </header>
-
-        <div class="grid-two">
-          <div>
-            <section class="card">
-              <div class="section-heading compact">
-                <div>
-                  <p class="eyebrow">Registered</p>
-                  <h3>Events</h3>
-                </div>
-              </div>
-
-              <div
-                id="changes-status"
-                class="status"
-                hidden
-              ></div>
-
-              <div
-                id="change-list"
-                class="change-list"
-                aria-live="polite"
-              ></div>
-            </section>
-
-            <section class="card">
-              <div class="section-heading compact">
-                <div>
-                  <p class="eyebrow">New event</p>
-                  <h3>Register change</h3>
-                </div>
-              </div>
-
-              <form id="change-form">
-                <div class="form-grid">
-                  <div class="field">
-                    <label for="change-id">Change ID</label>
-                    <input
-                      id="change-id"
-                      name="change_id"
-                      required
-                      autocomplete="off"
-                    >
-                  </div>
-
-                  <div class="field">
-                    <label for="change-type">Type</label>
-                    <input
-                      id="change-type"
-                      name="type"
-                      required
-                      autocomplete="off"
-                    >
-                  </div>
-
-                  <div class="field">
-                    <label for="old-version">Old version</label>
-                    <input
-                      id="old-version"
-                      name="old_version"
-                      required
-                      autocomplete="off"
-                    >
-                  </div>
-
-                  <div class="field">
-                    <label for="new-version">New version</label>
-                    <input
-                      id="new-version"
-                      name="new_version"
-                      required
-                      autocomplete="off"
-                    >
-                  </div>
-
-                  <div class="field">
-                    <label for="initiator">Initiator</label>
-                    <input
-                      id="initiator"
-                      name="initiator"
-                      required
-                      autocomplete="off"
-                    >
-                  </div>
-
-                  <div class="field field-wide">
-                    <label for="changed-entities">
-                      Changed entities JSON
-                    </label>
-                    <textarea
-                      id="changed-entities"
-                      name="changed_entities"
-                      spellcheck="false"
-                    >[]</textarea>
-                  </div>
-
-                  <div class="field field-wide">
-                    <label for="declared-scope">
-                      Declared scope JSON
-                    </label>
-                    <textarea
-                      id="declared-scope"
-                      name="declared_scope"
-                      spellcheck="false"
-                    >{}</textarea>
-                  </div>
-                </div>
-
-                <div class="form-actions">
-                  <button
-                    class="button button-primary"
-                    type="submit"
-                  >
-                    Register change
-                  </button>
-                </div>
-
-                <div
-                  id="create-status"
-                  class="status"
-                  aria-live="polite"
-                  hidden
-                ></div>
-              </form>
-            </section>
-          </div>
-
-          <section class="card">
-            <div
-              id="change-detail-status"
-              class="status"
-              hidden
-            ></div>
-
-            <div id="change-detail">
-              <div class="empty-state">
-                Select a change event to inspect its details and impact.
-              </div>
-            </div>
-          </section>
+    <div class="workspace">
+      <header class="topbar">
+        <div id="topbar-release" class="release-chips">
+          <strong>Release:</strong>
+          <span class="chip">loading…</span>
         </div>
-      </section>
 
+        <div class="topbar-spacer"></div>
 
-      <section
-        class="page"
-        data-view="dependencies"
-        hidden
-      >
-        <header class="page-header">
-          <div>
-            <p class="eyebrow">Stored provenance</p>
-            <h2>Dependency View</h2>
-            <p class="muted">
-              Inspect the current published dependency subgraph for one case.
-            </p>
-          </div>
-        </header>
-
-        <section class="card">
-          <form
-            id="dependency-form"
-            class="dependency-form"
+        <form id="topbar-search" class="topbar-search" role="search">
+          <input
+            id="topbar-case"
+            name="case_id"
+            autocomplete="off"
+            list="case-suggestions"
+            aria-label="Find a case"
+            placeholder="Find a case: short ID, or accession and drug"
           >
-            <div class="field">
-              <label for="case-id">Case ID</label>
-              <input
-                id="case-id"
-                name="case_id"
-                required
-                autocomplete="off"
-                list="case-suggestions"
-                placeholder="Short or full case ID, or accession and drug"
-              >
-            </div>
+          <button class="button" type="submit">Open</button>
+        </form>
+      </header>
 
-            <button
-              class="button button-primary"
-              type="submit"
-            >
-              Load graph
-            </button>
-          </form>
+      <main class="main">
+        <div id="topbar-status" class="status" aria-live="polite" hidden></div>
 
-          <div
-            id="dependency-status"
-            class="status"
-            aria-live="polite"
-            hidden
-          ></div>
-
-          <div id="dependency-summary"></div>
-        </section>
-
-        <section class="card">
-          <div class="section-heading compact">
+        <!-- dashboard: the numbers behind the latest published release -->
+        <section class="page" data-view="dashboard">
+          <header class="page-header">
             <div>
-              <p class="eyebrow">Case provenance</p>
-              <h3>Dependency graph</h3>
+              <h2>Dashboard</h2>
+              <p class="muted">Current published states across the frozen cohort.</p>
             </div>
+          </header>
+
+          <div id="dashboard-status" class="status" aria-live="polite" hidden></div>
+          <div id="dashboard-kpis" class="kpi-grid"></div>
+
+          <div class="grid-wide-narrow stack">
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Case state distribution</h3>
+              </div>
+              <div id="dashboard-states"></div>
+            </section>
+
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Discordance by antibiotic</h3>
+              </div>
+              <div id="dashboard-drugs"></div>
+            </section>
           </div>
 
-          <div class="graph-layout">
-            <div
-              id="graph-canvas"
-              class="graph-canvas"
-            >
-              <div class="empty-state">
-                Enter a case ID to load its dependency graph.
+          <div class="grid-wide-narrow stack">
+            <section class="card card-flush">
+              <div class="section-heading compact">
+                <h3>Recent workflow runs</h3>
+                <a class="button" href="#/runs">View all →</a>
               </div>
-            </div>
+              <div id="dashboard-runs"></div>
+            </section>
 
-            <aside
-              id="node-inspector"
-              class="node-inspector"
-              aria-live="polite"
-            ></aside>
-          </div>
-
-          <div class="rule-section">
-            <h4>Recorded rule space</h4>
-
-            <div id="rule-space">
-              <div class="empty-state">
-                Rule-space rows appear after a case is loaded.
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Quick actions</h3>
               </div>
-            </div>
+              <div class="quick-actions">
+                <a class="button button-primary button-block" href="#/explorer">⊞ Explore cases</a>
+                <a class="button button-block" href="#/changes">⊛ View changes</a>
+                <a class="button button-block" href="#/runs">↺ Runs &amp; equivalence</a>
+              </div>
+              <div id="dashboard-facts" class="facts"></div>
+            </section>
           </div>
         </section>
-      </section>
 
-      <section
-        class="page"
-        data-view="runs"
-        hidden
-      >
-        <header class="page-header">
-          <div>
-            <p class="eyebrow">Selective verification</p>
-            <h2>Runs &amp; Equivalence</h2>
-            <p class="muted">
-              Re-evaluate the stored impact set, compare it with an
-              exhaustive run, and inspect the release gate decision.
-            </p>
-          </div>
-        </header>
-
-        <div class="run-grid">
-          <section class="card">
-            <div class="section-heading compact">
-              <div>
-                <p class="eyebrow">Start run</p>
-                <h3>Re-evaluate a change</h3>
-              </div>
+        <!-- case explorer: every case with its current published state -->
+        <section class="page" data-view="explorer" hidden>
+          <header class="page-header">
+            <div>
+              <h2>Case Explorer</h2>
+              <p class="muted">Every isolate-antibiotic case and its current published state.</p>
             </div>
+          </header>
 
-            <form id="reevaluation-form">
-              <div class="form-grid">
-                <div class="field">
-                  <label for="run-change-id">
-                    Change ID
-                  </label>
-                  <select
-                    id="run-change-id"
-                    name="change_id"
-                    required
-                  >
-                    <option value="">Choose a registered change</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="run-release-id">
-                    New release ID
-                  </label>
-                  <input
-                    id="run-release-id"
-                    name="release_id"
-                    required
-                    autocomplete="off"
-                    placeholder="Unique release ID"
-                  >
-                </div>
+          <section class="card card-flush">
+            <form id="explorer-form" class="filter-bar">
+              <div class="field field-grow">
+                <label for="explorer-q">Search</label>
+                <input id="explorer-q" name="q" autocomplete="off" placeholder="Case ID start or accession">
               </div>
 
-              <div class="check-stack">
-                <label class="check-row">
-                  <input
-                    id="run-exhaustive"
-                    type="checkbox"
-                    checked
-                  >
-                  <span>
-                    Run exhaustive comparator after the selective run
-                  </span>
-                </label>
-
-                <label class="check-row">
-                  <input
-                    id="run-gate"
-                    type="checkbox"
-                    checked
-                  >
-                  <span>
-                    Apply the PASS/BLOCKED release gate
-                  </span>
-                </label>
-              </div>
-
-              <div class="form-actions">
-                <button
-                  id="run-submit"
-                  class="button button-primary"
-                  type="submit"
-                >
-                  Start re-evaluation
-                </button>
-              </div>
-            </form>
-
-            <div
-              id="run-status"
-              class="status"
-              aria-live="polite"
-              hidden
-            ></div>
-          </section>
-
-          <section class="card">
-            <div class="section-heading compact">
-              <div>
-                <p class="eyebrow">Stored result</p>
-                <h3>Open run</h3>
-              </div>
-            </div>
-
-            <form
-              id="run-lookup-form"
-              class="dependency-form"
-            >
               <div class="field">
-                <label for="run-id">
-                  Run ID
-                </label>
-                <select
-                  id="run-id"
-                  name="run_id"
-                  required
-                >
-                  <option value="">Choose a stored run</option>
+                <label for="explorer-drug">Antibiotic</label>
+                <select id="explorer-drug" name="drug">
+                  <option value="">All antibiotics</option>
                 </select>
               </div>
 
-              <button
-                class="button"
-                type="submit"
-              >
-                Load run
-              </button>
+              <div class="field">
+                <label for="explorer-state">Current state</label>
+                <select id="explorer-state" name="state">
+                  <option value="">All states</option>
+                  <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
+                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                  <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
+                  <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
+                  <option value="UNRESOLVED">Unresolved</option>
+                </select>
+              </div>
+
+              <button class="button button-primary" type="submit">Apply</button>
             </form>
 
-            <div
-              id="run-lookup-status"
-              class="status"
-              aria-live="polite"
-              hidden
-            ></div>
+            <div id="explorer-status" class="status" aria-live="polite" hidden></div>
+            <div id="explorer-results"></div>
+            <div id="explorer-pager" class="pager"></div>
           </section>
-        </div>
-
-        <section class="card">
-          <div id="run-detail">
-            <div class="empty-state">
-              Start or load a run to inspect its persisted status
-              and counts.
-            </div>
-          </div>
         </section>
 
-        <section class="card">
-          <div class="section-heading compact">
+        <!-- case dossier -->
+        <section class="page" data-view="dossier" hidden>
+          <header class="page-header">
             <div>
-              <p class="eyebrow">Safety gate</p>
-              <h3>Equivalence report</h3>
+              <div class="breadcrumb">
+                <a href="#/explorer">← Case Explorer</a>
+                <span class="muted">/</span>
+                <span>Case Dossier</span>
+              </div>
             </div>
-          </div>
 
-          <div id="equivalence-detail">
+            <form id="dossier-form" class="inline-form">
+              <div class="field">
+                <label for="dossier-case-id">Case</label>
+                <input
+                  id="dossier-case-id"
+                  name="case_id"
+                  required
+                  autocomplete="off"
+                  list="case-suggestions"
+                  placeholder="Short or full case ID, or accession and drug"
+                >
+              </div>
+              <button class="button button-primary" type="submit">Load dossier</button>
+              <a id="dossier-export" class="button" href="#" hidden>↓ Export snapshot</a>
+            </form>
+          </header>
+
+          <div id="dossier-status" class="status" aria-live="polite" hidden></div>
+
+          <div id="dossier-overview">
             <div class="empty-state">
-              An exhaustive comparison will show recall, precision,
-              reprocessing ratio, the three comparison axes, and
-              the PASS/BLOCKED decision here.
+              Open a case from the Case Explorer, or type one above, to see its current published state,
+              evidence and version vector.
             </div>
           </div>
-        </section>
-      </section>
 
-
-      <section
-        class="page"
-        data-view="dossier"
-        hidden
-      >
-        <header class="page-header">
-          <div>
-            <p class="eyebrow">Reviewer workspace</p>
-            <h2>Case Dossier</h2>
-            <p class="muted">
-              Reconstruct what changed and why, inspect provenance,
-              append a review, and export a reproducible snapshot.
-            </p>
-          </div>
-        </header>
-
-        <section class="card">
-          <form
-            id="dossier-form"
-            class="dependency-form"
-          >
-            <div class="field">
-              <label for="dossier-case-id">
-                Case ID
-              </label>
-              <input
-                id="dossier-case-id"
-                name="case_id"
-                required
-                autocomplete="off"
-                list="case-suggestions"
-                placeholder="Short or full case ID, or accession and drug"
-              >
-            </div>
-
-            <button
-              class="button button-primary"
-              type="submit"
-            >
-              Load dossier
-            </button>
-
-            <a
-              id="dossier-export"
-              class="button"
-              href="#"
-              hidden
-            >
-              Export current snapshot
-            </a>
-          </form>
-
-          <div
-            id="dossier-status"
-            class="status"
-            aria-live="polite"
-            hidden
-          ></div>
-        </section>
-
-        <section
-          id="dossier-overview"
-          class="card"
-        >
-          <div class="empty-state">
-            Load a case to inspect its current published state,
-            evidence and version vector.
-          </div>
-        </section>
-
-        <div class="dossier-grid">
-          <section class="card">
-            <div class="section-heading compact">
-              <div>
-                <p class="eyebrow">Append-only ledger</p>
+          <div class="dossier-grid stack">
+            <section class="card">
+              <div class="section-heading compact">
                 <h3>State history</h3>
               </div>
-            </div>
+              <p class="muted">
+                Includes non-published states; the dossier conclusion above uses only the latest PUBLISHED state.
+              </p>
+              <div id="dossier-history"></div>
+            </section>
 
-            <p class="muted">
-              Audit history includes non-published states; the
-              dossier conclusion above uses only the latest
-              PUBLISHED state.
-            </p>
-
-            <div id="dossier-history">
-              <div class="empty-state">
-                State history appears after a case is loaded.
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Review actions</h3>
               </div>
+
+              <form id="dossier-review-form">
+                <fieldset id="dossier-review-fieldset" class="review-fieldset" disabled>
+                  <div class="form-grid">
+                    <div class="field">
+                      <label for="dossier-reviewer">Reviewer</label>
+                      <input id="dossier-reviewer" name="reviewer" required autocomplete="off">
+                    </div>
+
+                    <div class="field">
+                      <label for="dossier-review-action">Action</label>
+                      <select id="dossier-review-action" name="action" required>
+                        <option value="CONFIRM">CONFIRM</option>
+                        <option value="CORRECT">CORRECT</option>
+                        <option value="MARK_UNRESOLVED">MARK_UNRESOLVED</option>
+                      </select>
+                    </div>
+
+                    <div class="field field-wide">
+                      <label for="dossier-review-reason">Reason</label>
+                      <textarea
+                        id="dossier-review-reason"
+                        name="reason"
+                        required
+                        placeholder="Explain the review decision"
+                      ></textarea>
+                    </div>
+
+                    <div class="field field-wide">
+                      <label for="dossier-corrected-state">Corrected state</label>
+                      <select id="dossier-corrected-state" name="corrected_state_code" disabled>
+                        <option value="">Choose a corrected state</option>
+                        <option value="CONCORDANT_RESISTANT">CONCORDANT_RESISTANT</option>
+                        <option value="CONCORDANT_SUSCEPTIBLE">CONCORDANT_SUSCEPTIBLE</option>
+                        <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S</option>
+                        <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE</option>
+                        <option value="UNRESOLVED">UNRESOLVED</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-actions">
+                    <button id="dossier-review-submit" class="button button-primary" type="submit">
+                      Append review
+                    </button>
+                  </div>
+                </fieldset>
+              </form>
+
+              <div id="dossier-review-status" class="status" aria-live="polite" hidden></div>
+
+              <h4>Review history</h4>
+              <div id="dossier-reviews"></div>
+            </section>
+          </div>
+
+          <section class="card">
+            <div class="section-heading compact">
+              <h3>Before / after</h3>
             </div>
+
+            <form id="dossier-diff-form" class="comparison-form">
+              <div class="field">
+                <label for="dossier-before-release">Before release</label>
+                <input
+                  id="dossier-before-release"
+                  name="before_release"
+                  autocomplete="off"
+                  placeholder="Default: previous published state"
+                >
+              </div>
+
+              <div class="field">
+                <label for="dossier-after-release">After release</label>
+                <input
+                  id="dossier-after-release"
+                  name="after_release"
+                  autocomplete="off"
+                  placeholder="Default: current published state"
+                >
+              </div>
+
+              <button class="button" type="submit">Compare releases</button>
+            </form>
+
+            <div id="dossier-diff-status" class="status" aria-live="polite" hidden></div>
+            <div id="dossier-diff"></div>
           </section>
 
           <section class="card">
             <div class="section-heading compact">
-              <div>
-                <p class="eyebrow">Human review</p>
-                <h3>Review actions</h3>
-              </div>
+              <h3>Dependency path</h3>
             </div>
 
-            <form id="dossier-review-form">
-              <fieldset
-                id="dossier-review-fieldset"
-                class="review-fieldset"
-                disabled
-              >
+            <div id="dossier-dependency-summary"></div>
+
+            <div class="graph-layout">
+              <div id="dossier-graph" class="graph-canvas"></div>
+              <aside class="graph-side">
+                <div class="graph-legend" data-graph-legend></div>
+                <div id="dossier-node-inspector" class="node-inspector" aria-live="polite"></div>
+              </aside>
+            </div>
+          </section>
+        </section>
+
+        <!-- dependency view -->
+        <section class="page" data-view="dependencies" hidden>
+          <header class="page-header">
+            <div>
+              <h2>Dependency View</h2>
+              <p class="muted">The stored dependency subgraph behind a case's current published state.</p>
+            </div>
+
+            <form id="dependency-form" class="inline-form">
+              <div class="field">
+                <label for="case-id">Case</label>
+                <input
+                  id="case-id"
+                  name="case_id"
+                  required
+                  autocomplete="off"
+                  list="case-suggestions"
+                  placeholder="Short or full case ID, or accession and drug"
+                >
+              </div>
+              <button class="button button-primary" type="submit">Load graph</button>
+            </form>
+          </header>
+
+          <div id="dependency-status" class="status" aria-live="polite" hidden></div>
+          <div id="dependency-summary"></div>
+
+          <section class="card">
+            <div class="graph-layout">
+              <div id="graph-canvas" class="graph-canvas">
+                <div class="empty-state">Choose a case to load its dependency graph.</div>
+              </div>
+              <aside class="graph-side">
+                <div class="graph-legend" data-graph-legend></div>
+                <div id="node-inspector" class="node-inspector" aria-live="polite"></div>
+              </aside>
+            </div>
+          </section>
+
+          <section class="card card-flush">
+            <div class="section-heading compact">
+              <h3>Recorded rule space</h3>
+            </div>
+            <div id="rule-space">
+              <div class="empty-state">Rule-space rows appear after a case is loaded.</div>
+            </div>
+          </section>
+        </section>
+
+        <!-- change events -->
+        <section class="page" data-view="changes" hidden>
+          <header class="page-header">
+            <div>
+              <h2>Change Events</h2>
+              <p class="muted">Typed changes to the evidence base and the impact set stored for each.</p>
+            </div>
+
+            <div class="page-actions">
+              <button id="refresh-changes" class="button" type="button">↻ Refresh</button>
+              <button id="toggle-change-form" class="button button-primary" type="button" aria-expanded="false">
+                + Register new change
+              </button>
+            </div>
+          </header>
+
+          <section id="change-form-card" class="card collapsible" hidden>
+            <div class="section-heading compact">
+              <h3>Register change</h3>
+            </div>
+
+            <form id="change-form">
+              <div class="form-grid">
+                <div class="field">
+                  <label for="change-id">Change ID</label>
+                  <input id="change-id" name="change_id" required autocomplete="off">
+                </div>
+
+                <div class="field">
+                  <label for="change-type">Type</label>
+                  <input id="change-type" name="type" required autocomplete="off">
+                </div>
+
+                <div class="field">
+                  <label for="old-version">Old version</label>
+                  <input id="old-version" name="old_version" required autocomplete="off">
+                </div>
+
+                <div class="field">
+                  <label for="new-version">New version</label>
+                  <input id="new-version" name="new_version" required autocomplete="off">
+                </div>
+
+                <div class="field">
+                  <label for="initiator">Initiator</label>
+                  <input id="initiator" name="initiator" required autocomplete="off">
+                </div>
+
+                <div class="field field-wide">
+                  <label for="changed-entities">Changed entities JSON</label>
+                  <textarea id="changed-entities" name="changed_entities" spellcheck="false">[]</textarea>
+                </div>
+
+                <div class="field field-wide">
+                  <label for="declared-scope">Declared scope JSON</label>
+                  <textarea id="declared-scope" name="declared_scope" spellcheck="false">{}</textarea>
+                </div>
+              </div>
+
+              <div class="form-actions">
+                <button class="button button-primary" type="submit">Register change</button>
+              </div>
+
+              <div id="create-status" class="status" aria-live="polite" hidden></div>
+            </form>
+          </section>
+
+          <section class="card card-flush">
+            <div id="changes-status" class="status" hidden></div>
+            <div class="table-wrap">
+              <table class="change-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Change ID</th>
+                    <th>Type</th>
+                    <th>From → To</th>
+                    <th>Initiated by</th>
+                    <th>Date</th>
+                    <th>Affected cases</th>
+                  </tr>
+                </thead>
+                <tbody id="change-list" aria-live="polite"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div id="change-detail-status" class="status" hidden></div>
+          <div id="change-detail" hidden></div>
+        </section>
+
+        <!-- runs and equivalence -->
+        <section class="page" data-view="runs" hidden>
+          <header class="page-header">
+            <div>
+              <h2>Runs &amp; Equivalence</h2>
+              <p class="muted">
+                Re-evaluate a change's stored impact set, compare it with an exhaustive run, and see the release
+                gate decision.
+              </p>
+            </div>
+          </header>
+
+          <div class="run-grid">
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Re-evaluate a change</h3>
+              </div>
+
+              <form id="reevaluation-form">
                 <div class="form-grid">
                   <div class="field">
-                    <label for="dossier-reviewer">
-                      Reviewer
-                    </label>
-                    <input
-                      id="dossier-reviewer"
-                      name="reviewer"
-                      required
-                      autocomplete="off"
-                    >
+                    <label for="run-change-id">Change</label>
+                    <select id="run-change-id" name="change_id" required>
+                      <option value="">Choose a registered change</option>
+                    </select>
                   </div>
 
                   <div class="field">
-                    <label for="dossier-review-action">
-                      Action
-                    </label>
-                    <select
-                      id="dossier-review-action"
-                      name="action"
+                    <label for="run-release-id">New release ID</label>
+                    <input
+                      id="run-release-id"
+                      name="release_id"
                       required
+                      autocomplete="off"
+                      placeholder="Unique release ID"
                     >
-                      <option value="CONFIRM">
-                        CONFIRM
-                      </option>
-                      <option value="CORRECT">
-                        CORRECT
-                      </option>
-                      <option value="MARK_UNRESOLVED">
-                        MARK_UNRESOLVED
-                      </option>
-                    </select>
                   </div>
+                </div>
 
-                  <div class="field field-wide">
-                    <label for="dossier-review-reason">
-                      Reason
-                    </label>
-                    <textarea
-                      id="dossier-review-reason"
-                      name="reason"
-                      required
-                      placeholder="Explain the review decision"
-                    ></textarea>
-                  </div>
+                <div class="check-stack">
+                  <label class="check-row">
+                    <input id="run-exhaustive" type="checkbox" checked>
+                    <span>Run the exhaustive comparator after the selective run</span>
+                  </label>
 
-                  <div class="field field-wide">
-                    <label for="dossier-corrected-state">
-                      Corrected state
-                    </label>
-                    <select
-                      id="dossier-corrected-state"
-                      name="corrected_state_code"
-                      disabled
-                    >
-                      <option value="">
-                        Choose a corrected state
-                      </option>
-                      <option value="CONCORDANT_RESISTANT">
-                        CONCORDANT_RESISTANT
-                      </option>
-                      <option value="CONCORDANT_SUSCEPTIBLE">
-                        CONCORDANT_SUSCEPTIBLE
-                      </option>
-                      <option
-                        value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S"
-                      >
-                        DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S
-                      </option>
-                      <option
-                        value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE"
-                      >
-                        DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE
-                      </option>
-                      <option value="UNRESOLVED">
-                        UNRESOLVED
-                      </option>
-                    </select>
-                  </div>
+                  <label class="check-row">
+                    <input id="run-gate" type="checkbox" checked>
+                    <span>Apply the PASS/BLOCKED release gate</span>
+                  </label>
                 </div>
 
                 <div class="form-actions">
-                  <button
-                    id="dossier-review-submit"
-                    class="button button-primary"
-                    type="submit"
-                  >
-                    Append review
-                  </button>
+                  <button id="run-submit" class="button button-primary" type="submit">Start re-evaluation</button>
                 </div>
-              </fieldset>
-            </form>
+              </form>
 
-            <div
-              id="dossier-review-status"
-              class="status"
-              aria-live="polite"
-              hidden
-            ></div>
+              <div id="run-status" class="status" aria-live="polite" hidden></div>
+            </section>
 
-            <h4>Review history</h4>
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Open a stored run</h3>
+              </div>
 
-            <div id="dossier-reviews">
+              <form id="run-lookup-form" class="inline-form">
+                <div class="field">
+                  <label for="run-id">Run</label>
+                  <select id="run-id" name="run_id" required>
+                    <option value="">Choose a stored run</option>
+                  </select>
+                </div>
+
+                <button class="button" type="submit">Load run</button>
+              </form>
+
+              <div id="run-lookup-status" class="status" aria-live="polite" hidden></div>
+            </section>
+          </div>
+
+          <section class="card">
+            <div id="run-detail">
+              <div class="empty-state">Start or load a run to see its stored status and counts.</div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="section-heading compact">
+              <h3>Equivalence report</h3>
+            </div>
+
+            <div id="equivalence-detail">
               <div class="empty-state">
-                Review history appears after a case is loaded.
+                An exhaustive comparison shows recall, precision, reprocessing ratio, the three comparison axes and
+                the PASS/BLOCKED decision here.
               </div>
             </div>
           </section>
-        </div>
-
-        <section class="card">
-          <div class="section-heading compact">
-            <div>
-              <p class="eyebrow">I-13 stored comparison</p>
-              <h3>Before / after</h3>
-            </div>
-          </div>
-
-          <form
-            id="dossier-diff-form"
-            class="comparison-form"
-          >
-            <div class="field">
-              <label for="dossier-before-release">
-                Before release
-              </label>
-              <input
-                id="dossier-before-release"
-                name="before_release"
-                autocomplete="off"
-                placeholder="Default: previous published state"
-              >
-            </div>
-
-            <div class="field">
-              <label for="dossier-after-release">
-                After release
-              </label>
-              <input
-                id="dossier-after-release"
-                name="after_release"
-                autocomplete="off"
-                placeholder="Default: current published state"
-              >
-            </div>
-
-            <button
-              class="button"
-              type="submit"
-            >
-              Compare releases
-            </button>
-          </form>
-
-          <div
-            id="dossier-diff-status"
-            class="status"
-            aria-live="polite"
-            hidden
-          ></div>
-
-          <div id="dossier-diff">
-            <div class="empty-state">
-              Before/after state, version, explanation and
-              dependency differences appear here.
-            </div>
-          </div>
         </section>
-
-        <section class="card">
-          <div class="section-heading compact">
-            <div>
-              <p class="eyebrow">A-10 stored provenance</p>
-              <h3>Dependency path</h3>
-            </div>
-          </div>
-
-          <div id="dossier-dependency-summary"></div>
-
-          <div class="graph-layout">
-            <div
-              id="dossier-graph"
-              class="graph-canvas"
-            >
-              <div class="empty-state">
-                Current dependency path appears after a case
-                is loaded.
-              </div>
-            </div>
-
-            <aside
-              id="dossier-node-inspector"
-              class="node-inspector"
-              aria-live="polite"
-            ></aside>
-          </div>
-        </section>
-      </section>
-
-    </main>
+      </main>
+    </div>
   </div>
 
   <datalist id="case-suggestions"></datalist>

@@ -303,3 +303,38 @@ class CaseDiffView(BaseModel):
     dependencies_added: list[DiffDependencyView]
     dependencies_unchanged: int
     triggered_by_change_id: str | None
+
+
+# how many cases currently hold one evidence state
+class StateCount(BaseModel):
+    state_code: str
+    count: int
+
+
+# one drug's cases and how many of them are currently unresolved or discordant
+class DrugSummary(BaseModel):
+    antibiotic: str
+    total: int
+    unresolved: int
+    discordant: int
+
+
+# the newest published release, what it was built from, and what it wrote
+class LatestReleaseSummary(BaseModel):
+    release_id: str
+    triggered_by_change_id: str | None
+    created_at: datetime
+    source_snapshot_id: str | None
+    interpretation_version: str | None
+    states_written: int
+    states_changed: int
+
+
+# the numbers the dashboard shows, all taken from the latest published states
+class Summary(BaseModel):
+    total_cases: int
+    cases_with_state: int
+    state_counts: list[StateCount]
+    drugs: list[DrugSummary]
+    labels_changed_cases: int
+    latest_release: LatestReleaseSummary | None

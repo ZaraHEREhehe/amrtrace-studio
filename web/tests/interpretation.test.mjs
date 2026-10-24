@@ -40,7 +40,7 @@ test("a kept label says so and shows no breakpoint", () => {
   assert.equal(row.host, "not recorded");
   assert.equal(row.shownLabel, "R");
   assert.equal(row.origin, "Submitted by lab (kept)");
-  assert.equal(row.breakpoint, "-");
+  assert.equal(row.breakpoint, "—");
 });
 
 
