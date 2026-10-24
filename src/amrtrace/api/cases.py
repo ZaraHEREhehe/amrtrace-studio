@@ -208,6 +208,7 @@ def list_cases(
     state: str | None = Query(default=None, min_length=1),
     q: str | None = Query(default=None, min_length=2),
     limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     conn: psycopg.Connection = Depends(get_connection),
 ) -> list[CaseSummary]:
     """List cases with optional drug and current-published-state filters."""
@@ -235,7 +236,7 @@ def list_cases(
       AND (%s::text IS NULL OR current_state.state_code = %s)
       AND (%s::text IS NULL OR c.case_id ILIKE %s OR c.target_acc ILIKE %s)
     ORDER BY c.case_id
-    LIMIT %s
+    LIMIT %s OFFSET %s
     """
 
     # q searches as you type: a case id that starts with it (CASE_ may be left out) or an accession that does
@@ -244,7 +245,7 @@ def list_cases(
     by_accession = None if search is None else search + "%"
 
     with conn.cursor(row_factory=dict_row) as cur:
-        cur.execute(sql, (drug, drug, state, state, search, by_id, by_accession, limit))
+        cur.execute(sql, (drug, drug, state, state, search, by_id, by_accession, limit, offset))
         rows = cur.fetchall()
 
     return [CaseSummary(**row) for row in rows]

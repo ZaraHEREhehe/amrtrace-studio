@@ -483,3 +483,39 @@ def test_a_short_case_id_or_an_accession_and_drug_resolve_to_the_full_id(client,
 def test_the_case_list_can_be_searched_by_id_start_or_accession(client):
     assert [r["case_id"] for r in client.get("/cases", params={"q": "CASE_B"}).json()] == ["CASE_B"]
     assert [r["case_id"] for r in client.get("/cases", params={"q": "PDT_CASE_E"}).json()] == ["CASE_EMPTY"]
+
+
+def test_the_summary_counts_only_the_latest_published_states(client):
+    body = client.get("/summary").json()
+
+    assert body["total_cases"] == 3
+    # CASE_EMPTY has no published state, and CASE_A's R3 draft must not count
+    assert body["cases_with_state"] == 2
+    assert {row["state_code"]: row["count"] for row in body["state_counts"]} == {
+        "CONCORDANT_RESISTANT": 1,
+        "CONCORDANT_SUSCEPTIBLE": 1,
+    }
+    assert body["labels_changed_cases"] == 0
+
+
+def test_the_summary_lists_every_drug_with_its_unresolved_and_discordant_counts(client):
+    drugs = {row["antibiotic"]: row for row in client.get("/summary").json()["drugs"]}
+
+    assert drugs["gentamicin"] == {"antibiotic": "gentamicin", "total": 2, "unresolved": 0, "discordant": 0}
+    assert drugs["ciprofloxacin"]["total"] == 1
+
+
+def test_the_summary_names_the_newest_published_release_and_what_it_wrote(client):
+    latest = client.get("/summary").json()["latest_release"]
+
+    # R3 is still a draft, so R2 is the newest published release
+    assert latest["release_id"] == "R2"
+    assert latest["states_written"] == 1
+    assert latest["states_changed"] == 1
+
+
+def test_the_case_list_pages_with_an_offset(client):
+    second = client.get("/cases", params={"limit": 1, "offset": 1}).json()
+    assert [row["case_id"] for row in second] == ["CASE_B"]
+
+    assert client.get("/cases", params={"offset": -1}).status_code == 422
