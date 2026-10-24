@@ -289,3 +289,26 @@ export function listRuns(changeId = null, limit = 50, fetchImpl = globalThis.fet
     fetchImpl,
   );
 }
+
+
+// the dashboard numbers, all from the latest published states
+export function getSummary(fetchImpl = globalThis.fetch) {
+  return requestJson("/summary", {}, fetchImpl);
+}
+
+
+// one page of the case list, filtered by text, drug and current state
+export function listCases(filters = {}, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({
+    limit: String(filters.limit ?? 50),
+    offset: String(filters.offset ?? 0),
+  });
+
+  for (const key of ["q", "drug", "state"]) {
+    if (filters[key]) {
+      params.set(key, filters[key]);
+    }
+  }
+
+  return requestJson(`/cases?${params.toString()}`, {}, fetchImpl);
+}

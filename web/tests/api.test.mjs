@@ -361,3 +361,21 @@ test("case lookups and the run list use query parameters", async () => {
     "/api/runs?limit=50",
   ]);
 });
+
+
+test("the dashboard summary and the filtered case list call the same-origin API", async () => {
+  const seen = [];
+  const fake = async (url) => {
+    seen.push(url);
+    return { ok: true, status: 200, text: async () => "[]" };
+  };
+  const { getSummary, listCases } = await import("../api.mjs");
+  await getSummary(fake);
+  await listCases({ q: "PDT1", drug: "gentamicin", state: "UNRESOLVED", limit: 51, offset: 50 }, fake);
+  await listCases({}, fake);
+  assert.deepEqual(seen, [
+    "/api/summary",
+    "/api/cases?limit=51&offset=50&q=PDT1&drug=gentamicin&state=UNRESOLVED",
+    "/api/cases?limit=50&offset=0",
+  ]);
+});
