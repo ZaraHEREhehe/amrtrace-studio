@@ -435,8 +435,7 @@ async function loadChangeDetail(changeId) {
     await changesLoaded;
   }
 
-  const panel = byId("change-detail");
-  const status = byId("change-detail-status");
+  const { panel, status } = changeDetailElements();
 
   if (!showChangeDetailRow(changeId)) {
     return;
@@ -2286,10 +2285,18 @@ async function fillAffectedCounts(changes) {
 }
 
 
+// the detail panel moves between rows, so we keep it once found; a removed row would hide it from getElementById
+let changeDetailParts = null;
+
+function changeDetailElements() {
+  changeDetailParts ??= { panel: byId("change-detail"), status: byId("change-detail-status") };
+  return changeDetailParts;
+}
+
+
 // moves the detail panel into a row right under the chosen change, and marks that change as open
 function showChangeDetailRow(changeId) {
-  const panel = byId("change-detail");
-  const status = byId("change-detail-status");
+  const { panel, status } = changeDetailElements();
 
   for (const old of document.querySelectorAll("#change-list .detail-row")) {
     old.remove();
