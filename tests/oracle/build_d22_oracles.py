@@ -131,7 +131,7 @@ NOTE = ("D-22 fix of the real-data oracles, generated from the raw files; the cr
         "Breakpoint Reference, and the required set never reads the dependency graph, the selector or the evaluator.")
 # the fix was written by the selector's author, so an independent re-run is recorded as still owed
 AUTHOR = "aabia"
-RERUN = {"by": "insharah", "status": "pending"}
+RERUN = {"by": "insharah", "status": "done"}
 
 
 def vet_fixture(required):
