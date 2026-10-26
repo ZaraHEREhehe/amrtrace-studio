@@ -1,4 +1,4 @@
-# AMRTrace Studio: Core Module Execution Plan (FYP-1 Mid Evaluation)
+# AMRTrace Studio: Execution Plan
 
 > **This file is the single source of truth for the core-module build.** It is written so that any LLM (or new teammate) can read it cold and (a) understand the project, (b) know every decision made so far, (c) know who owns what, and (d) work out the next coding step. Keep it updated (see Section 0.3).
 
