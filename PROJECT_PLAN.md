@@ -7,6 +7,7 @@
 - **Institution/Course:** FAST-NUCES Islamabad, FYP-1
 - **Execution mode: SEQUENTIAL BY DEFAULT, one step at a time** (Section 10). There is no day schedule and no parallel tracks. We have time, so we go step by step and nothing starts until the previous step's gate is met, except early starts allowed by D-15 (amended 2026-10-04).
 - **Deliverable for the mid-eval:** a live, deployed, CI/CD-backed core module (Section 3) plus the worksheet and report evidence (Section 12).
+- **Iteration 2 (after the mid evaluation):** the mocked and deferred features, planned in Section 16; target end of November 2026.
 
 ---
 
@@ -17,10 +18,11 @@
 1. Section 1 (what the project is) and Section 2 (decisions that must not be re-litigated).
 2. Section 3 (core module scope and extension points) and Section 5 (design contracts).
 3. Section 10 (the step sequence) and Section 14 (live status).
+4. For Iteration 2: Section 16 (scope, task board, order by track and its own live status).
 
 ### 0.2 Protocol: "what should we do next?"
 
-1. Open Section 14. Find the **lowest-numbered step that is not `DONE`**. That is the current step. Only one step is `IN-PROGRESS` at a time.
+1. Open Section 14. Find the **lowest-numbered step that is not `DONE`**. That is the current step. Only one step is `IN-PROGRESS` at a time. **Iteration 2 (steps 48 onwards) runs as three parallel tracks (D-24):** open Section 16.4, find your track's lowest-numbered step that is not `DONE`, and check its "Depends on" tasks are DONE.
 2. Output for that step: the task ID, owner (driver), reviewer, branch name, the files to create or edit (Section 4), exact function signatures (Section 5), the gate ("done when"), and the tests.
 3. Walk through it in small substeps (what to type, what to run, what to see). Explain every term in plain language. Assume nobody has context from earlier steps.
 4. Do not jump ahead, and do not suggest parallel work unless the user asks.
@@ -74,7 +76,7 @@ A version-aware evidence lifecycle: a **versioned dependency graph + append-only
 - Source: frozen local snapshot of NCBI Pathogen Detection (isolate metadata, AMRFinderPlus genotype calls, submitted AST).
 - **Core module only for now.** Out of the core-module build: the live monitoring/pulling of NCBI and the automatic diffing of new snapshots. These are a **later, separate producer** that emits typed change events into the same engine (Section 3.2). The core must not need modification when they are added.
 - Excluded: clinical diagnosis or treatment claims, wet-lab validation, private patient data, all-organism or all-antibiotic coverage, authoring new mappings, generated text as evidence.
-- Deferred: K. pneumoniae, triage ranking model, additional detectors.
+- Deferred: K. pneumoniae, triage ranking model, additional detectors. (Iteration 2 plans the monitor and triage: Section 16. K. pneumoniae stays out.)
 
 ### 1.5 Evidence states (exactly five; operational, non-causal)
 
@@ -124,6 +126,12 @@ A version-aware evidence lifecycle: a **versioned dependency graph + append-only
 | D-20 | OD-10: use the old pipeline's outputs as data, port only evaluation logic, copy `M8_2_CASE_RULES_V1.md` to `docs/spec/`. Toolchain: Python 3.12 venv, `pandas==3.0.5`, `pyarrow==25.0.1`, PostgreSQL 16, plain numbered SQL migrations (ADR-003 section 8, ADR-004)                                                                                                                                                        | Reproducible and independent of the old repo                                      |
 | D-21 | A lab-reported S/I/R label is re-read in interpretation mode only when CLSI M100 Ed32 (the labs' edition) explains it; any other label is kept as submitted (ADR-002 amendment 2) | Interpretation must not overrule a label it cannot account for |
 | D-22 | Animal isolates are read with CLSI VET01S Ed7 first (species row, else its grey human row); humans and unrecorded hosts with CLSI M100; animal `NOT_DEFINED` results may be read by their host rule only; every interpreted result carries a label flag. Release chain R1 as-reported, R2 Ed32 baseline, R3 VET01S, R4 Ed33 (`docs/design/d22_host_breakpoints.md`) | M100 is a human standard; the supervisor asked for veterinary breakpoints and a visible flag (2026-10-18) |
+| D-23 | Iteration 2 builds the items D-11 mocked or deferred (Review Copilot, triage, RBAC, the remaining change types, the live monitor) plus the unverified label, an Exports page, the remaining dependency types, the B3 ablation and release safety, as planned in Section 16. New producers still emit only typed change events, and the hard rules in Section 0.4 still apply. Scope is revisited only after Iteration 2 is complete | Agreed by all three after the mid evaluation (2026-10-26); keeps the core module unchanged while the deferred scope is built |
+| D-24 | Iteration 2 runs as three parallel tracks (one per member) instead of one step at a time; only the "Depends on" column sequences tasks. Target: end of November 2026, before the FYP-1 final evaluation (expected early December) | About five weeks for 19 tasks; strict sequencing would not fit (2026-10-26) |
+| D-25 | The Change Detection Engine is a registry of source watchers (NCBI Pathogen Detection, AMRFinderPlus software and database, breakpoint-standard editions). It only drafts events; a person applies each one. It runs on demand and optionally on a schedule. Tests and the demo replay stored snapshots. For licensed standards (CLSI) it raises an alert and a person enters the table, after which the interpretation differ drafts the event | Nothing enters the ledger without a person; live downloads are too large and slow for tests and the demo; CLSI tables cannot be downloaded automatically (2026-10-26) |
+| D-26 | Login roles are Analyst, Reviewer and Admin, as in the PoC and the prototype. Use-case actors map to them: AMR analyst / researcher, surveillance / public-health researcher and data steward / curator are Analysts (explore, register changes, run re-evaluations, apply drafted events, export); reviewer / domain expert is Reviewer (review queue, confirm or correct); administrator is Admin (users, release gate and equivalence reports, detection settings). Accounts are created by an admin script; no sign-up page and no external login | Matches the prototype and the use-case diagram (2026-10-26) |
+| D-27 | The Review Copilot uses templates first, then an optional local language model, with a free hosted API key (for example Groq) as the fallback. Any key lives in `.env`, never in the repo. Its output is labelled as generated and is never evidence (rule 9) | Deterministic and testable without a network; no paid service (2026-10-26) |
+| D-28 | A case is UNVERIFIED when interpretation changed its label (`labels_changed` > 0) and nobody has reviewed its current published state. Triage is a fixed, documented ordering (newly discordant, state changed, label changed, re-verified; ties by case ID), not a trained model | No labelled data exists for a learned model; a fixed order is explainable (2026-10-26) |
 
 ---
 
@@ -736,8 +744,8 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 | OD-5  | Repo host/name/visibility                                                                                                                                                                                                                                 | **Decided:** private GitHub repo `ZaraHEREhehe/amrtrace-studio`; supervisor invited later by Zara                                             | Zara     |
 | OD-6  | Frontend stack                                                                                                                                                                                                                                            | Open. Default stands (lightest option the team ships fastest); revisit before step 28                                                         | Zara     |
 | OD-7  | ORM vs raw SQL                                                                                                                                                                                                                                            | **Decided (D-20):** plain numbered SQL migrations; SQLAlchemy Core allowed for queries                                                        | Insharah |
-| OD-8  | Granularity ablation (B3 coarse model)                                                                                                                                                                                                                    | Deferred to FYP-1 final; keep a config flag                                                                                                   | Aabia    |
-| OD-9  | Panel comments to log (visual components; research contribution through data categorization and link discovery)                                                                                                                                           | Log both in the panel-actions table: "accepted, deferred to FYP-1 final" with a plan                                                          | Insharah |
+| OD-8  | Granularity ablation (B3 coarse model)                                                                                                                                                                                                                    | Deferred to Iteration 2 (A-16, Section 16)                                                                                                   | Aabia    |
+| OD-9  | Panel comments to log (visual components; research contribution through data categorization and link discovery)                                                                                                                                           | Logged as deferred; planned in Iteration 2 (G-09, Section 16)                                                                                | Insharah |
 | OD-10 | How the real V1 pipeline (M0-M11) is brought into the repo (copy the code, import as a module, or only use its outputs)                                                                                                                                   | **Decided (D-20):** use its outputs as input data, port only the evaluation logic into `evaluator/`, copy the case-rules spec to `docs/spec/` | Aabia    |
 
 ---
@@ -861,3 +869,88 @@ Continuous (not a step): G-08 milestone log, updated after every step by Zara.
 - **Producer:** anything that creates a typed change event (a person, a script, or the future monitor). The engine does not care which.
 - **As-reported mode:** the evaluator trusts the lab's submitted S/I/R label. **Interpretation mode:** it derives S/I/R from the MIC using a loaded table.
 - **B0/B1/B2/B3 baselines:** frozen non-versioned pipeline / exhaustive recomputation / manual analyst workflow / coarse-dependency ablation.
+
+---
+
+## 16. Iteration 2 (after the FYP-1 mid evaluation)
+
+Iteration 2 builds everything the mid evaluation mocked or deferred (D-11), plus the gaps found while building and evaluating the core module. The target is the **end of November 2026**, before the FYP-1 final evaluation (date not yet announced; expected early December). The core module does not change shape: every new producer still emits typed change events (D-13, D-14), and every hard rule in Section 0.4 still applies. Decisions D-23 to D-28 (Section 2) were agreed by all three members on 2026-10-26. The scope may be revisited once Iteration 2 is complete, not before.
+
+### 16.1 Scope
+
+| Area | What Iteration 2 adds | Where it lives |
+| ---- | --------------------- | -------------- |
+| Producers | **Change Detection Engine:** a registry of source watchers (NCBI Pathogen Detection snapshots; AMRFinderPlus software and reference database versions; breakpoint-standard editions such as CLSI M100 and VET01S) that turn a detected change into a draft typed change event or, where the source is a licensed document, an alert for a person (D-25) | `src/amrtrace/monitor/` (a producer, not an engine package) |
+| Change types | Mapping differ (C1, C2, C7); evidence changes C3 (phenotype corrected) and C4 (genotype set changed); C5 (rule policy for intermediate or missing values revised); a register form for every type | `src/amrtrace/changes/differs/`, `tests/oracle/fixtures/`, `web/` |
+| Review | Unverified label and review queue; Review Copilot; triage ranking of impacted cases (D-27, D-28) | `src/amrtrace/ledger/`, `src/amrtrace/copilot/`, `src/amrtrace/triage/`, `web/` |
+| Access | Roles Analyst, Reviewer and Admin, with an Admin page for user accounts (D-26) | `src/amrtrace/api/`, `web/` |
+| Exports | An Exports page for the existing as-of export (UC-5) | `web/` |
+| Engine and research | Remaining dependency types (contradiction, composite, alternative-support); granularity ablation B3 (OD-8); release safety for baseline releases; response to panel comments (OD-9) | `src/amrtrace/deps/`, `src/amrtrace/ledger/`, `docs/design/` |
+| Platform | Deployment of the D-22 database and the Iteration 2 build | `deploy/` |
+
+Not in Iteration 2: a second organism, clinical claims, wet-lab validation, private patient data, authoring new mappings, and any use of generated text as evidence (Section 1.4 exclusions still hold).
+
+### 16.2 Task board (Iteration 2)
+
+**Priority:** Must = needed for the final evaluation; Should = planned, cut only with team agreement; Could = only if time remains. **Week** = target week: W1 27 Oct–2 Nov, W2 3–9 Nov, W3 10–16 Nov, W4 17–23 Nov, W5 24–30 Nov.
+
+| ID | Task | Owner | Reviewer | Depends on | Priority | Week | Acceptance / evidence |
+| -- | ---- | ----- | -------- | ---------- | -------- | ---- | --------------------- |
+| A-17 | **Release safety:** a baseline release (R1 or a new full release) stays DRAFT until its dependency graph is stored and checked; only then is it PUBLISHED | Aabia | Insharah | none | Must | W1 | Failure test: a graph step that fails leaves the release DRAFT and nothing selectable against it; existing chain tests still pass |
+| I-15 | **Mapping differ:** compares two mapping versions and lists added, retired and newly linked determinant-antibiotic pairs (C1, C2, C7) | Insharah | Aabia | none | Must | W1 | Registered without editing registry code; C1, C2 and C7 fixtures produce the same changed entities as the hand-declared events; genericity guard passes |
+| Z-21 | **Exports page** for the existing as-of export (UC-5): choose a release, download JSON, show the snapshot hash | Zara | Aabia | none | Must | W1 | Export from the UI matches the API export byte for byte; web tests |
+| I-16 | **Evidence change types C3 and C4:** typed events for a corrected phenotype and a changed genotype set, with differs over evidence versions and oracle fixtures (written by Insharah, not the selector author, D-10) | Insharah | Aabia | I-15 | Must | W1–W2 | Invalid events rejected; fixtures committed before the selector runs against them |
+| A-12 | **Selector for evidence changes:** reverse reachability from changed AST and genotype evidence nodes, including declared derivatives | Aabia | Insharah | I-16 | Must | W2 | C3 and C4 oracle recall 100%; precision and reprocessing ratio reported; selective equals exhaustive |
+| I-18 | **Unverified label and review queue:** a case whose label was changed by interpretation (`labels_changed` > 0) and has no review on its current published state is UNVERIFIED; reviewers confirm or correct it with the existing append-only reviews | Insharah | Zara | none | Must | W2 | API returns the verification status and a queue; confirming or correcting appends a review and never edits a state; tests for both paths |
+| Z-16 | **Register forms for every change type** in Change Events, with the API validation errors shown next to the field | Zara | Aabia | I-15, I-16 | Must | W2–W3 | Each type registers end to end from the UI; web tests cover each form; a rejected event shows the 422 reason |
+| A-13 | **Change Detection Engine, part 1:** the watcher registry and the NCBI Pathogen Detection snapshot watcher (download, manifest and hash check, compare through the registered differs, draft events). Runs on demand ("check now") and optionally on a schedule | Aabia | Zara | I-15, I-16 | Must | W2–W3 | Replay test on two stored snapshots drafts the expected events and nothing else; a failed pull drafts nothing; no engine package changed |
+| Z-17 | **Review queue page** with the unverified badge in the explorer and the dossier | Zara | Insharah | I-18 | Must | W3 | Queue filters by drug and state; confirm and correct work end to end; web tests |
+| A-18 | **Change Detection Engine, part 2:** AMRFinderPlus software and database watcher (drafts tool-version and mapping events) and breakpoint-standard watcher (raises an alert for a new edition; a person enters the licensed table and the existing interpretation differ drafts the event) | Aabia | Insharah | A-13 | Must | W3 | A new tool or database version drafts the expected events; a new edition raises an alert; loading its table drafts the expected interpretation event |
+| I-19 | **Review Copilot:** a plain-language summary of why a case changed, built only from the stored diff, dependency subgraph and evidence; templates first, then an optional language-model layer (D-27); shown in the dossier, labelled as generated, stored apart from evidence | Insharah | Aabia | I-18 | Must | W3–W4 | Test proves the copilot output is never read by the evaluator, selector or release gate (rule 9); every sentence links back to a stored record; works with no network (templates) |
+| Z-18 | **Roles and Admin page:** Analyst, Reviewer and Admin (D-26); accounts created by an admin script; the Admin page lists users and their roles. The acting user is stored on every change, run and review | Zara | Insharah | Z-16, Z-17 | Must | W3–W4 | Write endpoints return 403 for the wrong role; tests per role; no secrets in the repo (rule 10) |
+| A-14 | **Triage ranking:** a fixed, documented ordering of an impact set for review (newly discordant, then state changed, then label changed, then re-verified; ties by case ID) with the reason shown (D-28) | Aabia | Insharah | I-18 | Must | W4 | Same inputs give the same order; reason shown per case; API sort option and UI column |
+| A-16 | **Granularity ablation (B3, OD-8):** a coarse dependency model behind the existing config flag, compared with the fine graph | Aabia | Insharah | A-12 | Must | W4 | `docs/design/ablation.md` with selected counts, precision and reprocessing for CLSI-REAL, VET01S, C2, C6 and C7 under both models |
+| G-09 | **Panel comments (OD-9):** visual components (a state-transition chart across releases and an impact overview) and a note on the research contribution through data categorisation and link discovery | Zara (visuals), Aabia (note) | Insharah | A-16 | Must | W4–W5 | Visuals on the dashboard and dossier; note in `docs/design/`; panel-actions table updated |
+| A-15 | **Remaining dependency types:** contradiction, composite and alternative-support materialised and followed by the selector | Aabia | Insharah | A-12 | Should | W5 | Synthetic fixtures for each type pass with recall 100%; `docs/design/graph_design.md` updated. If cut, stated as a limitation |
+| I-17 | **C5 rule policy revised** (intermediate or missing values): typed event, differ and oracle fixture | Insharah | Aabia | I-16 | Should | W5 | Fixture passes with recall 100%; selective equals exhaustive |
+| Z-20 | **Deployment refresh:** the D-22 database and the Iteration 2 build on the deployed instance; date decided by the team | Zara | Aabia | Z-18 | Could | W5 | Deployed health checks pass; demo case opens on the deployed instance |
+| G-11 | **Iteration 2 close-out:** tag, clean CI run, demo rehearsal, report and milestone updates | Insharah | Zara | all Must tasks | Must | W5 | Tag exists; rehearsal checklist done by all three; report and `docs/milestones.md` updated |
+
+### 16.3 Execution order (Iteration 2)
+
+Iteration 2 runs as **three parallel tracks** (D-24). Each member works through their own tasks in the order below; a task starts only when everything in its "Depends on" column is DONE. Cross-track dependencies are marked with an arrow. Review rotation and the PR rules in Section 8 still apply.
+
+| Step | Track A: Aabia | Step | Track B: Insharah | Step | Track C: Zara |
+| ---- | -------------- | ---- | ----------------- | ---- | ------------- |
+| 48 | A-17 Release safety | 54 | I-15 Mapping differ | 59 | Z-21 Exports page |
+| 49 | A-12 Selector for evidence changes (← I-16) | 55 | I-16 Evidence change types C3, C4 | 60 | Z-16 Register forms (← I-15, I-16) |
+| 50 | A-13 Detection engine, part 1 (← I-15, I-16) | 56 | I-18 Unverified label and queue | 61 | Z-17 Review queue page (← I-18) |
+| 51 | A-18 Detection engine, part 2 | 57 | I-19 Review Copilot | 62 | Z-18 Roles and Admin page |
+| 52 | A-14 Triage ranking (← I-18) | 58 | I-17 C5 rule policy revised | 63 | G-09 Visual components (← A-16) |
+| 53 | A-16 Ablation, then G-09 note, then A-15 | | | 64 | Z-20 Deployment refresh |
+| | | | | 65 | G-11 Iteration 2 close-out (all three; driver Insharah) |
+
+### 16.4 Live status (Iteration 2; update in every PR)
+
+| Step | Task | Driver | Status | PR / evidence | Notes |
+| ---- | ---- | ------ | ------ | ------------- | ----- |
+| - | UI redesign (prototype look, Dashboard, Case Explorer) | Aabia | DONE | PR #120 | Post-mid work merged 2026-10-24; `GET /summary` and paging on `/cases` added |
+| - | I-07c Independent re-run of the D-22 oracles | Insharah | DONE | PR #121 | Re-run of `build_d22_oracles.py` matched (5,556 / 112); `independent_rerun` set to done |
+| 48 | A-17 | Aabia | TODO | | |
+| 49 | A-12 | Aabia | TODO | | |
+| 50 | A-13 | Aabia | TODO | | |
+| 51 | A-18 | Aabia | TODO | | |
+| 52 | A-14 | Aabia | TODO | | |
+| 53 | A-16, G-09 note, A-15 | Aabia | TODO | | A-15 is Should |
+| 54 | I-15 | Insharah | TODO | | |
+| 55 | I-16 | Insharah | TODO | | |
+| 56 | I-18 | Insharah | TODO | | |
+| 57 | I-19 | Insharah | TODO | | |
+| 58 | I-17 | Insharah | TODO | | Should |
+| 59 | Z-21 | Zara | TODO | | |
+| 60 | Z-16 | Zara | TODO | | |
+| 61 | Z-17 | Zara | TODO | | |
+| 62 | Z-18 | Zara | TODO | | |
+| 63 | G-09 visuals | Zara | TODO | | |
+| 64 | Z-20 | Zara | TODO | | Could |
+| 65 | G-11 | Insharah | TODO | | |
