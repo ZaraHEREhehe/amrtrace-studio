@@ -3,7 +3,7 @@ description: Real interpretation-table change CLSI M100 Ed32 -> Ed33 for gentami
   case with an exact CLSI MIC of 4 labelled S or 8 labelled I must be selected (recall 100%). Animal cases are read by their
   host rules and are not touched by this change.
 authored_by: aabia
-authored_on_base_commit: fc64fbd66f29c84f5cd92683b5a77ab65e16a7b8
+authored_on_base_commit: STAMP_ME
 author_note: D-22 fix of the real-data oracles, generated from the raw files; the criteria are the rules in the AMRTrace Breakpoint
   Reference, and the required set never reads the dependency graph, the selector or the evaluator.
 real_data: true

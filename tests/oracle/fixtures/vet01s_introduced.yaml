@@ -2,7 +2,7 @@ scenario: VET01S-INTRODUCED
 description: Real interpretation-table change that adds the CLSI VET01S Ed7 host rules. Every animal case for gentamicin,
   meropenem or TMP-SMX with a CLSI MIC whose label M100 Ed32 explains, or which is NOT_DEFINED, must be selected (recall 100%).
 authored_by: aabia
-authored_on_base_commit: fc64fbd66f29c84f5cd92683b5a77ab65e16a7b8
+authored_on_base_commit: STAMP_ME
 author_note: D-22 fix of the real-data oracles, generated from the raw files; the criteria are the rules in the AMRTrace Breakpoint
   Reference, and the required set never reads the dependency graph, the selector or the evaluator.
 real_data: true
