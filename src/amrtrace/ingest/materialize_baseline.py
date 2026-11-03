@@ -1,4 +1,5 @@
-# stores the dependency graph of the baseline release, after checking the evaluator agrees with the ledger
+# stores the dependency graph of the baseline release, after checking the evaluator agrees with the ledger,
+# and only then publishes the release, so a baseline can never be published without its graph (task A-17)
 import argparse
 import os
 from dataclasses import dataclass, fields
@@ -18,6 +19,7 @@ from amrtrace.ingest.frozen_v1 import (
     read_frozen_tables,
 )
 from amrtrace.ingest.load_frozen_v1 import verify_hashes
+from amrtrace.ledger import get_release, publish_release
 from amrtrace.ledger._tx import atomic
 
 
@@ -27,6 +29,7 @@ class BaselineGraphReport:
     release_id: str
     cases_checked: int
     summary: MaterializeSummary
+    status: str
 
 
 def _stored_version_vector(conn, release_id: str) -> dict:
@@ -64,6 +67,24 @@ def _versions_for_release(tables: FrozenTables, stored: dict) -> VersionVector:
     return versions
 
 
+# every case in the release must have its dependency rows, or later changes would not find it
+def _check_graph(conn, release_id: str, case_ids) -> None:
+    with_rows = {
+        row[0]
+        for row in conn.execute(
+            "SELECT DISTINCT case_id FROM dependency WHERE release_id = %s",
+            (release_id,),
+        )
+    }
+    without = set(case_ids) - with_rows
+    if without:
+        example = sorted(without)[0]
+        raise ValueError(
+            f"{len(without)} cases in release {release_id} have no dependency rows "
+            f"(for example {example}); the release was not published"
+        )
+
+
 def _ledger_states(conn, release_id: str) -> dict:
     rows = conn.execute(
         "SELECT case_id, state_code, phenotype_state, genotype_state, uncertainty_reason "
@@ -74,7 +95,13 @@ def _ledger_states(conn, release_id: str) -> dict:
 
 
 def materialize_baseline(
-    conn, tables: FrozenTables, release_id: str, panel: tuple[str, ...], organism: str
+    conn,
+    tables: FrozenTables,
+    release_id: str,
+    panel: tuple[str, ...],
+    organism: str,
+    *,
+    publish: bool = True,
 ) -> BaselineGraphReport:
     versions = _versions_for_release(tables, _stored_version_vector(conn, release_id))
     ledger = _ledger_states(conn, release_id)
@@ -103,7 +130,7 @@ def materialize_baseline(
             seen.add(inputs.case_id)
             yield inputs, result
 
-    # one unit: a mismatch anywhere leaves no dependency rows behind
+    # one unit: a mismatch or a missing graph anywhere leaves no rows behind and the release unpublished
     with atomic(conn):
         summary = materialize(conn, release_id, checked_evaluations(), versions)
         not_built = set(ledger) - seen
@@ -111,9 +138,18 @@ def materialize_baseline(
             raise ValueError(
                 f"{len(not_built)} cases in release {release_id} were not built from the files"
             )
+        _check_graph(conn, release_id, ledger)
+
+        # a draft baseline is published only now that its graph is complete; a published one is left as it is
+        release = get_release(conn, release_id)
+        if publish and release.status in ("DRAFT", "VALIDATED"):
+            release = publish_release(conn, release_id, baseline=True)
 
     return BaselineGraphReport(
-        release_id=release_id, cases_checked=len(seen), summary=summary
+        release_id=release_id,
+        cases_checked=len(seen),
+        summary=summary,
+        status=release.status,
     )
 
 
@@ -182,6 +218,7 @@ def main() -> int:
     print(
         f"release {report.release_id}: {report.cases_checked:,} cases re-evaluated, all equal to the ledger"
     )
+    print(f"release {report.release_id} is {report.status}")
     print(
         f"written this run: {summary.cases_written:,} cases, {summary.dependency_rows:,} dependency rows, "
         f"{summary.applicability_rows:,} applicability rows ({summary.cases_skipped:,} cases already stored)"
