@@ -936,7 +936,7 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | ---- | ---- | ------ | ------ | ------------- | ----- |
 | - | UI redesign (prototype look, Dashboard, Case Explorer) | Aabia | DONE | PR #120 | Post-mid work merged 2026-10-24; `GET /summary` and paging on `/cases` added |
 | - | I-07c Independent re-run of the D-22 oracles | Insharah | DONE | PR #121 | Re-run of `build_d22_oracles.py` matched (5,556 / 112); `independent_rerun` set to done |
-| 48 | A-17 | Aabia | TODO | | |
+| 48 | A-17 | Aabia | IN-REVIEW | | The baseline loader stores R1 as a draft; `materialize_baseline` publishes it only after the graph is stored and checked, in one transaction. `make_fixture.py load-db` now builds the R1 graph too. 6 new tests in `tests/integration/test_materialize_baseline.py` |
 | 49 | A-12 | Aabia | TODO | | |
 | 50 | A-13 | Aabia | TODO | | |
 | 51 | A-18 | Aabia | TODO | | |

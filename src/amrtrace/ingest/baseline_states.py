@@ -1,7 +1,8 @@
 """Frozen V1 case states -> baseline release (task I-04). This is the dataset-aware side; the ledger stays generic.
 
 Reads data/raw/analysis_v1/final_case_states_v1.parquet, which the golden test (A-02) proved the evaluator
-reproduces exactly, and loads it as release R1 (as-reported mode).
+reproduces exactly, and loads it as release R1 (as-reported mode). R1 is stored as a DRAFT: it is published by
+amrtrace.ingest.materialize_baseline once its dependency graph is stored and checked (task A-17).
 
 Hashes for R1 are computed from the frozen row itself, with the canonical JSON rule from ADR-004:
   input_hash  = sha256 of the evidence and rule id lists the case used, plus its refgene_db_version
@@ -122,7 +123,10 @@ def main(argv=None) -> int:
             print(f"STOP: the case table has {cases:,} rows but the file has {len(states):,}. Load the cohort first (Z-03).")
             return 1
         try:
-            report = load_baseline_release(conn, args.release_id, vector, states, expected_count=len(states))
+            # stored as a draft; the graph step publishes it, so a release without a graph is never selectable
+            report = load_baseline_release(
+                conn, args.release_id, vector, states, expected_count=len(states), publish=False
+            )
         except LedgerError as exc:
             print(f"STOP: {exc}")
             return 1
@@ -141,7 +145,7 @@ def main(argv=None) -> int:
         if stored != expected:
             print("MISMATCH between stored and expected counts")
             return 1
-    print("OK: release is published and the counts match the frozen file")
+    print("OK: the counts match the frozen file; run amrtrace.ingest.materialize_baseline to build the graph and publish the release")
     return 0
 
 

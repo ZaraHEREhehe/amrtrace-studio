@@ -44,6 +44,12 @@ from amrtrace.ingest.load_frozen_v1 import (  # noqa: E402
     verify_hashes,
 )
 from amrtrace.ingest.baseline_states import read_frozen_baseline  # noqa: E402
+from amrtrace.ingest.frozen_v1 import read_frozen_tables  # noqa: E402
+from amrtrace.ingest.materialize_baseline import (  # noqa: E402
+    _organism,
+    _panel,
+    materialize_baseline,
+)
 from amrtrace.ledger import load_baseline_release  # noqa: E402
 
 RAW = ROOT / "data" / "raw"
@@ -472,12 +478,21 @@ def load_db():
         try:
             source_report = load_frozen_v1(conn, DEST, manifest)
             vector, states = read_frozen_baseline(str(states_file))
-            baseline_report = load_baseline_release(
+            load_baseline_release(
                 conn,
                 "R1",
                 vector,
                 states,
                 expected_count=len(states),
+                publish=False,
+            )
+            # R1 is published only after its graph is stored and checked, in the same transaction (task A-17)
+            graph_report = materialize_baseline(
+                conn,
+                read_frozen_tables(DEST),
+                "R1",
+                _panel(conn),
+                _organism(conn),
             )
             conn.commit()
         except Exception:
@@ -499,7 +514,8 @@ def load_db():
         "OK: loaded Z-14 fixture DB; "
         f"cases={stored_cases}, R1 states={stored_states}, "
         f"source_already_loaded={source_report.already_loaded}, "
-        f"release={baseline_report.status}, seconds={seconds:.1f}"
+        f"graph_cases={graph_report.summary.cases_written}, "
+        f"release={graph_report.status}, seconds={seconds:.1f}"
     )
 
 

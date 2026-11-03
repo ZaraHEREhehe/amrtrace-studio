@@ -115,7 +115,7 @@ The committed fixture is described in [tests/fixtures/mini_cohort/README.md](tes
 Invoke-RestMethod "http://localhost:8080/api/cases?limit=1"
 ~~~
 
-The loader imports sample source records and creates the baseline `R1` release with **660 case states**. Open **http://localhost:8080** to inspect the case interface.
+The loader imports sample source records, stores the baseline `R1` release with **660 case states**, builds and checks its dependency graph, and only then publishes `R1`. Open **http://localhost:8080** to inspect the case interface.
 
 The mini-cohort supports local development and CI, not full-cohort research reproduction. Views requiring additional releases, change events, reviewer actions or comparison runs will only contain results when those records exist.
 
@@ -145,7 +145,7 @@ Do not regenerate the committed manifest to disguise a mismatch. Use a **separat
 .\.venv\Scripts\python.exe -m amrtrace.ingest.materialize_baseline
 ~~~
 
-Run these commands **in order**, only on the separate, freshly migrated database containing the approved full frozen files. They load the source tables, create and publish the `R1` baseline states, and then verify/materialize the `R1` dependency and applicability graph. The required private files are not committed; these full-data steps were not part of the Windows mini-cohort reproduction.
+Run these commands **in order**, only on the separate, freshly migrated database containing the approved full frozen files. They load the source tables, store the `R1` baseline states as a **draft**, and then verify/materialize the `R1` dependency and applicability graph. `R1` is published only by the last command, once its graph is stored and checked, so a baseline without a graph is never published (task A-17). Running the last command again on an already published `R1` changes nothing. The required private files are not committed; these full-data steps were not part of the Windows mini-cohort reproduction.
 
 ## 5. Automated tests
 

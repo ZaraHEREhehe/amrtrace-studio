@@ -2,7 +2,9 @@
 import pytest
 from psycopg.types.json import Jsonb
 
+import amrtrace.ingest.materialize_baseline as materialize_module
 import amrtrace.policies  # noqa: F401
+from amrtrace.deps.materialize import MaterializeSummary
 from amrtrace.evaluator import evaluate
 from amrtrace.ingest.frozen_v1 import (
     FrozenTables,
@@ -94,9 +96,8 @@ def tables():
     )
 
 
-# fills the database the way the cohort loader and the baseline loader would
-@pytest.fixture
-def baseline(conn, tables):
+# fills the database the way the cohort loader and the baseline loader would, leaving the release a draft
+def store_draft(conn, tables):
     versions = build_version_vector(tables, "CASE_RULES_V1", "PANEL_X", "0.1.0")
     conn.execute(
         "INSERT INTO release (release_id, version_vector, status) VALUES (%s, %s, 'DRAFT')",
@@ -125,10 +126,35 @@ def baseline(conn, tables):
             ),
         )
         states[inputs.target_acc] = (inputs.case_id, result.state_code)
+    return states
+
+
+# a release that was published before task A-17, the way existing databases hold R1
+@pytest.fixture
+def baseline(conn, tables):
+    states = store_draft(conn, tables)
     conn.execute(
         "UPDATE release SET status = 'PUBLISHED' WHERE release_id = %s", (RELEASE,)
     )
     return states
+
+
+# a release stored the way the baseline loader stores it now: a draft waiting for its graph
+@pytest.fixture
+def draft(conn, tables):
+    return store_draft(conn, tables)
+
+
+def release_status(conn):
+    return conn.execute(
+        "SELECT status FROM release WHERE release_id = %s", (RELEASE,)
+    ).fetchone()[0]
+
+
+def published_releases(conn):
+    return conn.execute(
+        "SELECT count(*) FROM release WHERE status = 'PUBLISHED'"
+    ).fetchone()[0]
 
 
 def stored_rows(conn):
@@ -222,3 +248,78 @@ def test_a_release_without_states_is_refused(conn, tables):
     )
     with pytest.raises(LookupError, match="no states"):
         materialize_baseline(conn, tables, "R_EMPTY", PANEL, ORGANISM)
+
+
+# task A-17: a baseline is published only once its graph is stored and checked
+
+
+def test_a_draft_baseline_is_published_once_its_graph_is_stored(conn, tables, draft):
+    report = materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM)
+
+    assert report.status == "PUBLISHED"
+    assert release_status(conn) == "PUBLISHED"
+    assert stored_rows(conn) == 22
+
+
+def test_a_draft_baseline_can_be_left_unpublished_on_request(conn, tables, draft):
+    report = materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM, publish=False)
+
+    assert report.status == "DRAFT"
+    assert stored_rows(conn) == 22
+
+
+def test_an_already_published_baseline_is_left_as_it_is(conn, tables, baseline):
+    report = materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM)
+
+    assert report.status == "PUBLISHED"
+    assert stored_rows(conn) == 22
+
+
+def test_a_graph_step_that_fails_leaves_the_draft_unpublished_and_empty(
+    conn, tables, draft, monkeypatch
+):
+    real_materialize = materialize_module.materialize
+
+    # the rows are written and then the step breaks, as a crash half way through would
+    def breaks_after_writing(*args, **kwargs):
+        real_materialize(*args, **kwargs)
+        raise RuntimeError("graph step failed")
+
+    monkeypatch.setattr(materialize_module, "materialize", breaks_after_writing)
+
+    with pytest.raises(RuntimeError, match="graph step failed"):
+        materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM)
+
+    assert release_status(conn) == "DRAFT"
+    assert stored_rows(conn) == 0
+    assert published_releases(conn) == 0
+
+
+def test_a_graph_missing_cases_is_refused_and_the_draft_stays_unpublished(
+    conn, tables, draft, monkeypatch
+):
+    # a broken graph step that reports success but stores nothing
+    def stores_nothing(conn, release_id, evaluations, versions):
+        for _ in evaluations:
+            pass
+        return MaterializeSummary(
+            cases_written=0, cases_skipped=0, dependency_rows=0, applicability_rows=0
+        )
+
+    monkeypatch.setattr(materialize_module, "materialize", stores_nothing)
+
+    with pytest.raises(ValueError, match="have no dependency rows"):
+        materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM)
+
+    assert release_status(conn) == "DRAFT"
+    assert published_releases(conn) == 0
+
+
+def test_a_state_mismatch_leaves_the_draft_unpublished(conn, tables, draft):
+    tables.ast[1]["phenotype_normalized"] = "R"
+
+    with pytest.raises(ValueError, match="the ledger holds"):
+        materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM)
+
+    assert release_status(conn) == "DRAFT"
+    assert stored_rows(conn) == 0
