@@ -942,7 +942,7 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | 51 | A-18 | Aabia | TODO | | |
 | 52 | A-14 | Aabia | TODO | | |
 | 53 | A-16, G-09 note, A-15 | Aabia | TODO | | A-15 is Should |
-| 54 | I-15 | Insharah | TODO | | |
+| 54 | I-15 | Insharah | IN-REVIEW | Closes #124 | `changes/differs/mapping.py`: one differ class registered for MAPPING_ADDED and MAPPING_RETIRED through `register_default_differs` (registry code unchanged). Rules are matched by `mapping_rule_id`; each added, retired or edited rule is one `mapping_rule` entity, and `compare()` also lists newly linked pairs (no rule for the pair in the old version). C1, C2 and C7 give exactly the hand-declared entities, and the service derives them with the selection still meeting the oracle (`tests/oracle/test_mapping_differ_fixtures.py`); 12 unit tests in `tests/unit/test_mapping_differ.py`; genericity guard passes. No database loader for mapping versions yet: the A-13 watcher builds the two sets from snapshots |
 | 55 | I-16 | Insharah | TODO | | |
 | 56 | I-18 | Insharah | TODO | | |
 | 57 | I-19 | Insharah | TODO | | |
