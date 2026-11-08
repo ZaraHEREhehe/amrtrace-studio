@@ -1,0 +1,37 @@
+name: Z17 Isolated Review Queue QA
+on:
+  push:
+    branches:
+      - qa/Z17-browser-smoke
+
+permissions:
+  contents: read
+
+jobs:
+  z17-qa:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Execute all frontend regression tests
+        run: node --test web/tests/*.test.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install Playwright Chromium
+        run: |
+          python -m pip install --disable-pip-version-check playwright==1.56.0
+          python -m playwright install --with-deps chromium
+      - name: Run isolated review-queue browser checks
+        run: python web/tests/z17_browser_smoke.py
+      - name: Upload browser QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: z17-browser-qa
+          path: artifacts/z17-browser
+          if-no-files-found: warn
+          retention-days: 7
