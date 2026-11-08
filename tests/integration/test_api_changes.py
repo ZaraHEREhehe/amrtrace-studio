@@ -223,6 +223,26 @@ def client(api_change_database):
         app.dependency_overrides.pop(get_write_connection, None)
 
 
+def test_z16_change_type_api_lists_registered_capabilities():
+    # Read-only endpoint has no DB dependency, so the fixture is not needed.
+    with TestClient(app) as test_client:
+        response = test_client.get("/changes/types")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 7
+    assert {row["type"] for row in data} == {
+        "INTERPRETATION_VERSION", "MAPPING_ADDED", "MAPPING_RETIRED",
+        "AST_CORRECTED", "GENOTYPE_CHANGED", "RULE_POLICY_REVISED",
+        "EVALUATOR_VERSION",
+    }
+    assert [row["type"] for row in data] == sorted(row["type"] for row in data)
+    for row in data:
+        assert isinstance(row["has_differ"], bool)
+        assert isinstance(row["can_derive_entities"], bool)
+        assert row["can_derive_entities"] is (row["type"] == "INTERPRETATION_VERSION")
+
+
 def test_change_routes_are_registered():
     paths = set(app.openapi()["paths"])
 
