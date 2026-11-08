@@ -227,6 +227,7 @@
             <div id="review-queue-case-summary"></div>
             <p class="muted">This decision is attached to the selected published state. If a newer state is published, the API rejects the stale review.</p>
             <form id="review-queue-review-form">
+              <fieldset id="review-queue-review-fieldset" class="review-fieldset" disabled>
               <div class="form-grid">
                 <div class="field">
                   <label for="review-queue-reviewer">Reviewer</label>
@@ -260,6 +261,7 @@
                 <button id="review-queue-submit" class="button button-primary" type="submit">Append review</button>
                 <a id="review-queue-dossier" class="button" href="#/dossier">Inspect full dossier</a>
               </div>
+              </fieldset>
             </form>
             <div id="review-queue-review-status" class="status" aria-live="polite" hidden></div>
           </section>
