@@ -3157,6 +3157,7 @@ let reviewQueueDrugsLoaded = false;
 
 function closeReviewQueueCase() {
   selectedReviewQueueCase = null;
+  byId("review-queue-review-fieldset").disabled = true;
   byId("review-queue-detail-card").hidden = true;
   hideStatus(byId("review-queue-review-status"));
 }
@@ -3270,6 +3271,8 @@ async function openReviewQueueCase(item) {
   card.hidden = false;
   setStatus(status, "loading", "Checking this case's current published state…");
   const submit = byId("review-queue-submit");
+  const fieldset = byId("review-queue-review-fieldset");
+  fieldset.disabled = true;
   submit.disabled = true;
   try {
     const current = await getCaseReviewStatus(item.case_id);
@@ -3299,6 +3302,7 @@ async function openReviewQueueCase(item) {
     }));
     byId("review-queue-review-form").reset();
     syncQueueCorrection();
+    fieldset.disabled = false;
     submit.disabled = false;
     hideStatus(status);
     card.scrollIntoView({ block: "nearest", behavior: "smooth" });
