@@ -555,6 +555,10 @@ function addChangedEntity(data = null) {
     placeholder: '{"field":"mic","intervals":[[1,2]]}',
   });
   regionField.classList.add("field-wide");
+  // Evidence rows and policy_rule nodes cannot carry a changed region.
+  // Other policy node types may still use the generic region contract.
+  regionField.hidden = type === "AST_CORRECTED" || type === "GENOTYPE_CHANGED" ||
+    (type === "RULE_POLICY_REVISED" && entity.node_type === "policy_rule");
   const actions = make("div", { className: "form-actions field-wide" });
   const remove = make("button", { className: "button", text: "Remove entity", attributes: { type: "button" } });
   remove.addEventListener("click", () => container.remove());
