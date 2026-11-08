@@ -556,6 +556,10 @@ textarea {
   min-height: 64px;
 }
 
+#change-entities-section[hidden] {
+  display: none;
+}
+
 #change-entities-section > .section-heading {
   display: flex;
   align-items: center;
