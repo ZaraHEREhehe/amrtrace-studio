@@ -12,6 +12,7 @@ from amrtrace.changes import (
     ChangedEntity,
     DuplicateChange,
     InvalidChangeEvent,
+    default_registry,
     get_change_event,
     list_change_events,
 )
@@ -95,6 +96,22 @@ def _change_not_found(change_id: str, exc: Exception) -> ApiError:
         f"Change {change_id!r} does not exist",
         {"change_id": change_id},
     )
+
+
+@router.get("/types")
+def list_change_types() -> list[dict[str, object]]:
+    """Expose supported types and *working* HTTP derivation capabilities to the UI."""
+    return [
+        {
+            "type": change_type,
+            "has_differ": default_registry.has_differ(change_type),
+            "can_derive_entities": (
+                default_registry.has_differ(change_type)
+                and change_type in VERSION_LOADERS
+            ),
+        }
+        for change_type in default_registry.change_types()
+    ]
 
 
 @router.post(
