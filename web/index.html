@@ -411,7 +411,10 @@
 
                 <div class="field">
                   <label for="change-type">Type</label>
-                  <input id="change-type" name="type" required autocomplete="off">
+                  <select id="change-type" name="type" required>
+                    <option value="">Loading registered change types…</option>
+                  </select>
+                  <small id="change-type-hint" class="muted" aria-live="polite"></small>
                 </div>
 
                 <div class="field">
@@ -430,8 +433,19 @@
                 </div>
 
                 <div class="field field-wide">
-                  <label for="changed-entities">Changed entities JSON</label>
-                  <textarea id="changed-entities" name="changed_entities" spellcheck="false">[]</textarea>
+                  <label class="check-row" for="change-derive">
+                    <input id="change-derive" name="derive_entities" type="checkbox">
+                    <span>Automatically compare stored versions</span>
+                  </label>
+                  <small id="change-derive-hint" class="muted">Available only where the API supports version loading.</small>
+                </div>
+                <div class="field field-wide" id="change-entities-section">
+                  <div class="section-heading compact">
+                    <h3>Changed entities</h3>
+                    <button id="change-add-entity" class="button" type="button">+ Add entity</button>
+                  </div>
+                  <p class="muted">Enter registered nodes and versions. Leave one version empty for added or removed entities.</p>
+                  <div id="change-entity-rows" class="change-entity-rows"></div>
                 </div>
 
                 <div class="field field-wide">
@@ -444,6 +458,7 @@
                 <button class="button button-primary" type="submit">Register change</button>
               </div>
 
+              <div id="change-form-errors" class="status status-error" role="alert" hidden></div>
               <div id="create-status" class="status" aria-live="polite" hidden></div>
             </form>
           </section>
