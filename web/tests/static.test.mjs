@@ -129,8 +129,8 @@ test("the shell has the prototype's dashboard and case explorer pages", () => {
 
 
 test("Z-17 review queue has filters, state-bound review actions, and a dossier link", () => {
-  const html = read("web/index.html");
-  const js = read("web/app.mjs");
+  const html = read("../index.html");
+  const js = read("../app.mjs");
   assert.match(html, /data-nav="review-queue"/);
   assert.match(html, /data-view="review-queue"/);
   for (const id of [
@@ -150,7 +150,7 @@ test("Z-17 review queue has filters, state-bound review actions, and a dossier l
 });
 
 test("Z-17 displays the API's review status in Explorer and Dossier", () => {
-  const js = read("web/app.mjs");
+  const js = read("../app.mjs");
   assert.match(js, /row\.review_status/);
   assert.match(js, /reviewBadge\(dossier\.review_status\)/);
   assert.match(js, /getCaseReviewStatus\(activeDossierCaseId\)/);
