@@ -179,3 +179,43 @@ test("a new entity uses only the selected type's documented default node type", 
   assert.equal(suggestedEntity("EVALUATOR_VERSION").node_type, "");
   assert.equal(changeTypeHint("NEW_CUSTOM_TYPE").label, "NEW_CUSTOM_TYPE");
 });
+
+
+test("all six manual-registration types produce valid API payload shapes", () => {
+  for (const type of [
+    "MAPPING_ADDED", "MAPPING_RETIRED", "AST_CORRECTED",
+    "GENOTYPE_CHANGED", "RULE_POLICY_REVISED", "EVALUATOR_VERSION",
+  ]) {
+    const fields = { ...base, type };
+    const node = suggestedEntity(type, "V1", "V2");
+    const entityRecord = {
+      ...node,
+      node_type: node.node_type || "case_rule_version",
+      node_id: type === "RULE_POLICY_REVISED" ? "POLICY|VALUE" : "NODE-X",
+    };
+    const payload = buildChangePayload(fields, [entityRecord]);
+    assert.equal(payload.type, type);
+    assert.equal(payload.changed_entities.length, 1);
+    assert.equal(payload.changed_entities[0].node_type, entityRecord.node_type);
+    assert.equal(payload.changed_entities[0].node_id, entityRecord.node_id);
+  }
+});
+
+test("new and retired mapping rule templates default to null on the absent version", () => {
+  const added = suggestedEntity("MAPPING_ADDED", "V1", "V2");
+  const retired = suggestedEntity("MAPPING_RETIRED", "V1", "V2");
+  assert.equal(added.old_version, "");
+  assert.equal(added.new_version, "V2");
+  assert.equal(retired.old_version, "V1");
+  assert.equal(retired.new_version, "");
+});
+
+test("API 422 unknown types and absent entities map to the selector and entity editor", () => {
+  const issues = changeValidationIssues({
+    details: { problems: [
+      "unknown change type 'UNKNOWN'; registered types: AST_CORRECTED",
+      "change type 'EVALUATOR_VERSION' has no differ, so changed_entities must declare what changed",
+    ] },
+  });
+  assert.deepEqual(issues.map((x) => x.field), ["type", "changed_entities"]);
+});
