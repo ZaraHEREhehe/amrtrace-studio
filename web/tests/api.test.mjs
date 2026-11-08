@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   ApiError,
   createChange,
+  listChangeTypes,
   createReview,
   exportUrl,
   getCase,
@@ -44,6 +45,26 @@ test("listChanges uses the same-origin API proxy", async () => {
   assert.deepEqual(result, []);
   assert.equal(seenUrl, "/api/changes?limit=25");
   assert.equal(seenOptions.method, "GET");
+});
+
+
+test("listChangeTypes reads backend registration capabilities", async () => {
+  const fakeFetch = async (url, options) => {
+    assert.equal(url, "/api/changes/types");
+    assert.equal(options.method, "GET");
+    return {
+      ok: true,
+      status: 200,
+      text: async () => JSON.stringify([
+        { type: "INTERPRETATION_VERSION", has_differ: true, can_derive_entities: true },
+        { type: "MAPPING_ADDED", has_differ: true, can_derive_entities: false },
+      ]),
+    };
+  };
+  const types = await listChangeTypes(fakeFetch);
+  assert.equal(types.length, 2);
+  assert.equal(types[0].can_derive_entities, true);
+  assert.equal(types[1].can_derive_entities, false);
 });
 
 
