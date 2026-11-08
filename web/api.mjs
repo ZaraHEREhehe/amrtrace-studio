@@ -240,6 +240,157 @@ export function getCaseDiff(
 }
 
 
+export function listPublishedReleases(fetchImpl = globalThis.fetch) {
+  return requestJson("/releases", {}, fetchImpl);
+}
+
+export async function getVerifiedExportJson(
+  releaseId,
+  expectedDigest,
+  fetchImpl = globalThis.fetch,
+  cryptoImpl = globalThis.crypto?.subtle,
+) {
+  if (typeof releaseId !== "string" || !releaseId.trim()) {
+    throw new TypeError("A release ID is required");
+  }
+
+  if (!/^[0-9a-f]{64}$/i.test(expectedDigest ?? "")) {
+    throw new TypeError("A valid snapshot hash is required");
+  }
+
+  if (!cryptoImpl || typeof cryptoImpl.digest !== "function") {
+    throw new ApiError(
+      0,
+      "crypto_unavailable",
+      "SHA-256 verification is unavailable in this browser",
+    );
+  }
+
+  let response;
+
+  try {
+    response = await fetchImpl(exportUrl(releaseId, "json"), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+  } catch (error) {
+    throw new ApiError(
+      0,
+      "network_error",
+      "Could not download the AMRTrace export",
+      { cause: String(error) },
+    );
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    let payload = null;
+
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      // HTTP errors do not always contain structured JSON.
+    }
+
+    throw new ApiError(
+      response.status,
+      payload?.error_code ?? "http_error",
+      payload?.message ?? `Request failed with status ${response.status}`,
+      payload?.details ?? null,
+    );
+  }
+
+  // Preserve the response bytes. Never parse and reserialize the JSON.
+  const buffer = await response.arrayBuffer();
+  const hashBuffer = await cryptoImpl.digest("SHA-256", buffer);
+
+  const calculatedDigest = Array.from(
+    new Uint8Array(hashBuffer),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join("");
+
+  const serverDigest = response.headers
+    ?.get("X-AMRTrace-Snapshot-SHA256")
+    ?.trim()
+    .toLowerCase();
+
+  if (
+    !/^[0-9a-f]{64}$/.test(serverDigest ?? "") ||
+    calculatedDigest !== serverDigest ||
+    calculatedDigest !== expectedDigest.toLowerCase()
+  ) {
+    throw new ApiError(
+      response.status,
+      "snapshot_hash_mismatch",
+      "Export verification failed: JSON bytes do not match the snapshot SHA-256",
+    );
+  }
+
+  return new Uint8Array(buffer);
+}
+
+export function snapshotHashFileText(digest) {
+  if (typeof digest !== "string" || !/^[0-9a-f]{64}$/i.test(digest)) {
+    throw new TypeError("A valid snapshot hash is required");
+  }
+  return `${digest.toLowerCase()}\n`;
+}
+
+export async function getSnapshotHash(
+  releaseId,
+  fetchImpl = globalThis.fetch,
+) {
+  if (typeof releaseId !== "string" || !releaseId.trim()) {
+    throw new TypeError("A release ID is required");
+  }
+
+  let response;
+
+  try {
+    response = await fetchImpl(exportUrl(releaseId, "sha256"), {
+      method: "GET",
+      headers: { Accept: "text/plain" },
+    });
+  } catch (error) {
+    throw new ApiError(
+      0,
+      "network_error",
+      "Could not reach the AMRTrace API",
+      { cause: String(error) },
+    );
+  }
+
+  if (!response.ok) {
+    const body = await response.text();
+    let payload = null;
+
+    try {
+      payload = JSON.parse(body);
+    } catch {
+      // An HTTP failure may not contain JSON.
+    }
+
+    throw new ApiError(
+      response.status,
+      payload?.error_code ?? "http_error",
+      payload?.message ?? `Request failed with status ${response.status}`,
+      payload?.details ?? null,
+    );
+  }
+
+  const digest = (await response.text()).trim().toLowerCase();
+
+  if (!/^[0-9a-f]{64}$/.test(digest)) {
+    throw new ApiError(
+      response.status,
+      "invalid_response",
+      "API returned an invalid SHA-256 hash",
+    );
+  }
+
+  return digest;
+}
+
 export function exportUrl(releaseId, format = "json") {
   if (!["json", "sha256"].includes(format)) {
     throw new TypeError(
