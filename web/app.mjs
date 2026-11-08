@@ -656,6 +656,9 @@ function showChangeFormErrors(issues) {
   for (const element of byId("change-form").querySelectorAll("[aria-invalid]")) {
     element.removeAttribute("aria-invalid");
   }
+  for (const element of byId("change-form").querySelectorAll(".change-inline-error")) {
+    element.remove();
+  }
   if (!issues.length) {
     panel.hidden = true;
     return;
@@ -664,7 +667,14 @@ function showChangeFormErrors(issues) {
   const items = make("ul");
   for (const issue of issues) {
     const target = changeFormField(issue.field);
-    if (target) target.setAttribute("aria-invalid", "true");
+    if (target) {
+      target.setAttribute("aria-invalid", "true");
+      const wrapper = target.closest(".field") ?? target.closest(".change-entity-row");
+      if (wrapper) {
+        const inline = make("small", { className: "change-inline-error", text: issue.message });
+        wrapper.append(inline);
+      }
+    }
     const item = make("li", { text: issue.message });
     items.append(item);
   }
