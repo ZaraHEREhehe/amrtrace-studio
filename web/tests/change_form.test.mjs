@@ -162,7 +162,7 @@ test("domain 422 messages retain entity indexes and diagnostics", () => {
       "new_version must be a non-empty string",
     ] },
   });
-  assert.deepEqual(issues.map((x) => x.field), ["changed_entities[0]", "new_version"]);
+  assert.deepEqual(issues.map((x) => x.field), ["changed_entities[0].new_version", "new_version"]);
   assert.match(issues[0].message, /not a registered version/);
 });
 
