@@ -48,6 +48,10 @@ test("routes round-trip and unknown routes open the dashboard", () => {
   );
 
   assert.equal(routeHash("exports"), "#/exports");
+  assert.deepEqual(parseRoute("#/review-queue/drug%3Dgentamicin"), {
+    view: "review-queue", id: "drug=gentamicin",
+  });
+  assert.equal(routeHash("review-queue"), "#/review-queue");
 });
 
 
