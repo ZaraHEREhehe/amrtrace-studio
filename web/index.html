@@ -49,6 +49,12 @@
             <span class="nav-icon" aria-hidden="true">↺</span>Runs &amp; Equivalence
           </button>
         </div>
+        <div class="nav-group">
+          <div class="nav-group-label">Tools</div>
+          <button class="nav-button" type="button" data-nav="exports">
+            <span class="nav-icon" aria-hidden="true">↓</span>Exports
+          </button>
+        </div>
       </nav>
 
       <div class="sidebar-foot">FYP F26-118 · research prototype</div>
@@ -566,6 +572,112 @@
               <div class="empty-state">
                 An exhaustive comparison shows recall, precision, reprocessing ratio, the three comparison axes and
                 the PASS/BLOCKED decision here.
+              </div>
+            </div>
+          </section>
+        </section>
+        <!-- exports: reproducible published-release snapshots -->
+        <section class="page" data-view="exports" hidden>
+          <header class="page-header">
+            <div>
+              <h2>Exports</h2>
+              <p class="muted">
+                Download reproducible case-state snapshots from published releases.
+              </p>
+            </div>
+          </header>
+
+          <div id="exports-status" class="status" aria-live="polite" hidden></div>
+
+          <div class="grid-wide-narrow stack">
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Export configuration</h3>
+              </div>
+
+              <form id="exports-form">
+                <div class="field">
+                  <label for="exports-release">Published release</label>
+                  <select id="exports-release" name="as_of_release" required disabled>
+                    <option value="">Choose a published release</option>
+                  </select>
+                </div>
+
+                <h4>Output format</h4>
+                <p>JSON - canonical case-state snapshot</p>
+                <p class="muted">
+                  Includes the latest published state of each case at or
+                  before the selected release.
+                </p>
+
+                <div class="form-actions">
+                  <button id="exports-download-hash" class="button"
+                          type="button" disabled>
+                    Download SHA-256
+                  </button>
+                  <button id="exports-download-json"
+                          class="button button-primary"
+                          type="submit" disabled>
+                    Download JSON
+                  </button>
+                </div>
+              </form>
+            </section>
+
+            <section class="card">
+              <div class="section-heading compact">
+                <h3>Snapshot verification</h3>
+              </div>
+
+              <dl class="definition-list">
+                <dt>Release</dt>
+                <dd id="exports-selected-release">Not selected</dd>
+
+                <dt>Status</dt>
+                <dd id="exports-release-status">Not loaded</dd>
+
+                <dt>SHA-256</dt>
+                <dd><code id="exports-hash">Not loaded</code></dd>
+              </dl>
+
+              <div class="form-actions">
+                <button id="exports-copy-hash" class="button"
+                        type="button" disabled>
+                  Copy hash
+                </button>
+              </div>
+
+              <div id="exports-hash-status" class="status"
+                   aria-live="polite" hidden></div>
+            </section>
+          </div>
+
+          <section class="card">
+            <div class="section-heading compact">
+              <h3>Snapshot contents</h3>
+            </div>
+
+            <div class="grid-two">
+              <div>
+                <h4>Included</h4>
+                <ul>
+                  <li>Case IDs and published case states</li>
+                  <li>Phenotype and genotype state labels</li>
+                  <li>Verification status and explanations</li>
+                  <li>Evaluator and reference database versions</li>
+                  <li>Input and output hashes</li>
+                  <li>State and release references</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4>Not included</h4>
+                <ul>
+                  <li>Raw AST or genotype evidence records</li>
+                  <li>Complete dependency graphs</li>
+                  <li>Reviewer notes and assertions</li>
+                  <li>Raw sequence files</li>
+                </ul>
               </div>
             </div>
           </section>

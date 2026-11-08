@@ -41,6 +41,13 @@ test("routes round-trip and unknown routes open the dashboard", () => {
   assert.deepEqual(parseRoute("#/runs"), { view: "runs", id: null });
   assert.deepEqual(parseRoute("#/nowhere/x"), { view: "dashboard", id: null });
   assert.deepEqual(parseRoute(""), { view: "dashboard", id: null });
+
+  assert.deepEqual(
+    parseRoute("#/exports"),
+    { view: "exports", id: null },
+  );
+
+  assert.equal(routeHash("exports"), "#/exports");
 });
 
 
