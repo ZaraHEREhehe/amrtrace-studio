@@ -1,0 +1,49 @@
+scenario: C3
+description: >
+  A source phenotype is corrected: one AST row of an isolate was entered wrongly (susceptible) and the corrected
+  version of the same row says resistant. The case that read the row is affected, and so is any other case with a
+  stored edge to that row (its declared derivatives); a repeat row of the same case that did not change does not
+  stop the case being selected. A case of the same isolate for another drug reads other rows and is not affected,
+  nor is a case of another isolate, nor a case with no evidence edges.
+authored_by: insharah
+authored_on_base_commit: 963afc609e873473e3f05dc2a5c2d16c48f8f2c9      # the commit this file was written on top of (stamp_fixtures.py)
+author_note: >
+  Expected sets are written from plan section 6 ("the case and declared derivatives"; "cases for that isolate/drug
+  depending on the changed evidence") and the over-selection principle (rule 6), not produced by running the selector.
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns them (D-10: not the selector author).
+  The author had read the current selector source; no expected set was changed to fit it.
+world:
+  cases: [C3_A_CORRECTED_ROW, C3_B_SAME_ISOLATE_OTHER_DRUG, C3_C_OTHER_ISOLATE, C3_D_NO_EDGES]
+  case_isolates: {C3_A_CORRECTED_ROW: PDT_C3_ISO1, C3_B_SAME_ISOLATE_OTHER_DRUG: PDT_C3_ISO1}
+  case_antibiotics: {C3_B_SAME_ISOLATE_OTHER_DRUG: meropenem}
+  versions:
+    - {node_type: ast_evidence, node_id: AST_C3_A1, version: EVIDENCE_V1}
+    - {node_type: ast_evidence, node_id: AST_C3_A1, version: EVIDENCE_V2}
+  edges:
+    - {case: C3_A_CORRECTED_ROW, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C3_A1}
+    - {case: C3_A_CORRECTED_ROW, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C3_A2}
+    - {case: C3_B_SAME_ISOLATE_OTHER_DRUG, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C3_B1}
+    - {case: C3_C_OTHER_ISOLATE, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C3_C1}
+evidence_versions:            # the two versions the change compares; read by the differ test, never by the selector
+  node_type: ast_evidence
+  EVIDENCE_V1:
+    - {ast_evidence_id: AST_C3_A1, phenotype: susceptible, measurement_sign: "==", mic: 16.0}
+    - {ast_evidence_id: AST_C3_A2, phenotype: resistant, measurement_sign: "==", mic: 16.0}
+    - {ast_evidence_id: AST_C3_B1, phenotype: susceptible, measurement_sign: "<=", mic: 0.25}
+    - {ast_evidence_id: AST_C3_C1, phenotype: susceptible, measurement_sign: "==", mic: 1.0}
+  EVIDENCE_V2:
+    - {ast_evidence_id: AST_C3_A1, phenotype: resistant, measurement_sign: "==", mic: 16.0}
+    - {ast_evidence_id: AST_C3_A2, phenotype: resistant, measurement_sign: "==", mic: 16.0}
+    - {ast_evidence_id: AST_C3_B1, phenotype: susceptible, measurement_sign: "<=", mic: 0.25}
+    - {ast_evidence_id: AST_C3_C1, phenotype: susceptible, measurement_sign: "==", mic: 1.0}
+change_event:
+  change_id: CHG-ORACLE-C3
+  type: AST_CORRECTED
+  old_version: EVIDENCE_V1
+  new_version: EVIDENCE_V2
+  changed_entities:
+    - {node_type: ast_evidence, node_id: AST_C3_A1, old_version: EVIDENCE_V1, new_version: EVIDENCE_V2}
+expected:
+  required_case_ids: [C3_A_CORRECTED_ROW]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [C3_B_SAME_ISOLATE_OTHER_DRUG, C3_C_OTHER_ISOLATE, C3_D_NO_EDGES]

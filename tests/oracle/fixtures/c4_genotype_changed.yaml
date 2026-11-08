@@ -1,0 +1,54 @@
+scenario: C4
+description: >
+  An isolate's determinant set changes after re-annotation: one genotype row is no longer called (removed) and
+  another is re-called with a different symbol (edited). Every case with a stored edge to either row is affected,
+  whether the row supported its state or was only evaluated. A case of the same isolate whose genotype inputs did not
+  include either row is not affected (plan section 6: "depending on the changed evidence"), nor is a case of another
+  isolate or a case with no evidence edges.
+authored_by: insharah
+authored_on_base_commit: 963afc609e873473e3f05dc2a5c2d16c48f8f2c9      # the commit this file was written on top of (stamp_fixtures.py)
+author_note: >
+  Expected sets are written from plan section 6 ("the case and declared derivatives"; "cases for that isolate/drug
+  depending on the changed evidence") and the over-selection principle (rule 6), not produced by running the selector.
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns them (D-10: not the selector author).
+  The author had read the current selector source; no expected set was changed to fit it.
+world:
+  cases: [C4_A_SUPPORTED_BY_REMOVED, C4_B_EVALUATED_EDITED, C4_C_SAME_ISOLATE_UNCHANGED_ROW, C4_D_OTHER_ISOLATE, C4_E_NO_EDGES]
+  case_isolates:
+    C4_A_SUPPORTED_BY_REMOVED: PDT_C4_ISO1
+    C4_B_EVALUATED_EDITED: PDT_C4_ISO1
+    C4_C_SAME_ISOLATE_UNCHANGED_ROW: PDT_C4_ISO1
+  case_antibiotics: {C4_B_EVALUATED_EDITED: meropenem, C4_C_SAME_ISOLATE_UNCHANGED_ROW: ciprofloxacin}
+  versions:
+    - {node_type: genotype_evidence, node_id: GEN_C4_1, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_C4_2, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_C4_2, version: EVIDENCE_V2}
+  edges:
+    - {case: C4_A_SUPPORTED_BY_REMOVED, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4_1}
+    - {case: C4_A_SUPPORTED_BY_REMOVED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4_1}
+    - {case: C4_B_EVALUATED_EDITED, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4_2}
+    - {case: C4_C_SAME_ISOLATE_UNCHANGED_ROW, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4_3}
+    - {case: C4_D_OTHER_ISOLATE, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4_9}
+evidence_versions:
+  node_type: genotype_evidence
+  EVIDENCE_V1:
+    - {genotype_evidence_id: GEN_C4_1, element_symbol: DETA, target_acc: PDT_C4_ISO1}
+    - {genotype_evidence_id: GEN_C4_2, element_symbol: DETB, target_acc: PDT_C4_ISO1}
+    - {genotype_evidence_id: GEN_C4_3, element_symbol: DETC, target_acc: PDT_C4_ISO1}
+    - {genotype_evidence_id: GEN_C4_9, element_symbol: DETA, target_acc: PDT_C4_D_OTHER_ISOLATE}
+  EVIDENCE_V2:
+    - {genotype_evidence_id: GEN_C4_2, element_symbol: DETB2, target_acc: PDT_C4_ISO1}
+    - {genotype_evidence_id: GEN_C4_3, element_symbol: DETC, target_acc: PDT_C4_ISO1}
+    - {genotype_evidence_id: GEN_C4_9, element_symbol: DETA, target_acc: PDT_C4_D_OTHER_ISOLATE}
+change_event:
+  change_id: CHG-ORACLE-C4
+  type: GENOTYPE_CHANGED
+  old_version: EVIDENCE_V1
+  new_version: EVIDENCE_V2
+  changed_entities:
+    - {node_type: genotype_evidence, node_id: GEN_C4_1, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_C4_2, old_version: EVIDENCE_V1, new_version: EVIDENCE_V2}
+expected:
+  required_case_ids: [C4_A_SUPPORTED_BY_REMOVED, C4_B_EVALUATED_EDITED]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [C4_C_SAME_ISOLATE_UNCHANGED_ROW, C4_D_OTHER_ISOLATE, C4_E_NO_EDGES]

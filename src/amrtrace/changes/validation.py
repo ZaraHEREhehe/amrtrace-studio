@@ -96,6 +96,13 @@ def validate_shape(event: ChangeEvent, registry: ChangeTypeRegistry = default_re
             problems.append(f"{label}: duplicate of an earlier entity")
         seen.add(key)
 
+    # a differ may add checks of its own on the entities its type can name (for example: only evidence rows);
+    # the check belongs to the differ, so this module still knows nothing about any particular type
+    if entities and type_known:
+        check = getattr(registry.get_differ(event.type), "validate_entities", None)
+        if callable(check):
+            problems.extend(check(event))
+
     return problems[:MAX_PROBLEMS]
 
 
