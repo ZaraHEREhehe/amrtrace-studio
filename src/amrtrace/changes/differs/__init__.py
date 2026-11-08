@@ -13,6 +13,16 @@ from .evidence import (
     parse_evidence_set,
 )
 from .interpretation import InterpretationTableDiffer
+from .policy import (
+    POLICY_RULE_NODE_TYPE,
+    PolicyRule,
+    RulePolicyComparison,
+    RulePolicyDiffer,
+    RulePolicySet,
+    compare_rule_policies,
+    parse_rule_policy,
+    policy_rule_key,
+)
 from .mapping import (
     MappingAddedDiffer,
     MappingComparison,
@@ -33,6 +43,7 @@ def register_default_differs(registry) -> None:
         MappingRetiredDiffer(),
         AstCorrectedDiffer(),
         GenotypeChangedDiffer(),
+        RulePolicyDiffer(),
     ):
         if not registry.has_differ(differ.change_type):
             registry.register_differ(differ)
