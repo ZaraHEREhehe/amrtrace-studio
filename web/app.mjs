@@ -3,6 +3,7 @@ import {
   createChange,
   createReview,
   exportUrl,
+  listPublishedReleases,
   getCase,
   getCaseDependencies,
   getCaseDiff,
@@ -13,6 +14,9 @@ import {
   getRun,
   getRunEquivalence,
   getSummary,
+  getSnapshotHash,
+  snapshotHashFileText,
+  getVerifiedExportJson,
   listCases,
   listChanges,
   listRuns,
@@ -2177,6 +2181,277 @@ async function submitDossierReview(event) {
 }
 
 
+let exportsLoadToken = 0;
+let exportsHashToken = 0;
+
+
+function syncExportSelection() {
+  ++exportsHashToken;
+  const releaseId = byId("exports-release").value;
+
+  byId("exports-selected-release").textContent =
+    releaseId || "Not selected";
+  byId("exports-release-status").textContent =
+    releaseId ? "Published" : "Not loaded";
+  byId("exports-hash").textContent = "Not loaded";
+
+  hideStatus(byId("exports-hash-status"));
+
+  // Require a fresh hash before enabling export actions.
+  byId("exports-download-json").disabled = true;
+  byId("exports-download-hash").disabled = true;
+  byId("exports-copy-hash").disabled = true;
+}
+
+
+async function loadExportHash() {
+  const releaseId = byId("exports-release").value;
+  const token = exportsHashToken;
+
+  if (!releaseId) {
+    return;
+  }
+
+  const status = byId("exports-hash-status");
+  setStatus(status, "loading", "Loading snapshot hash…");
+
+  try {
+    const digest = await getSnapshotHash(releaseId);
+
+    if (token !== exportsHashToken ||
+        byId("exports-release").value !== releaseId) {
+      return;
+    }
+
+    byId("exports-hash").textContent = digest;
+    byId("exports-copy-hash").disabled = false;
+    byId("exports-download-hash").disabled = false;
+    byId("exports-download-json").disabled = false;
+    hideStatus(status);
+  } catch (error) {
+    if (token !== exportsHashToken) {
+      return;
+    }
+
+    setStatus(status, "error", errorText(error));
+  }
+}
+
+
+async function copyExportHash() {
+  const digest = byId("exports-hash").textContent;
+  const token = exportsHashToken;
+  const status = byId("exports-hash-status");
+
+  if (!/^[0-9a-f]{64}$/.test(digest)) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(digest);
+
+    if (token === exportsHashToken) {
+      setStatus(status, "success", "Snapshot hash copied.");
+    }
+  } catch {
+    if (token === exportsHashToken) {
+      setStatus(
+        status,
+        "error",
+        "Could not copy automatically. Select and copy the displayed hash.",
+      );
+    }
+  }
+}
+
+function saveExportJson(bytes, releaseId) {
+  const safeId = releaseId
+    .replace(/[^A-Za-z0-9._-]/g, "_")
+    .slice(0, 80);
+
+  const blob = new Blob(
+    [bytes],
+    { type: "application/json" },
+  );
+
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = objectUrl;
+  link.download = `amrtrace-${safeId}.json`;
+  link.hidden = true;
+  document.body.append(link);
+
+  try {
+    link.click();
+  } finally {
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+}
+
+
+async function submitExportSnapshot(event) {
+  event.preventDefault();
+
+  const releaseId = byId("exports-release").value;
+  const expectedDigest = byId("exports-hash").textContent;
+  const token = exportsHashToken;
+  const status = byId("exports-hash-status");
+  const button = byId("exports-download-json");
+
+  if (!releaseId || !/^[0-9a-f]{64}$/.test(expectedDigest)) {
+    setStatus(status, "error", "Select a release and load its hash first.");
+    return;
+  }
+
+  button.disabled = true;
+  setStatus(status, "loading", "Downloading and verifying JSON snapshot…");
+
+  try {
+    const bytes = await getVerifiedExportJson(
+      releaseId,
+      expectedDigest,
+    );
+
+    if (
+      token !== exportsHashToken ||
+      byId("exports-release").value !== releaseId
+    ) {
+      return;
+    }
+
+    saveExportJson(bytes, releaseId);
+    setStatus(
+      status,
+      "success",
+      `SHA-256 verified. Download started for ${releaseId}.`,
+    );
+  } catch (error) {
+    if (token === exportsHashToken) {
+      setStatus(status, "error", errorText(error));
+    }
+  } finally {
+    if (
+      token === exportsHashToken &&
+      byId("exports-release").value === releaseId
+    ) {
+      button.disabled = false;
+    }
+  }
+}
+
+function downloadExportHash() {
+  const releaseId = byId("exports-release").value;
+  const digest = byId("exports-hash").textContent;
+  const status = byId("exports-hash-status");
+
+  if (!releaseId || !/^[0-9a-f]{64}$/.test(digest)) {
+    setStatus(status, "error", "Select a release and load its hash first.");
+    return;
+  }
+
+  const safeId = releaseId
+    .replace(/[^A-Za-z0-9._-]/g, "_")
+    .slice(0, 80);
+
+  // The API's SHA-256 text endpoint returns the digest plus one newline.
+  // A blob URL lets the browser honor the release-specific filename.
+  const blob = new Blob(
+    [snapshotHashFileText(digest)],
+    { type: "text/plain;charset=utf-8" },
+  );
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = `amrtrace-${safeId}.sha256`;
+  link.hidden = true;
+  document.body.append(link);
+
+  try {
+    link.click();
+  } finally {
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+}
+
+async function loadExports() {
+  const token = ++exportsLoadToken;
+  const selector = byId("exports-release");
+  const status = byId("exports-status");
+  const previousId = selector.value;
+
+  selector.disabled = true;
+  setStatus(status, "loading", "Loading published releases…");
+
+  try {
+    const releases = await listPublishedReleases();
+
+    if (token !== exportsLoadToken) {
+      return;
+    }
+
+    if (!Array.isArray(releases)) {
+      throw new Error("Invalid published-release response");
+    }
+
+    const ordered = [...releases].sort(
+      (a, b) => b.release_seq - a.release_seq,
+    );
+
+    clear(selector);
+    selector.append(
+      make("option", {
+        text: "Choose a published release",
+        attributes: { value: "" },
+      }),
+    );
+
+    for (const release of ordered) {
+      selector.append(
+        make("option", {
+          text: `${release.release_id} — Published`,
+          attributes: { value: release.release_id },
+        }),
+      );
+    }
+
+    if (ordered.length === 0) {
+      selector.value = "";
+      syncExportSelection();
+      status.className = "status";
+      status.textContent = "No published releases are available.";
+      status.hidden = false;
+      return;
+    }
+
+    selector.disabled = false;
+    selector.value = ordered.some(
+      (release) => release.release_id === previousId,
+    ) ? previousId : ordered[0].release_id;
+
+    syncExportSelection();
+    hideStatus(status);
+    void loadExportHash();
+  } catch (error) {
+    if (token !== exportsLoadToken) {
+      return;
+    }
+
+    clear(selector);
+    selector.append(
+      make("option", {
+        text: "Choose a published release",
+        attributes: { value: "" },
+      }),
+    );
+    selector.disabled = true;
+    syncExportSelection();
+    setStatus(status, "error", errorText(error));
+  }
+}
+
 function activateView(name) {
   for (const section of document.querySelectorAll("[data-view]")) {
     section.hidden = section.dataset.view !== name;
@@ -2208,6 +2483,11 @@ function bindNavigation() {
 async function applyRoute() {
   const { view, id } = parseRoute(window.location.hash);
   activateView(view);
+
+  if (view === "exports") {
+    await loadExports();
+    return;
+  }
 
   if (view === "dashboard") {
     await loadDashboard();
@@ -2687,6 +2967,16 @@ function boot() {
   byId("dossier-review-action").addEventListener("change", syncReviewCorrection);
   byId("explorer-form").addEventListener("submit", submitExplorer);
   byId("topbar-search").addEventListener("submit", submitTopbarSearch);
+  byId("exports-form").addEventListener("submit", submitExportSnapshot);
+  byId("exports-download-hash").addEventListener("click", downloadExportHash);
+  byId("exports-release").addEventListener("change", () => {
+    syncExportSelection();
+    void loadExportHash();
+  });
+  byId("exports-copy-hash").addEventListener(
+    "click",
+    () => void copyExportHash(),
+  );
 
   syncGateControl();
   syncReviewCorrection();

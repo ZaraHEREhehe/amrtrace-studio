@@ -947,7 +947,7 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | 56 | I-18 | Insharah | TODO | | |
 | 57 | I-19 | Insharah | TODO | | |
 | 58 | I-17 | Insharah | TODO | | Should |
-| 59 | Z-21 | Zara | TODO | | |
+| 59 | Z-21 | Zara | IN-REVIEW | Closes #125 | Published-release Exports UI with SHA-256 verified JSON, release-specific hash downloads, and frontend/API tests. Browser JSON exports for R1-R4 matched API byte for byte; automated regression passed (957 tests before final cleanup). Manual mobile/offline/interaction QA deferred. |
 | 60 | Z-16 | Zara | TODO | | |
 | 61 | Z-17 | Zara | TODO | | |
 | 62 | Z-18 | Zara | TODO | | |
