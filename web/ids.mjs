@@ -4,7 +4,7 @@ const CASE_PREFIX = "CASE_";
 // twelve hex characters, like a git short hash, are unique across the whole cohort
 const SHORT_HASH = 12;
 // the views that can be opened straight from a link, and what kind of id each one takes
-export const ROUTED_VIEWS = ["dashboard", "explorer", "changes", "dependencies", "runs", "dossier", "exports"];
+export const ROUTED_VIEWS = ["dashboard", "explorer", "changes", "dependencies", "runs", "dossier", "exports", "review-queue"];
 
 
 // CASE_ plus the first twelve hash characters, with an ellipsis when something was cut
