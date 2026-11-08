@@ -160,7 +160,7 @@ def main():
             page.locator("#review-queue-state").select_option("CONCORDANT_RESISTANT")
             page.locator('#review-queue-filters button[type="submit"]').click()
             expect(page.locator("#review-queue-results tbody tr")).to_have_count(1)
-            assert "PDT-QA-2" in page.locator("#review-queue-results").inner_text()
+            expect(page.locator("#review-queue-results")).to_contain_text("PDT-QA-2")
             print("PASS: State filtering")
 
             page.locator("#review-queue-state").select_option("")
