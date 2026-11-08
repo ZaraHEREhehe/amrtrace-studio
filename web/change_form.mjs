@@ -66,8 +66,10 @@ export function suggestedEntity(type, oldVersion = "", newVersion = "") {
   return {
     node_type: changeTypeHint(type).nodeType,
     node_id: "",
-    old_version: oldVersion,
-    new_version: newVersion,
+    // New rules do not have an old entity version; retired rules have no new one.
+    // The user can still fill both when a mapping rule was edited in place.
+    old_version: type === "MAPPING_ADDED" ? "" : oldVersion,
+    new_version: type === "MAPPING_RETIRED" ? "" : newVersion,
     changed_region: "",
   };
 }
