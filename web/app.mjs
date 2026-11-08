@@ -729,9 +729,14 @@ async function submitChange(event) {
     const issues = error instanceof ChangeFormError
       ? [{ field: error.field, message: error.message }]
       : changeValidationIssues(error);
-    if (issues.length) showChangeFormErrors(issues);
+    if (issues.length) {
+      showChangeFormErrors(issues);
+    } else if (error instanceof ApiError && error.status === 422) {
+      // Unknown domain error shapes still show the original server reason.
+      showChangeFormErrors([{ field: "form", message: errorText(error) }]);
+    }
     setStatus(status, "error", error instanceof ApiError && error.status === 422
-      ? "Change rejected by API (422). See the validation details above."
+      ? "Change rejected by API (422). Check the reason below."
       : errorText(error));
   } finally {
     submit.disabled = false;
@@ -2820,6 +2825,7 @@ function toggleChangeForm() {
   button.textContent = card.hidden ? "+ Register new change" : "× Close form";
 
   if (!card.hidden) {
+    if (!availableChangeTypes.length) void loadChangeTypes();
     byId("change-id").focus();
   }
 }
@@ -2831,10 +2837,20 @@ function boot() {
   byId("change-form").addEventListener("submit", submitChange);
   byId("change-type").addEventListener("change", () => {
     byId("change-entity-rows").replaceChildren();
+    const type = byId("change-type").value;
+    byId("change-derive").checked = Boolean(
+      availableChangeTypes.find((item) => item.type === type)?.can_derive_entities,
+    );
     updateChangeTypeForm();
-    if (!byId("change-derive").checked && byId("change-type").value) addChangedEntity();
+    if (!byId("change-derive").checked && type) addChangedEntity();
   });
-  byId("change-derive").addEventListener("change", updateChangeTypeForm);
+  byId("change-derive").addEventListener("change", () => {
+    updateChangeTypeForm();
+    if (!byId("change-derive").checked && byId("change-type").value &&
+        !byId("change-entity-rows").children.length) {
+      addChangedEntity();
+    }
+  });
   byId("change-add-entity").addEventListener("click", () => addChangedEntity());
   void loadChangeTypes();
 
