@@ -156,7 +156,7 @@ def main() -> None:
             page = context.new_page()
             page.route("**/api/**", intercepted_api)
             page.on("pageerror", lambda exc: page_errors.append(str(exc)))
-            page.goto(base_url + "/#/changes", wait_until="domcontentloaded")
+            page.goto(base_url + "/index.html#/changes", wait_until="domcontentloaded")
             page.wait_for_function(
                 "document.querySelectorAll('#change-type option').length === 8",
                 timeout=15000,
