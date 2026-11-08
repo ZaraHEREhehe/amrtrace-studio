@@ -556,6 +556,10 @@ textarea {
   min-height: 64px;
 }
 
+.change-entity-row .field[hidden] {
+  display: none;
+}
+
 #change-entities-section[hidden] {
   display: none;
 }
