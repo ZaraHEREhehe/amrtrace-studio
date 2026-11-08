@@ -173,7 +173,9 @@ export function changeValidationIssues(error) {
         return { field: entityMatch[1], message: entityMatch[2] };
       }
       const basic = ["change_id", "initiator", "type", "old_version", "new_version", "declared_scope", "changed_entities"];
-      const field = basic.find((key) => value.startsWith(key + " ") || value.startsWith(key + ":")) ?? "form";
+      const field = value.startsWith("unknown change type") ? "type"
+        : value.startsWith("change type") && value.includes("changed_entities") ? "changed_entities"
+        : basic.find((key) => value.startsWith(key + " ") || value.startsWith(key + ":")) ?? "form";
       return { field, message: value };
     });
   }
