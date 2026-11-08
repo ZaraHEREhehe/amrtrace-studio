@@ -3157,6 +3157,8 @@ let reviewQueueDrugsLoaded = false;
 
 function closeReviewQueueCase() {
   selectedReviewQueueCase = null;
+  byId("review-queue-dossier").hidden = true;
+  byId("review-queue-dossier").removeAttribute("href");
   byId("review-queue-review-fieldset").disabled = true;
   byId("review-queue-detail-card").hidden = true;
   hideStatus(byId("review-queue-review-status"));
@@ -3208,6 +3210,14 @@ async function loadReviewQueue(filters, offset = 0) {
     const raw = await listReviewQueue(reviewQueuePath(filters, offset));
     if (token !== reviewQueueRequestToken) return;
     const page = reviewPageInfo(raw);
+    // The last item on a page may have just been reviewed; go back to the
+    // newest valid page instead of showing a misleading empty queue.
+    if (page.total > 0 && offset >= page.total) {
+      return loadReviewQueue(
+        filters,
+        Math.floor((page.total - 1) / REVIEW_PAGE_SIZE) * REVIEW_PAGE_SIZE,
+      );
+    }
     clear(results);
     clear(pager);
 
@@ -3253,12 +3263,14 @@ async function loadReviewQueue(filters, offset = 0) {
     buttons.append(previous, next);
     pager.append(buttons);
     hideStatus(status);
+    return true;
   } catch (error) {
     if (token === reviewQueueRequestToken) {
       clear(results);
       clear(pager);
       setStatus(status, "error", errorText(error));
     }
+    return false;
   }
 }
 
@@ -3289,6 +3301,7 @@ async function openReviewQueueCase(item) {
       release_id: current.release_id,
     };
     byId("review-queue-dossier").href = routeHash("dossier", item.case_id);
+    byId("review-queue-dossier").hidden = false;
     const summary = byId("review-queue-case-summary");
     clear(summary);
     summary.append(definitionList({
@@ -3343,11 +3356,29 @@ async function submitQueueReview(event) {
       throw new Error("Unexpected review response: the reviewed state did not match.");
     }
     selectedReviewQueueCase = null;
+    byId("review-queue-review-fieldset").disabled = true;
     byId("review-queue-detail-card").hidden = true;
-    // Always re-read the queue after writing, since the reviewed case should leave it.
-    await loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset);
-    setStatus(byId("review-queue-status"), "success",
-      "Review #" + created.review_id + " appended. The stored case state was not edited.");
+
+    // I-18 requires reading the *new* review status after an append. If
+    // that read fails, report the successful write without implying failure.
+    let currentStatusLabel = null;
+    try {
+      const updated = await getCaseReviewStatus(target.case_id);
+      currentStatusLabel = updated.state_id === target.state_id
+        ? reviewStatusMeta(updated.review_status).label
+        : "new published state — review again if needed";
+    } catch {
+      // A follow-up GET failure must never make an append look unsuccessful.
+    }
+
+    // Re-read the queue; it should no longer contain the reviewed case.
+    const reloaded = await loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset);
+    const message = "Review #" + created.review_id + " appended. " +
+      (currentStatusLabel ? "Current status: " + currentStatusLabel + ". " :
+        "Status could not be refreshed. ") +
+      "The stored case state was not edited.";
+    setStatus(byId("review-queue-status"), reloaded ? "success" : "error",
+      reloaded ? message : message + " Queue refresh failed; press Refresh to retry.");
   } catch (error) {
     setStatus(status, "error", errorText(error));
   } finally {
