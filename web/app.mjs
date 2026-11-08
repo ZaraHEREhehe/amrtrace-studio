@@ -1701,7 +1701,12 @@ function renderDossierOverview(dossier, history = []) {
   );
 
   titleBlock.append(title, idLine);
-  titleBlock.append(make("p", { className: "muted", text: "Label review status (current published state)" }), reviewBadge(dossier.review_status));
+  const currentReviewBadge = make("span", { attributes: { id: "dossier-current-review-status" } });
+  currentReviewBadge.append(reviewBadge(dossier.review_status));
+  titleBlock.append(
+    make("p", { className: "muted", text: "Label review status (current published state)" }),
+    currentReviewBadge,
+  );
 
   const actions = make("div", { className: "page-actions" });
   actions.append(
@@ -2350,6 +2355,19 @@ async function submitDossierReview(event) {
     );
 
     renderDossierReviews(reviews);
+    // Keep the dossier's I-18 status badge current after a successful review.
+    // The append already succeeded, so a status refresh failure must not turn
+    // this into a misleading "review failed" message.
+    try {
+      const currentStatus = await getCaseReviewStatus(activeDossierCaseId);
+      if (currentStatus.state_id === activeDossierStateId) {
+        byId("dossier-current-review-status").replaceChildren(
+          reviewBadge(currentStatus.review_status),
+        );
+      }
+    } catch {
+      // The next dossier load will obtain the fresh status.
+    }
 
     setStatus(
       status,
@@ -3409,7 +3427,10 @@ function boot() {
   byId("explorer-form").addEventListener("submit", submitExplorer);
   byId("review-queue-filters").addEventListener("submit", submitReviewQueueFilters);
   byId("review-queue-refresh").addEventListener("click", () => void loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset));
-  byId("review-queue-close").addEventListener("click", closeReviewQueueCase);
+  byId("review-queue-close").addEventListener("click", () => {
+    ++reviewQueueRequestToken;
+    closeReviewQueueCase();
+  });
   byId("review-queue-action").addEventListener("change", syncQueueCorrection);
   byId("review-queue-review-form").addEventListener("submit", submitQueueReview);
   byId("topbar-search").addEventListener("submit", submitTopbarSearch);
