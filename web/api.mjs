@@ -83,6 +83,11 @@ export function listChanges(limit = 100, fetchImpl = globalThis.fetch) {
 }
 
 
+export function listChangeTypes(fetchImpl = globalThis.fetch) {
+  return requestJson("/changes/types", {}, fetchImpl);
+}
+
+
 export function createChange(payload, fetchImpl = globalThis.fetch) {
   return requestJson(
     "/changes",

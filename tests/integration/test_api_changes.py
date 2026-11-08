@@ -223,6 +223,26 @@ def client(api_change_database):
         app.dependency_overrides.pop(get_write_connection, None)
 
 
+def test_z16_change_type_api_lists_registered_capabilities():
+    # Read-only endpoint has no DB dependency, so the fixture is not needed.
+    with TestClient(app) as test_client:
+        response = test_client.get("/changes/types")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data) == 7
+    assert {row["type"] for row in data} == {
+        "INTERPRETATION_VERSION", "MAPPING_ADDED", "MAPPING_RETIRED",
+        "AST_CORRECTED", "GENOTYPE_CHANGED", "RULE_POLICY_REVISED",
+        "EVALUATOR_VERSION",
+    }
+    assert [row["type"] for row in data] == sorted(row["type"] for row in data)
+    for row in data:
+        assert isinstance(row["has_differ"], bool)
+        assert isinstance(row["can_derive_entities"], bool)
+        assert row["can_derive_entities"] is (row["type"] == "INTERPRETATION_VERSION")
+
+
 def test_change_routes_are_registered():
     paths = set(app.openapi()["paths"])
 
@@ -438,3 +458,115 @@ def test_interpretation_change_can_derive_entities_from_versions(client):
         item["case_id"]
         for item in body["impact"]["items"]
     ] == ["CASE_C"]
+
+
+@pytest.mark.parametrize(
+    ("change_type", "node_type", "node_id"),
+    [
+        ("MAPPING_ADDED", "mapping_rule", "RULE-X"),
+        ("MAPPING_RETIRED", "mapping_rule", "RULE-X"),
+        ("AST_CORRECTED", "ast_evidence", "AST-Z16"),
+        ("GENOTYPE_CHANGED", "genotype_evidence", "GENO-Z16"),
+        ("RULE_POLICY_REVISED", "policy_rule", "POLICY|VALUE"),
+        ("EVALUATOR_VERSION", "case_rule_version", "EVAL-Z16"),
+    ],
+)
+def test_z16_manual_entity_registration_per_type(
+    client, api_change_database, change_type, node_type, node_id,
+):
+    """Every manual form type must be accepted and create an impact set.
+
+    All version IDs, evidence nodes and cases here are synthetic and live in
+    the test transaction; the test never writes to the restored cohort.
+    """
+    if node_type == "mapping_rule":
+        # RULE-X/V1 already exists in the fixture.
+        register_version(api_change_database, node_type, node_id, "V2")
+    else:
+        register_version(api_change_database, node_type, node_id, "V1")
+        register_version(api_change_database, node_type, node_id, "V2")
+        api_change_database.execute(
+            """
+            INSERT INTO dependency (
+                case_id, release_id, dep_type, edge_type,
+                node_type, node_id, node_version, node_context
+            ) VALUES (
+                'CASE_A', 'REL_API', 'input_evidence', 'derived_from',
+                %s, %s, 'V1', NULL
+            )
+            """,
+            (node_type, node_id),
+        )
+
+    event_id = "CHG-Z16-" + change_type
+    payload = {
+        "change_id": event_id,
+        "type": change_type,
+        "old_version": "V1",
+        "new_version": "V2",
+        "initiator": "z16-test",
+        "changed_entities": [
+            {
+                "node_type": node_type,
+                "node_id": node_id,
+                "old_version": "V1",
+                "new_version": "V2",
+                "changed_region": None,
+            },
+        ],
+        "declared_scope": {},
+    }
+    result = client.post("/changes", json=payload)
+    assert result.status_code == 201, result.text
+    body = result.json()
+    assert body["event"]["type"] == change_type
+    assert body["event"]["change_id"] == event_id
+    assert body["entities_derived"] is False
+    assert body["impact"]["level2_size"] >= 1
+
+    stored = client.get(f"/changes/{event_id}")
+    assert stored.status_code == 200
+    assert stored.json()["changed_entities"] == payload["changed_entities"]
+
+
+@pytest.mark.parametrize(
+    ("change_type", "node_type"),
+    [
+        ("AST_CORRECTED", "genotype_evidence"),
+        ("GENOTYPE_CHANGED", "ast_evidence"),
+    ],
+)
+def test_z16_evidence_type_mismatch_is_422_and_atomic(
+    client, api_change_database, change_type, node_type,
+):
+    register_version(api_change_database, node_type, "WRONG-NODE", "V1")
+    event_id = "CHG-Z16-INVALID-" + change_type
+    response = client.post(
+        "/changes",
+        json={
+            "change_id": event_id,
+            "type": change_type,
+            "old_version": "V1",
+            "new_version": "V2",
+            "initiator": "z16-test",
+            "changed_entities": [{
+                "node_type": node_type,
+                "node_id": "WRONG-NODE",
+                "old_version": "V1",
+                "new_version": None,
+                "changed_region": None,
+            }],
+        },
+    )
+    assert response.status_code == 422
+    data = response.json()
+    assert data["error_code"] == "invalid_change_event"
+    assert any("changed_entities[0]" in p for p in data["details"]["problems"])
+    assert api_change_database.execute(
+        "SELECT count(*) FROM change_event WHERE change_id = %s",
+        (event_id,),
+    ).fetchone()[0] == 0
+    assert api_change_database.execute(
+        "SELECT count(*) FROM impact_set WHERE change_id = %s",
+        (event_id,),
+    ).fetchone()[0] == 0

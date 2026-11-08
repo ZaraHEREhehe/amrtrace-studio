@@ -19,6 +19,7 @@ import {
   getVerifiedExportJson,
   listCases,
   listChanges,
+  listChangeTypes,
   listRuns,
   resolveCase,
   searchCases,
@@ -53,6 +54,14 @@ import {
   stateMeta,
   versionVectorEntries,
 } from "./view_meta.mjs";
+
+import {
+  ChangeFormError,
+  buildChangePayload,
+  changeTypeHint,
+  changeValidationIssues,
+  suggestedEntity,
+} from "./change_form.mjs";
 
 import {
   decisionLabel,
@@ -504,89 +513,257 @@ async function loadChangeDetail(changeId) {
 }
 
 
-function parseJsonField(raw, fallback, label) {
-  const trimmed = raw.trim();
 
-  if (!trimmed) {
-    return fallback;
+// Z-16: the backend decides which change types and automatic loaders exist.
+let availableChangeTypes = [];
+let changeFormLoading = null;
+let changedEntitySequence = 0;
+
+function changeField(labelText, key, value = "", options = {}) {
+  const id = "change-entity-" + (++changedEntitySequence);
+  const field = make("div", { className: "field" });
+  const label = make("label", { text: labelText, attributes: { for: id } });
+  const input = make(options.multiline ? "textarea" : "input", {
+    attributes: { id, "data-entity-field": key, autocomplete: "off" },
+  });
+  input.value = value;
+  if (options.placeholder) input.placeholder = options.placeholder;
+  field.append(label, input);
+  return field;
+}
+
+function addChangedEntity(data = null) {
+  const type = byId("change-type").value;
+  const hint = changeTypeHint(type);
+  const entity = data ?? suggestedEntity(
+    type,
+    byId("old-version").value.trim(),
+    byId("new-version").value.trim(),
+  );
+  const container = make("fieldset", { className: "change-entity-row" });
+  const legend = make("legend", { text: "Affected entity" });
+  container.append(legend);
+  const fields = make("div", { className: "form-grid" });
+  const kindField = changeField("Node type", "node_type", entity.node_type, {
+    placeholder: "e.g. mapping_rule",
+  });
+  const kindInput = kindField.querySelector("input");
+  kindInput.readOnly = Boolean(hint.lockNodeType);
+  const idField = changeField("Registered node ID", "node_id", entity.node_id, {
+    placeholder: "Exact registered ID",
+  });
+  const oldField = changeField("Entity old version (blank = added)", "old_version", entity.old_version ?? "");
+  const newField = changeField("Entity new version (blank = retired)", "new_version", entity.new_version ?? "");
+  // Keep untouched entity versions in sync when the user enters event versions
+  // after choosing a type. Explicitly cleared/edited entity versions stay intact.
+  for (const [field, autoFill] of [
+    [oldField, data === null && type !== "MAPPING_ADDED"],
+    [newField, data === null && type !== "MAPPING_RETIRED"],
+  ]) {
+    const control = field.querySelector("input");
+    control.dataset.autoFill = String(autoFill);
+    control.addEventListener("input", () => { control.dataset.autoFill = "false"; });
   }
+  const regionField = changeField("Changed region JSON (optional)", "changed_region", entity.changed_region ?? "", {
+    multiline: true,
+    placeholder: '{"field":"mic","intervals":[[1,2]]}',
+  });
+  regionField.classList.add("field-wide");
+  // Evidence rows cannot carry a changed region. Policy declarations can
+  // use other node types, so keep their advanced region field available.
+  regionField.hidden = type === "AST_CORRECTED" || type === "GENOTYPE_CHANGED";
+  const actions = make("div", { className: "form-actions field-wide" });
+  const remove = make("button", { className: "button", text: "Remove entity", attributes: { type: "button" } });
+  remove.addEventListener("click", () => container.remove());
+  actions.append(remove);
+  fields.append(kindField, idField, oldField, newField, regionField, actions);
+  container.append(fields);
+  byId("change-entity-rows").append(container);
+  return container;
+}
 
-  try {
-    return JSON.parse(trimmed);
-  } catch (error) {
-    throw new Error(`${label} must be valid JSON: ${error.message}`);
+function syncChangedEntityVersions(entityField, eventFieldId) {
+  const version = byId(eventFieldId).value.trim();
+  for (const row of byId("change-entity-rows").querySelectorAll(".change-entity-row")) {
+    const input = row.querySelector('[data-entity-field="' + entityField + '"]');
+    if (input?.dataset.autoFill === "true") input.value = version;
   }
 }
 
+function collectChangedEntities() {
+  return [...byId("change-entity-rows").querySelectorAll(".change-entity-row")].map((row) => {
+    const result = {};
+    for (const el of row.querySelectorAll("[data-entity-field]")) {
+      result[el.dataset.entityField] = el.value;
+    }
+    return result;
+  });
+}
+
+function updateChangeTypeForm() {
+  const type = byId("change-type").value;
+  const meta = availableChangeTypes.find((item) => item.type === type);
+  const canDerive = Boolean(meta?.can_derive_entities);
+  const derive = byId("change-derive");
+  derive.disabled = !canDerive;
+  if (!canDerive) derive.checked = false;
+  // Prefer version derivation when it is genuinely available.
+  byId("change-derive-hint").textContent = canDerive
+    ? "The API will compare registered old/new versions for you."
+    : "This type needs one or more explicitly declared, registered entities.";
+  byId("change-type-hint").textContent = type ? changeTypeHint(type).description : "";
+  const entitySection = byId("change-entities-section");
+  entitySection.hidden = derive.checked;
+  if (type) {
+    for (const row of byId("change-entity-rows").querySelectorAll(".change-entity-row")) {
+      const kind = row.querySelector('[data-entity-field="node_type"]');
+      const oldHint = changeTypeHint(type);
+      if (oldHint.lockNodeType) kind.value = oldHint.nodeType;
+      kind.readOnly = Boolean(oldHint.lockNodeType);
+    }
+  }
+}
+
+async function loadChangeTypes() {
+  const select = byId("change-type");
+  if (changeFormLoading) return changeFormLoading;
+  changeFormLoading = (async () => {
+    try {
+      const types = await listChangeTypes();
+      if (!Array.isArray(types) || !types.every((item) => typeof item.type === "string")) {
+        throw new Error("The API returned an invalid change type list.");
+      }
+      availableChangeTypes = types;
+      const prior = select.value;
+      select.replaceChildren(make("option", {
+        text: "Choose a change type",
+        attributes: { value: "" },
+      }));
+      for (const item of types) {
+        select.append(make("option", {
+          text: changeTypeHint(item.type).label,
+          attributes: { value: item.type },
+        }));
+      }
+      if (types.some((item) => item.type === prior)) select.value = prior;
+      updateChangeTypeForm();
+    } catch (error) {
+      setStatus(byId("create-status"), "error", "Cannot load change types: " + errorText(error));
+      select.replaceChildren(make("option", { text: "Change types unavailable", attributes: { value: "" } }));
+    } finally {
+      changeFormLoading = null;
+    }
+  })();
+  return changeFormLoading;
+}
+
+function changeFormField(field) {
+  const basic = {
+    change_id: byId("change-id"),
+    type: byId("change-type"),
+    old_version: byId("old-version"),
+    new_version: byId("new-version"),
+    initiator: byId("initiator"),
+    declared_scope: byId("declared-scope"),
+    changed_entities: byId("change-add-entity"),
+  };
+  const match = field.match(/^changed_entities\[(\d+)\](?:\.(\w+))?/);
+  if (match) {
+    const row = byId("change-entity-rows").querySelectorAll(".change-entity-row")[Number(match[1])];
+    return row?.querySelector(match[2] ? '[data-entity-field="' + match[2] + '"]' : '[data-entity-field="node_id"]') ?? row;
+  }
+  return basic[field] ?? null;
+}
+
+function showChangeFormErrors(issues) {
+  const panel = byId("change-form-errors");
+  panel.replaceChildren();
+  for (const element of byId("change-form").querySelectorAll("[aria-invalid]")) {
+    element.removeAttribute("aria-invalid");
+  }
+  for (const element of byId("change-form").querySelectorAll(".change-inline-error")) {
+    element.remove();
+  }
+  if (!issues.length) {
+    panel.hidden = true;
+    return;
+  }
+  panel.append(make("strong", { text: "Please correct the following:" }));
+  const items = make("ul");
+  for (const issue of issues) {
+    const target = changeFormField(issue.field);
+    if (target) {
+      target.setAttribute("aria-invalid", "true");
+      const wrapper = target.closest(".field") ?? target.closest(".change-entity-row");
+      if (wrapper) {
+        const inline = make("small", { className: "change-inline-error", text: issue.message });
+        wrapper.append(inline);
+      }
+    }
+    const item = make("li", { text: issue.message });
+    items.append(item);
+  }
+  panel.append(items);
+  panel.hidden = false;
+  const first = changeFormField(issues[0].field);
+  first?.focus?.();
+}
 
 async function submitChange(event) {
   event.preventDefault();
-
   const form = event.currentTarget;
   const status = byId("create-status");
   const submit = form.querySelector('button[type="submit"]');
-
+  if (!availableChangeTypes.length) {
+    setStatus(status, "error", "Change types are unavailable. Retry loading the form.");
+    return;
+  }
   submit.disabled = true;
+  hideStatus(status);
+  showChangeFormErrors([]);
   setStatus(status, "loading", "Registering change event…");
 
   try {
     const formData = new FormData(form);
-
-    const changedEntities = parseJsonField(
-      String(formData.get("changed_entities") ?? ""),
-      [],
-      "Changed entities",
-    );
-
-    const declaredScope = parseJsonField(
-      String(formData.get("declared_scope") ?? ""),
-      {},
-      "Declared scope",
-    );
-
-    if (!Array.isArray(changedEntities)) {
-      throw new Error("Changed entities must be a JSON array.");
+    const type = String(formData.get("type") ?? "").trim();
+    if (!availableChangeTypes.some((item) => item.type === type)) {
+      throw new ChangeFormError("type", "Choose a supported change type.");
     }
-
-    if (
-      declaredScope === null ||
-      Array.isArray(declaredScope) ||
-      typeof declaredScope !== "object"
-    ) {
-      throw new Error("Declared scope must be a JSON object.");
-    }
-
-    const payload = {
-      change_id: String(formData.get("change_id") ?? "").trim(),
-      type: String(formData.get("type") ?? "").trim(),
-      old_version: String(formData.get("old_version") ?? "").trim(),
-      new_version: String(formData.get("new_version") ?? "").trim(),
-      changed_entities: changedEntities,
-      declared_scope: declaredScope,
-      initiator: String(formData.get("initiator") ?? "").trim(),
-    };
-
+    const payload = buildChangePayload({
+      change_id: formData.get("change_id"),
+      type,
+      old_version: formData.get("old_version"),
+      new_version: formData.get("new_version"),
+      initiator: formData.get("initiator"),
+      declared_scope: formData.get("declared_scope"),
+      derive_entities: byId("change-derive").checked,
+      can_derive_entities: Boolean(availableChangeTypes.find((item) => item.type === type)?.can_derive_entities),
+    }, collectChangedEntities());
     const created = await createChange(payload);
-
-    setStatus(
-      status,
-      "success",
-      `Registered ${created.event.change_id}.`,
-    );
-
+    setStatus(status, "success", "Registered " + created.event.change_id + ".");
     form.reset();
-    byId("changed-entities").value = "[]";
     byId("declared-scope").value = "{}";
-
+    byId("change-entity-rows").replaceChildren();
+    updateChangeTypeForm();
     await loadChanges();
     await loadChangeDetail(created.event.change_id);
   } catch (error) {
-    setStatus(status, "error", errorText(error));
+    const issues = error instanceof ChangeFormError
+      ? [{ field: error.field, message: error.message }]
+      : changeValidationIssues(error);
+    if (issues.length) {
+      showChangeFormErrors(issues);
+    } else if (error instanceof ApiError && error.status === 422) {
+      // Unknown domain error shapes still show the original server reason.
+      showChangeFormErrors([{ field: "form", message: errorText(error) }]);
+    }
+    setStatus(status, "error", error instanceof ApiError && error.status === 422
+      ? "Change rejected by API (422). Check the reason below."
+      : errorText(error));
   } finally {
     submit.disabled = false;
   }
 }
-
 
 function svgElement(tag, attributes = {}) {
   const element = document.createElementNS(SVG_NS, tag);
@@ -2946,6 +3123,7 @@ function toggleChangeForm() {
   button.textContent = card.hidden ? "+ Register new change" : "× Close form";
 
   if (!card.hidden) {
+    if (!availableChangeTypes.length) void loadChangeTypes();
     byId("change-id").focus();
   }
 }
@@ -2955,6 +3133,27 @@ function boot() {
   bindNavigation();
 
   byId("change-form").addEventListener("submit", submitChange);
+  byId("change-type").addEventListener("change", () => {
+    byId("change-entity-rows").replaceChildren();
+    const type = byId("change-type").value;
+    byId("change-derive").checked = Boolean(
+      availableChangeTypes.find((item) => item.type === type)?.can_derive_entities,
+    );
+    updateChangeTypeForm();
+    if (!byId("change-derive").checked && type) addChangedEntity();
+  });
+  byId("change-derive").addEventListener("change", () => {
+    updateChangeTypeForm();
+    if (!byId("change-derive").checked && byId("change-type").value &&
+        !byId("change-entity-rows").children.length) {
+      addChangedEntity();
+    }
+  });
+  byId("change-add-entity").addEventListener("click", () => addChangedEntity());
+  byId("old-version").addEventListener("input", () => syncChangedEntityVersions("old_version", "old-version"));
+  byId("new-version").addEventListener("input", () => syncChangedEntityVersions("new_version", "new-version"));
+  void loadChangeTypes();
+
   byId("toggle-change-form").addEventListener("click", toggleChangeForm);
   byId("dependency-form").addEventListener("submit", submitDependencyLookup);
   byId("refresh-changes").addEventListener("click", () => void loadChanges().then(() => applyRoute()));
