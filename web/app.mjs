@@ -550,6 +550,16 @@ function addChangedEntity(data = null) {
   });
   const oldField = changeField("Entity old version (blank = added)", "old_version", entity.old_version ?? "");
   const newField = changeField("Entity new version (blank = retired)", "new_version", entity.new_version ?? "");
+  // Keep untouched entity versions in sync when the user enters event versions
+  // after choosing a type. Explicitly cleared/edited entity versions stay intact.
+  for (const [field, autoFill] of [
+    [oldField, data === null && type !== "MAPPING_ADDED"],
+    [newField, data === null && type !== "MAPPING_RETIRED"],
+  ]) {
+    const control = field.querySelector("input");
+    control.dataset.autoFill = String(autoFill);
+    control.addEventListener("input", () => { control.dataset.autoFill = "false"; });
+  }
   const regionField = changeField("Changed region JSON (optional)", "changed_region", entity.changed_region ?? "", {
     multiline: true,
     placeholder: '{"field":"mic","intervals":[[1,2]]}',
@@ -566,6 +576,14 @@ function addChangedEntity(data = null) {
   container.append(fields);
   byId("change-entity-rows").append(container);
   return container;
+}
+
+function syncChangedEntityVersions(entityField, eventFieldId) {
+  const version = byId(eventFieldId).value.trim();
+  for (const row of byId("change-entity-rows").querySelectorAll(".change-entity-row")) {
+    const input = row.querySelector('[data-entity-field="' + entityField + '"]');
+    if (input?.dataset.autoFill === "true") input.value = version;
+  }
 }
 
 function collectChangedEntities() {
@@ -2852,6 +2870,8 @@ function boot() {
     }
   });
   byId("change-add-entity").addEventListener("click", () => addChangedEntity());
+  byId("old-version").addEventListener("input", () => syncChangedEntityVersions("old_version", "old-version"));
+  byId("new-version").addEventListener("input", () => syncChangedEntityVersions("new_version", "new-version"));
   void loadChangeTypes();
 
   byId("toggle-change-form").addEventListener("click", toggleChangeForm);
