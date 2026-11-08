@@ -1,0 +1,52 @@
+scenario: C4-ADDED
+description: >
+  A determinant is newly detected on an isolate: the new evidence version adds a genotype row that no stored edge can
+  point at. The case of that isolate for a drug the determinant is mapped to (a stored mapping rule links the pair)
+  must be selected. A case of the same isolate for a drug with no rule for the determinant may be selected (rule 6:
+  over-selection is allowed, missing is not). A case of another isolate is not affected, even for the same drug.
+authored_by: insharah
+authored_on_base_commit: 963afc609e873473e3f05dc2a5c2d16c48f8f2c9      # the commit this file was written on top of (stamp_fixtures.py)
+author_note: >
+  Expected sets are written from plan section 6 ("the case and declared derivatives"; "cases for that isolate/drug
+  depending on the changed evidence") and the over-selection principle (rule 6), not produced by running the selector.
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns them (D-10: not the selector author).
+  The author had read the current selector source; no expected set was changed to fit it.
+pending:
+  until: A-12
+  reason: the selector does not yet find the cases of a newly added genotype row through its isolate
+world:
+  cases: [C4N_A_MAPPED_DRUG, C4N_B_UNMAPPED_DRUG, C4N_C_OTHER_ISOLATE]
+  case_isolates: {C4N_A_MAPPED_DRUG: PDT_C4N_ISO1, C4N_B_UNMAPPED_DRUG: PDT_C4N_ISO1}
+  case_antibiotics: {C4N_B_UNMAPPED_DRUG: meropenem}
+  versions:
+    - {node_type: genotype_evidence, node_id: GEN_C4N_NEW, version: EVIDENCE_V2}
+  mapping_rules:
+    - {mapping_rule_id: MAPRULE_DETNEW_GENT, mapping_version: MAPPING_SET_V1, determinant_identity: DETNEW, candidate_antibiotic: gentamicin}
+  edges:
+    - {case: C4N_A_MAPPED_DRUG, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4N_OLD}
+    - {case: C4N_B_UNMAPPED_DRUG, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4N_OLD}
+    - {case: C4N_C_OTHER_ISOLATE, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C4N_C1}
+  genotype_evidence:          # rows as stored after the change
+    - {genotype_evidence_id: GEN_C4N_OLD, case: C4N_A_MAPPED_DRUG, element_symbol: DETOLD}
+    - {genotype_evidence_id: GEN_C4N_NEW, case: C4N_A_MAPPED_DRUG, element_symbol: DETNEW}
+    - {genotype_evidence_id: GEN_C4N_C1, case: C4N_C_OTHER_ISOLATE, element_symbol: DETNEW}
+evidence_versions:
+  node_type: genotype_evidence
+  EVIDENCE_V1:
+    - {genotype_evidence_id: GEN_C4N_OLD, element_symbol: DETOLD, target_acc: PDT_C4N_ISO1}
+    - {genotype_evidence_id: GEN_C4N_C1, element_symbol: DETNEW, target_acc: PDT_C4N_C_OTHER_ISOLATE}
+  EVIDENCE_V2:
+    - {genotype_evidence_id: GEN_C4N_OLD, element_symbol: DETOLD, target_acc: PDT_C4N_ISO1}
+    - {genotype_evidence_id: GEN_C4N_NEW, element_symbol: DETNEW, target_acc: PDT_C4N_ISO1}
+    - {genotype_evidence_id: GEN_C4N_C1, element_symbol: DETNEW, target_acc: PDT_C4N_C_OTHER_ISOLATE}
+change_event:
+  change_id: CHG-ORACLE-C4-ADDED
+  type: GENOTYPE_CHANGED
+  old_version: EVIDENCE_V1
+  new_version: EVIDENCE_V2
+  changed_entities:
+    - {node_type: genotype_evidence, node_id: GEN_C4N_NEW, old_version: null, new_version: EVIDENCE_V2}
+expected:
+  required_case_ids: [C4N_A_MAPPED_DRUG]
+  allowed_extra_case_ids: [C4N_B_UNMAPPED_DRUG]
+  must_not_select_case_ids: [C4N_C_OTHER_ISOLATE]

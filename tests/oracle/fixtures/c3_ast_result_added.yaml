@@ -1,0 +1,50 @@
+scenario: C3-ADDED
+description: >
+  A missing phenotype is supplied: a case had no AST row for its drug, and the corrected evidence adds one. No stored
+  edge can point at a row that did not exist, so a selector that only follows edges from the changed node finds
+  nothing. The affected case is the one for the row's isolate and drug (the row is stored in ast_evidence with both).
+  A case of the same isolate for another drug, and a case of another isolate for the same drug, are not affected.
+authored_by: insharah
+authored_on_base_commit: 963afc609e873473e3f05dc2a5c2d16c48f8f2c9      # the commit this file was written on top of (stamp_fixtures.py)
+author_note: >
+  Expected sets are written from plan section 6 ("the case and declared derivatives"; "cases for that isolate/drug
+  depending on the changed evidence") and the over-selection principle (rule 6), not produced by running the selector.
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns them (D-10: not the selector author).
+  The author had read the current selector source; no expected set was changed to fit it.
+pending:
+  until: A-12
+  reason: the selector does not yet find the case of a newly added evidence row through its isolate and drug
+world:
+  cases: [C3N_A_RESULT_ADDED, C3N_B_SAME_ISOLATE_OTHER_DRUG, C3N_C_OTHER_ISOLATE_SAME_DRUG]
+  case_isolates: {C3N_A_RESULT_ADDED: PDT_C3N_ISO1, C3N_B_SAME_ISOLATE_OTHER_DRUG: PDT_C3N_ISO1}
+  case_antibiotics: {C3N_B_SAME_ISOLATE_OTHER_DRUG: meropenem}
+  versions:
+    - {node_type: ast_evidence, node_id: AST_C3N_A1, version: EVIDENCE_V2}
+  edges:
+    - {case: C3N_A_RESULT_ADDED, dep_type: input_evidence, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_C3N_A1}
+    - {case: C3N_B_SAME_ISOLATE_OTHER_DRUG, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C3N_B1}
+    - {case: C3N_C_OTHER_ISOLATE_SAME_DRUG, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C3N_C1}
+  ast_evidence:               # rows as stored after the change
+    - {ast_evidence_id: AST_C3N_A1, case: C3N_A_RESULT_ADDED, phenotype: resistant, measurement_sign: "==", mic: 16.0}
+    - {ast_evidence_id: AST_C3N_B1, case: C3N_B_SAME_ISOLATE_OTHER_DRUG, phenotype: susceptible, measurement_sign: "<=", mic: 0.25}
+    - {ast_evidence_id: AST_C3N_C1, case: C3N_C_OTHER_ISOLATE_SAME_DRUG, phenotype: susceptible, measurement_sign: "==", mic: 1.0}
+evidence_versions:
+  node_type: ast_evidence
+  EVIDENCE_V1:
+    - {ast_evidence_id: AST_C3N_B1, phenotype: susceptible, measurement_sign: "<=", mic: 0.25}
+    - {ast_evidence_id: AST_C3N_C1, phenotype: susceptible, measurement_sign: "==", mic: 1.0}
+  EVIDENCE_V2:
+    - {ast_evidence_id: AST_C3N_A1, phenotype: resistant, measurement_sign: "==", mic: 16.0}
+    - {ast_evidence_id: AST_C3N_B1, phenotype: susceptible, measurement_sign: "<=", mic: 0.25}
+    - {ast_evidence_id: AST_C3N_C1, phenotype: susceptible, measurement_sign: "==", mic: 1.0}
+change_event:
+  change_id: CHG-ORACLE-C3-ADDED
+  type: AST_CORRECTED
+  old_version: EVIDENCE_V1
+  new_version: EVIDENCE_V2
+  changed_entities:
+    - {node_type: ast_evidence, node_id: AST_C3N_A1, old_version: null, new_version: EVIDENCE_V2}
+expected:
+  required_case_ids: [C3N_A_RESULT_ADDED]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [C3N_B_SAME_ISOLATE_OTHER_DRUG, C3N_C_OTHER_ISOLATE_SAME_DRUG]

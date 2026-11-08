@@ -45,6 +45,15 @@ from .models import CaseStateRecord, Release
 from .review import REVIEW_ACTIONS, ReviewEvent, add_review, get_current_correction, get_latest_review, get_reviews
 from .export import export_as_of, export_json, snapshot_hash
 from .errors import NoStateToReview, ReleaseNotPublished, ReviewNotAllowed
+from .verification import (
+    REVIEW_STATUSES,
+    ReviewQueueItem,
+    ReviewQueuePage,
+    ReviewStatus,
+    get_review_status,
+    list_review_queue,
+    review_status_for,
+)
 
 __all__ = [
     "REVIEW_ACTIONS", "ReviewEvent", "add_review", "get_reviews", "get_latest_review", "get_current_correction", "export_as_of", "export_json", "snapshot_hash", "NoStateToReview", "ReviewNotAllowed", "ReleaseNotPublished",
@@ -55,4 +64,6 @@ __all__ = [
     "create_release", "get_release", "list_releases", "validate_release", "publish_release",
     "block_release", "fail_release",
     "append_case_state", "get_state", "get_history", "get_state_as_of", "get_current_state",
+    "REVIEW_STATUSES", "ReviewStatus", "ReviewQueueItem", "ReviewQueuePage",
+    "review_status_for", "get_review_status", "list_review_queue",
 ]

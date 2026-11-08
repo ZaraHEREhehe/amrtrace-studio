@@ -32,6 +32,10 @@ def test_fixture_is_consistent(path):
     assert cases == required | extra | must_not, "every case in the world must be classified (required, allowed or must-not)"
     assert {e["case"] for e in fx["world"].get("edges", [])} <= cases
     assert {a["case"] for a in fx["world"].get("applicability", [])} <= cases
+    for kind in ("ast_evidence", "genotype_evidence"):
+        assert {row["case"] for row in fx["world"].get(kind, [])} <= cases, f"{kind} rows name unknown cases"
+    assert set(fx["world"].get("case_isolates") or {}) <= cases
+    assert set(fx["world"].get("case_antibiotics") or {}) <= cases
 
 
 def test_scenario_names_are_unique():

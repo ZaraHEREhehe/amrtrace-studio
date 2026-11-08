@@ -33,15 +33,25 @@ def load_fixture(path) -> dict:
         return yaml.safe_load(handle)
 
 
+def _isolate_of(world: dict, case_id: str) -> str:
+    """Each case has its own isolate unless world.case_isolates puts several cases on one (C4: one isolate, two drugs)."""
+    return (world.get("case_isolates") or {}).get(case_id, "PDT_" + case_id)
+
+
+def _antibiotic_of(world: dict, case_id: str) -> str:
+    return (world.get("case_antibiotics") or {}).get(case_id, world.get("antibiotic", "gentamicin"))
+
+
 def build_world(conn, fx: dict) -> None:
     """Create the cases, a published baseline release (and optional later partial releases), the version nodes,
     mapping rules, edges and applicability rows."""
     world = fx["world"]
     for case_id in world["cases"]:
-        conn.execute("INSERT INTO isolate (target_acc) VALUES (%s)", ("PDT_" + case_id,))
+        target_acc = _isolate_of(world, case_id)
+        conn.execute("INSERT INTO isolate (target_acc) VALUES (%s) ON CONFLICT DO NOTHING", (target_acc,))
         conn.execute(
             'INSERT INTO "case" (case_id, target_acc, antibiotic, panel_id) VALUES (%s, %s, %s, %s)',
-            (case_id, "PDT_" + case_id, world.get("antibiotic", "gentamicin"), "PANEL_ORACLE"),
+            (case_id, target_acc, _antibiotic_of(world, case_id), "PANEL_ORACLE"),
         )
     load_baseline_release(
         conn, RELEASE_ID, {"oracle_scenario": fx["scenario"]},
@@ -69,6 +79,22 @@ def build_world(conn, fx: dict) -> None:
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
             (e["case"], _release_id(e.get("release")), e["dep_type"], e["edge_type"], e["node_type"], e["node_id"],
              e.get("node_version"), None if e.get("node_context") is None else Jsonb(e["node_context"])),
+        )
+    # evidence rows as stored in the source tables after the change, so a selector can find the isolate and drug
+    # of a row that no stored edge points at yet (a newly reported result or a newly detected determinant)
+    for row in world.get("ast_evidence", []):
+        conn.execute(
+            "INSERT INTO ast_evidence (ast_evidence_id, source_row_id, target_acc, antibiotic, phenotype, "
+            "measurement_sign, mic) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (row["ast_evidence_id"], row["ast_evidence_id"], _isolate_of(world, row["case"]),
+             _antibiotic_of(world, row["case"]), row.get("phenotype"), row.get("measurement_sign"), row.get("mic")),
+        )
+    for row in world.get("genotype_evidence", []):
+        conn.execute(
+            "INSERT INTO genotype_evidence (genotype_evidence_id, representation_source, target_acc, "
+            "element_symbol_raw, source_row_signature_sha256) VALUES (%s, %s, %s, %s, %s)",
+            (row["genotype_evidence_id"], "ORACLE", _isolate_of(world, row["case"]), row.get("element_symbol"),
+             row["genotype_evidence_id"]),
         )
     for a in world.get("applicability", []):
         conn.execute(

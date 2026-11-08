@@ -7,8 +7,9 @@ from fastapi import FastAPI
 from .cases import router as cases_router
 from .changes import router as changes_router
 from .dossier import router as dossier_router
-from .runs import router as runs_router
 from .releases import router as releases_router
+from .review_queue import router as review_queue_router
+from .runs import router as runs_router
 from .summary import router as summary_router
 from .errors import register_error_handlers
 
@@ -23,8 +24,9 @@ def create_app() -> FastAPI:
     app.include_router(cases_router)
     app.include_router(changes_router)
     app.include_router(dossier_router)
-    app.include_router(runs_router)
     app.include_router(releases_router)
+    app.include_router(review_queue_router)
+    app.include_router(runs_router)
     app.include_router(summary_router)
 
     @app.get("/health")
