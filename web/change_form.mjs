@@ -170,7 +170,9 @@ export function changeValidationIssues(error) {
       const value = String(message);
       const entityMatch = value.match(/^(changed_entities\[\d+\]):\s*(.*)$/);
       if (entityMatch) {
-        return { field: entityMatch[1], message: entityMatch[2] };
+        const detail = entityMatch[2];
+        const namedField = detail.match(/^(node_type|node_id|old_version|new_version|changed_region)(?:\b|\.)/);
+        return { field: entityMatch[1] + (namedField ? "." + namedField[1] : ""), message: detail };
       }
       const basic = ["change_id", "initiator", "type", "old_version", "new_version", "declared_scope", "changed_entities"];
       const field = value.startsWith("unknown change type") ? "type"
