@@ -183,6 +183,20 @@ export function getCaseHistory(
 }
 
 
+export function getCaseReviewStatus(caseId, fetchImpl = globalThis.fetch) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/review-status`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+export function listReviewQueue(query = "", fetchImpl = globalThis.fetch) {
+  return requestJson(`/review-queue?${query}`, {}, fetchImpl);
+}
+
+
 export function getCaseReviews(
   caseId,
   fetchImpl = globalThis.fetch,
