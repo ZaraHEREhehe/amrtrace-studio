@@ -192,8 +192,8 @@ export function getCaseReviewStatus(caseId, fetchImpl = globalThis.fetch) {
 }
 
 
-export function listReviewQueue(query = "", fetchImpl = globalThis.fetch) {
-  return requestJson(`/review-queue?${query}`, {}, fetchImpl);
+export function listReviewQueue(path = "/review-queue?limit=25&offset=0", fetchImpl = globalThis.fetch) {
+  return requestJson(path, {}, fetchImpl);
 }
 
 
