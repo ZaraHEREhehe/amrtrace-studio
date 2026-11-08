@@ -192,6 +192,38 @@ def main():
             assert writes[1][1]["corrected_state_code"] == "UNRESOLVED"
             print("PASS: Correct requires corrected state and removes case after append")
 
+            # Third supported action must append a state-bound review too.
+            reviews.pop("CASE_Z17_A")
+            page.locator("#review-queue-refresh").click()
+            expect(page.locator('button[aria-label="Review CASE_Z17_A"]')).to_be_visible()
+            page.locator('button[aria-label="Review CASE_Z17_A"]').click()
+            expect(page.locator("#review-queue-submit")).to_be_enabled()
+            page.locator("#review-queue-action").select_option("MARK_UNRESOLVED")
+            page.locator("#review-queue-reviewer").fill("qa-reviewer")
+            page.locator("#review-queue-reason").fill("Synthetic unresolved marking")
+            page.locator('#review-queue-review-form button[type="submit"]').click()
+            expect(page.locator("#review-queue-results")).to_contain_text(
+                "No unverified cases match these filters."
+            )
+            assert len(writes) == 3
+            assert writes[-1][1]["action"] == "MARK_UNRESOLVED"
+            assert "corrected_state_code" not in writes[-1][1]
+            print("PASS: Mark Unresolved appends a decision without a corrected state")
+
+            # A newly published state invalidates an older queued row.
+            reviews.pop("CASE_Z17_B")
+            page.locator("#review-queue-refresh").click()
+            expect(page.locator('button[aria-label="Review CASE_Z17_B"]')).to_be_visible()
+            CASES[1]["state_id"] = 1103
+            CASES[1]["release_id"] = "R3"
+            page.locator('button[aria-label="Review CASE_Z17_B"]').click()
+            expect(page.locator("#review-queue-review-status")).to_contain_text(
+                "changed since the queue was loaded"
+            )
+            expect(page.locator("#review-queue-submit")).to_be_disabled()
+            assert len(writes) == 3, writes
+            print("PASS: Stale queued state cannot be reviewed after a newer publication")
+
             page.screenshot(path=str(ARTIFACTS / "review-queue.png"), full_page=True)
             page.set_viewport_size({"width": 390, "height": 844})
             expect(page.locator('section[data-view="review-queue"]')).to_be_visible()
