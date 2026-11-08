@@ -24,6 +24,8 @@ class CaseSummary(BaseModel):
     current_release_id: str | None
     # how many results in the current state got a different label from interpretation (None = not interpreted)
     labels_changed: int | None = None
+    # I-18: UNVERIFIED, CONFIRMED, CORRECTED, MARKED_UNRESOLVED or NOT_REQUIRED (None = no published state)
+    review_status: str | None = None
 
 
 class CaseStateView(BaseModel):
@@ -101,6 +103,7 @@ class CaseDossier(BaseModel):
     version_vector: dict[str, Any] | None
     interpretation: list[InterpretationFlagView] = []
     labels_changed: int | None = None
+    review_status: str | None = None
 
 
 class GraphNodeView(BaseModel):
@@ -240,6 +243,36 @@ class ReviewCreate(BaseModel):
     reason: str = Field(min_length=1)
     state_id: int | None = Field(default=None, ge=1)
     corrected_state_code: str | None = None
+
+
+# I-18: the review status of a case's current published state (not case_state.verification_status)
+class ReviewStatusView(BaseModel):
+    case_id: str
+    review_status: str | None
+    unverified: bool
+    state_id: int | None
+    release_id: str | None
+    state_code: str | None
+    labels_changed: int | None
+    latest_review_id: int | None
+    latest_review_action: str | None
+
+
+class ReviewQueueItemView(BaseModel):
+    case_id: str
+    target_acc: str
+    antibiotic: str
+    state_id: int
+    release_id: str
+    state_code: str
+    labels_changed: int
+
+
+class ReviewQueueView(BaseModel):
+    total: int
+    limit: int
+    offset: int
+    items: list[ReviewQueueItemView]
 
 
 class ReviewEventView(BaseModel):

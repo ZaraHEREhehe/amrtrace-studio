@@ -15,7 +15,7 @@ from amrtrace.evaluator.constants import (
     NODE_GENOTYPE_EVIDENCE,
     NODE_INTERPRETATION_RULE,
 )
-from amrtrace.ledger import get_current_state, get_history, get_release
+from amrtrace.ledger import get_current_state, get_history, get_release, get_review_status, review_status_for
 
 from .db import get_connection
 from .errors import ApiError
@@ -221,10 +221,11 @@ def list_cases(
         c.panel_id,
         current_state.state_code AS current_state,
         current_state.release_id AS current_release_id,
-        (current_state.explanation ->> 'labels_changed')::int AS labels_changed
+        (current_state.explanation ->> 'labels_changed')::int AS labels_changed,
+        latest_review.action AS latest_review_action
     FROM "case" c
     LEFT JOIN LATERAL (
-        SELECT cs.state_code, cs.release_id, cs.explanation
+        SELECT cs.state_id, cs.state_code, cs.release_id, cs.explanation
         FROM case_state cs
         JOIN release r ON r.release_id = cs.release_id
         WHERE cs.case_id = c.case_id
@@ -232,6 +233,13 @@ def list_cases(
         ORDER BY r.release_seq DESC, cs.state_id DESC
         LIMIT 1
     ) current_state ON TRUE
+    LEFT JOIN LATERAL (
+        SELECT rv.action
+        FROM review_event rv
+        WHERE rv.state_id = current_state.state_id
+        ORDER BY rv.review_id DESC
+        LIMIT 1
+    ) latest_review ON TRUE
     WHERE (%s::text IS NULL OR c.antibiotic = %s)
       AND (%s::text IS NULL OR current_state.state_code = %s)
       AND (%s::text IS NULL OR c.case_id ILIKE %s OR c.target_acc ILIKE %s)
@@ -248,7 +256,13 @@ def list_cases(
         cur.execute(sql, (drug, drug, state, state, search, by_id, by_accession, limit, offset))
         rows = cur.fetchall()
 
-    return [CaseSummary(**row) for row in rows]
+    summaries = []
+    for row in rows:
+        action = row.pop("latest_review_action")
+        # the same rule as GET /cases/{case_id}/review-status (ledger.verification, I-18)
+        status = None if row["current_state"] is None else review_status_for(row["labels_changed"], action)
+        summaries.append(CaseSummary(**row, review_status=status))
+    return summaries
 
 
 @router.get("/cases/{case_id}", response_model=CaseDossier)
@@ -279,8 +293,11 @@ def get_case(
         release = get_release(conn, current.release_id)
         version_vector = dict(release.version_vector)
 
+    review_status = get_review_status(conn, case_id).review_status if current is not None else None
+
     return CaseDossier(
         **case,
+        review_status=review_status,
         current_state=state_view,
         evidence=evidence,
         version_vector=version_vector,
