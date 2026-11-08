@@ -126,3 +126,32 @@ test("the shell has the prototype's dashboard and case explorer pages", () => {
   assert.match(app, /getSummary/);
   assert.match(app, /listCases/);
 });
+
+
+test("Z-17 review queue has filters, state-bound review actions, and a dossier link", () => {
+  const html = read("web/index.html");
+  const js = read("web/app.mjs");
+  assert.match(html, /data-nav="review-queue"/);
+  assert.match(html, /data-view="review-queue"/);
+  for (const id of [
+    "review-queue-filters", "review-queue-drug", "review-queue-state",
+    "review-queue-results", "review-queue-pager",
+    "review-queue-review-form", "review-queue-action",
+    "review-queue-reason", "review-queue-corrected-state",
+    "review-queue-review-status",
+  ]) {
+    assert.ok(html.includes('id="' + id + '"'), "Missing " + id);
+  }
+  assert.match(js, /getCaseReviewStatus\(item\.case_id\)/);
+  assert.match(js, /buildReviewPayload\(/);
+  assert.match(js, /createReview\(target\.case_id, payload\)/);
+  assert.match(js, /loadReviewQueue\(currentReviewQueueFilters, reviewQueueOffset\)/);
+  assert.doesNotMatch(js, /\.innerHTML\s*=|insertAdjacentHTML\(/);
+});
+
+test("Z-17 displays the API's review status in Explorer and Dossier", () => {
+  const js = read("web/app.mjs");
+  assert.match(js, /row\.review_status/);
+  assert.match(js, /reviewBadge\(dossier\.review_status\)/);
+  assert.match(js, /getCaseReviewStatus\(activeDossierCaseId\)/);
+});
