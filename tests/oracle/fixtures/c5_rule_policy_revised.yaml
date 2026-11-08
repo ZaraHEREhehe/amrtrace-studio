@@ -1,0 +1,52 @@
+scenario: C5
+description: >
+  The rule policy for values that are not a plain answer is revised: under POLICY_V1 a "not defined" label counts as
+  a non-binary value (the case stays unresolved), under POLICY_V2 it is not usable (as if the row had no label; the
+  row stays traceable and is never turned into S or R). The rule for intermediate labels is unchanged. Every case
+  that consulted the not-defined rule under the old policy version is affected, alone or next to other labels.
+  A case that only consulted the intermediate rule, a case with only plain labels (no policy rule consulted), and a
+  case that consulted the not-defined rule under an older policy version that is no longer its current one are not.
+authored_by: insharah
+authored_on_base_commit: 7a3459d38934b2a1355eb5d420592ddc23168da4      # the commit this file was written on top of (stamp_fixtures.py)
+author_note: >
+  Expected sets are written from plan section 6 ("cases carrying the affected value and rule dependency") and the
+  over-selection principle (rule 6), not produced by running the selector. Drafted with LLM assistance (Claude) for
+  Insharah, who reviews and owns them (D-10: not the selector author). The author had read the current selector
+  source; no expected set was changed to fit it.
+world:
+  cases: [C5_A_NOT_DEFINED_ONLY, C5_B_R_AND_NOT_DEFINED, C5_C_INTERMEDIATE_ONLY, C5_D_PLAIN_LABELS, C5_E_OLDER_POLICY]
+  versions:
+    - {node_type: policy_rule, node_id: "PHENOTYPE_VALUES|NOT_DEFINED", version: POLICY_V1}
+    - {node_type: policy_rule, node_id: "PHENOTYPE_VALUES|NOT_DEFINED", version: POLICY_V2}
+  later_releases:
+    - {name: R2, cases: [C5_E_OLDER_POLICY]}
+  edges:
+    - {case: C5_A_NOT_DEFINED_ONLY, dep_type: applicability, edge_type: evaluated_against, node_type: policy_rule, node_id: "PHENOTYPE_VALUES|NOT_DEFINED", node_version: POLICY_V1, node_context: {value: NOT_DEFINED}}
+    - {case: C5_A_NOT_DEFINED_ONLY, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C5_A1}
+    - {case: C5_B_R_AND_NOT_DEFINED, dep_type: applicability, edge_type: evaluated_against, node_type: policy_rule, node_id: "PHENOTYPE_VALUES|NOT_DEFINED", node_version: POLICY_V1, node_context: {value: NOT_DEFINED}}
+    - {case: C5_B_R_AND_NOT_DEFINED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C5_B1}
+    - {case: C5_B_R_AND_NOT_DEFINED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C5_B2}
+    - {case: C5_C_INTERMEDIATE_ONLY, dep_type: applicability, edge_type: evaluated_against, node_type: policy_rule, node_id: "PHENOTYPE_VALUES|I", node_version: POLICY_V1, node_context: {value: I}}
+    - {case: C5_C_INTERMEDIATE_ONLY, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C5_C1}
+    - {case: C5_D_PLAIN_LABELS, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C5_D1}
+    # E consulted the not-defined rule in R1 under POLICY_V1, but its current state (R2) no longer has that value
+    - {case: C5_E_OLDER_POLICY, dep_type: applicability, edge_type: evaluated_against, node_type: policy_rule, node_id: "PHENOTYPE_VALUES|NOT_DEFINED", node_version: POLICY_V1, node_context: {value: NOT_DEFINED}}
+    - {case: C5_E_OLDER_POLICY, release: R2, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_C5_E2}
+policy_versions:              # the two versions the change compares; read by the differ test, never by the selector
+  POLICY_V1:
+    - {policy_id: PHENOTYPE_VALUES, value: I, treatment: NONBINARY}
+    - {policy_id: PHENOTYPE_VALUES, value: NOT_DEFINED, treatment: NONBINARY}
+  POLICY_V2:
+    - {policy_id: PHENOTYPE_VALUES, value: I, treatment: NONBINARY}
+    - {policy_id: PHENOTYPE_VALUES, value: NOT_DEFINED, treatment: NOT_USABLE}
+change_event:
+  change_id: CHG-ORACLE-C5
+  type: RULE_POLICY_REVISED
+  old_version: POLICY_V1
+  new_version: POLICY_V2
+  changed_entities:
+    - {node_type: policy_rule, node_id: "PHENOTYPE_VALUES|NOT_DEFINED", old_version: POLICY_V1, new_version: POLICY_V2}
+expected:
+  required_case_ids: [C5_A_NOT_DEFINED_ONLY, C5_B_R_AND_NOT_DEFINED]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [C5_C_INTERMEDIATE_ONLY, C5_D_PLAIN_LABELS, C5_E_OLDER_POLICY]
