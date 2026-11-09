@@ -430,6 +430,25 @@ class ChangeDraftDismiss(BaseModel):
     note: str = Field(min_length=1)
 
 
+class SourceAlertView(BaseModel):
+    alert_id: str
+    source: str
+    kind: str
+    subject: str
+    message: str
+    details: dict[str, Any]
+    detected_at: datetime
+    status: str
+    acknowledged_by: Optional[str] = None
+    acknowledged_at: Optional[datetime] = None
+    acknowledgement_note: Optional[str] = None
+
+
+class SourceAlertAcknowledge(BaseModel):
+    acknowledged_by: str = Field(min_length=1)
+    note: Optional[str] = None
+
+
 class ChangeDraftApplied(BaseModel):
     draft: ChangeDraftView
     application: ChangeApplicationView
