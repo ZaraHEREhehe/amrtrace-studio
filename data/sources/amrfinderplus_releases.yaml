@@ -1,12 +1,11 @@
 # The newest AMRFinderPlus software and reference database NCBI has published (task A-18, D-25).
-# `python -m amrtrace.monitor.source_check --fetch` updates it from NCBI; review and commit the change. The check raises
-# an alert when the database is not covered by the mapping, or the software is newer than the one the release used.
-# The values below are the newest seen in the cohort's own data (AMRTRACE_RAW_V2, 2026-11-09) until the first fetch.
+# `python -m amrtrace.monitor.sources --fetch` updates it from NCBI; review and commit the change. The check raises an
+# alert when the database is not covered by the mapping, or the software is newer than the one the release used.
 software:
   version: 4.2.7
-  source: AMRTRACE_RAW_V2 isolates
+  source: https://api.github.com/repos/ncbi/amr/releases/latest
   checked_on: '2026-11-09'
 database:
-  version: 2026-08-07.1
-  source: AMRTRACE_RAW_V2 isolates
+  version: 2026-10-29.1
+  source: https://ftp.ncbi.nlm.nih.gov/pathogen/Antimicrobial_resistance/AMRFinderPlus/database/latest/version.txt
   checked_on: '2026-11-09'

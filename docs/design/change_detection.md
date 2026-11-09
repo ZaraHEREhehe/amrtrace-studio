@@ -151,10 +151,24 @@ The check reads two committed files, so it can always be replayed:
 reported and skipped. Which editions a table holds is read from its version name (`CLSI_M100_ED33_VET01S_ED7` holds
 M100 Ed33 and VET01S Ed7), so a new table must follow that naming.
 
-On the D-22 database (R4 in force, `CLSI_M100_ED33_VET01S_ED7`) the committed catalogue raises one alert, CLSI M100
-Ed36 (published 26 January 2026; Ed34 and Ed35 were skipped), and nothing for VET01S, whose newest edition is still
-Ed7. The mapping covers the three databases the V1 and V2 isolates use, so no database alert is raised until a fetch
-finds a newer NCBI database.
+A newer table with the same breakpoints as the table in force ends the alert and drafts nothing; the check reports
+it as "same breakpoints, nothing to re-evaluate", so a person can see the edition was checked.
+
+### First real run (2026-11-09, D-22 database, R4 in force: `CLSI_M100_ED33_VET01S_ED7`)
+
+- **CLSI M100 Ed36 (published 26 January 2026).** The check raised `NEW_STANDARD_EDITION`, with Ed34 and Ed35
+  skipped. The team's Breakpoint Reference (M100 Table 2A-1, Ed34 to Ed36) shows that, from Ed32 to Ed36, the only
+  Enterobacterales MIC change for the five panel drugs is gentamicin in Ed33. Aabia therefore entered
+  `data/interpretation/clsi_m100_ed36_vet01s_ed7.yaml`: the Ed33 values under the Ed36 name, with M100 Ed36 as the
+  source. Once stored, the alert is no longer raised, and the check reports the table as the same as the one in
+  force, so no change is drafted and no case is re-evaluated. This is why the project never needed a release after
+  Ed33: the later editions do not move any of our breakpoints.
+- **CLSI VET01S.** The newest edition is still Ed7 (January 2024), which the table in force holds. Nothing raised.
+- **AMRFinderPlus.** `--fetch` found NCBI's newest database is 2026-10-29.1, which the mapping (2026-03-24.1,
+  2026-05-15.1, 2026-08-07.1) does not cover, so `DATABASE_NOT_IN_MAPPING` was raised. None of the cohort's isolates
+  use it yet (V2 used 2026-08-07.1 at most), so no case is affected today; once NCBI re-runs isolates with it, the
+  mapping needs rules for it before their cases can be evaluated. The newest software is still 4.2.7, the version
+  the release used, so nothing was raised for it.
 
 ## Deciding drafts
 

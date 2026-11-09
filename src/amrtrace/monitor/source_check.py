@@ -40,6 +40,8 @@ class TableDraft:
 class SourceFindings:
     alerts: tuple[Alert, ...]
     table_drafts: tuple[TableDraft, ...]
+    # newer tables a person stored whose breakpoints equal the table in force: checked, nothing to re-evaluate
+    unchanged_tables: tuple[tuple[str, str], ...] = ()
 
 
 # the versions the newest published release was built with; empty before any release exists
@@ -96,7 +98,7 @@ def check_standards(conn, catalogue: list[Standard]) -> SourceFindings:
             )
         )
 
-    drafts = []
+    drafts, unchanged = [], []
     if in_force:
         differ = InterpretationTableDiffer()
         old_table = None
@@ -110,6 +112,7 @@ def check_standards(conn, catalogue: list[Standard]) -> SourceFindings:
             old_table = old_table or load_table_from_db(conn, in_force)
             entities = differ.diff(old_table, load_table_from_db(conn, candidate))
             if not entities:
+                unchanged.append((in_force, candidate))
                 continue
             counts = {
                 "rules_added": sum(1 for e in entities if e.old_version is None),
@@ -125,7 +128,7 @@ def check_standards(conn, catalogue: list[Standard]) -> SourceFindings:
                 summary={**counts, "editions_before": editions_in(in_force), "editions_after": editions_in(candidate)},
             )
             drafts.append(TableDraft(in_force, candidate, draft))
-    return SourceFindings(tuple(alerts), tuple(drafts))
+    return SourceFindings(tuple(alerts), tuple(drafts), tuple(unchanged))
 
 
 def _mapped_databases(conn) -> set[str]:
@@ -198,7 +201,11 @@ def check_amrfinderplus(conn, releases: ToolReleases, snapshot: Snapshot | None 
 def check_sources(conn, catalogue: list[Standard], releases: ToolReleases, snapshot: Snapshot | None = None) -> SourceFindings:
     standards = check_standards(conn, catalogue)
     tools = check_amrfinderplus(conn, releases, snapshot)
-    return SourceFindings(standards.alerts + tools.alerts, standards.table_drafts + tools.table_drafts)
+    return SourceFindings(
+        standards.alerts + tools.alerts,
+        standards.table_drafts + tools.table_drafts,
+        standards.unchanged_tables + tools.unchanged_tables,
+    )
 
 
 def _fetch(catalogue_path, releases_path, catalogue: list[Standard], releases: ToolReleases):
@@ -299,6 +306,8 @@ def main(argv: list[str] | None = None) -> int:
             for item in findings.table_drafts:
                 summary = {k: item.draft.summary[k] for k in ("rules_added", "rules_removed", "rules_changed")}
                 print(f"  draft  {item.draft.change_type}: {item.old_table} -> {item.new_table} {summary}")
+            for old_table, new_table in findings.unchanged_tables:
+                print(f"  same   {old_table} -> {new_table}: newer table, same breakpoints; nothing to re-evaluate")
             if args.dry_run:
                 print(f"{len(findings.alerts)} alert(s), {len(findings.table_drafts)} draft(s) found; nothing stored (dry run)")
                 return 0

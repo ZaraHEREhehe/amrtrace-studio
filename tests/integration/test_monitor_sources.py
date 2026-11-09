@@ -312,3 +312,16 @@ def test_applying_a_software_draft_selects_every_case_evaluated_under_the_old_ve
     application = apply_draft(conn, draft.draft_id, decided_by="aabia")
 
     assert len(get_impact_set(conn, application.change_id).items) == len(states)
+
+
+# a person stored the newer edition after checking it: same breakpoints, so the alert stops and nothing is drafted
+def test_a_newer_table_with_the_same_breakpoints_ends_the_alert_and_drafts_nothing(conn):
+    store(conn, ED33_VET)
+    publish(conn, "R_SRC_1", ED33_VET)
+    assert kinds(check_standards(conn, catalogue(m100=(33, 34, 35, 36)))) == [(NEW_STANDARD_EDITION, "CLSI M100 Ed36")]
+
+    store_table(conn, load_table(str(TABLES / "clsi_m100_ed36_vet01s_ed7.yaml")))
+    found = check_standards(conn, catalogue(m100=(33, 34, 35, 36)))
+
+    assert found.alerts == () and found.table_drafts == ()
+    assert found.unchanged_tables == ((ED33_VET, "CLSI_M100_ED36_VET01S_ED7"),)

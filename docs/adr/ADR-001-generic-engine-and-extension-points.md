@@ -68,4 +68,3 @@ are not snapshots (breakpoint editions, NCBI's newest AMRFinderPlus release) are
 become a draft by itself (an edition with no table yet, a database the mapping does not cover) becomes an alert for a
 person instead; once a person stores a newer table, the same check drafts the change with the interpretation differ
 already registered. No engine package changed.
-

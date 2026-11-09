@@ -179,4 +179,3 @@ details), with status OPEN or ACKNOWLEDGED. Like `change_draft`, a trigger allow
 ACKNOWLEDGED together with `acknowledged_by`, `acknowledged_at` and `acknowledgement_note`; everything an alert found
 is fixed, and deletes and truncates are refused with the table's own guard function. An alert is never a change
 event and nothing in the ledger refers to it.
-
