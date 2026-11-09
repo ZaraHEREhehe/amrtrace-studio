@@ -92,15 +92,20 @@ def _qrdr_gene(determinant):
     return None
 
 
-# shared shape for drugs that only need one qualifying item
+# the third part says how the support holds: (need, items) groups, each needing that many distinct determinants
+def _held_by(*groups):
+    return tuple((need, tuple(items)) for need, items in groups)
+
+
+# shared shape for drugs that only need one qualifying item: any one of them holds the state
 def _single_item_rule(items, decisive_strengths):
     decisive = _supports_with_strength(items, decisive_strengths)
     if decisive:
-        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(decisive)
+        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(decisive), _held_by((1, decisive))
 
     contextual = _requires_context(_relevant(items))
     if contextual:
-        return c.GENOTYPE_CONTEXTUAL_SUPPORT, tuple(contextual)
+        return c.GENOTYPE_CONTEXTUAL_SUPPORT, tuple(contextual), _held_by((1, contextual))
 
     return c.GENOTYPE_NO_MAPPED_SUPPORT, ()
 
@@ -109,7 +114,7 @@ def _single_item_rule(items, decisive_strengths):
 def _combination_rule(items):
     direct = _supports_with_strength(items, {"DIRECT_DRUG_SUPPORT"})
     if direct:
-        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(direct)
+        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(direct), _held_by((1, direct))
 
     relevant = _relevant(items)
     trimethoprim_items = []
@@ -121,14 +126,17 @@ def _combination_rule(items):
         if COMPONENT_SULFONAMIDE in labels:
             sulfonamide_items.append(item)
 
+    # both halves are needed together, which makes this a composite support
     if trimethoprim_items and sulfonamide_items:
-        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(
-            trimethoprim_items + sulfonamide_items
+        return (
+            c.GENOTYPE_DECISIVE_SUPPORT,
+            tuple(trimethoprim_items + sulfonamide_items),
+            _held_by((1, trimethoprim_items), (1, sulfonamide_items)),
         )
 
     contextual = trimethoprim_items + sulfonamide_items + _requires_context(relevant)
     if contextual:
-        return c.GENOTYPE_CONTEXTUAL_SUPPORT, tuple(contextual)
+        return c.GENOTYPE_CONTEXTUAL_SUPPORT, tuple(contextual), _held_by((1, contextual))
 
     return c.GENOTYPE_NO_MAPPED_SUPPORT, ()
 
@@ -137,7 +145,7 @@ def _combination_rule(items):
 def _qrdr_rule(items):
     direct = _supports_with_strength(items, {"DIRECT_DRUG_SUPPORT"})
     if direct:
-        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(direct)
+        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(direct), _held_by((1, direct))
 
     relevant = _relevant(items)
     qrdr_support = [
@@ -151,12 +159,14 @@ def _qrdr_rule(items):
         _qrdr_gene(determinant) == QRDR_ANCHOR_GENE for determinant in distinct
     )
 
+    # an anchor mutation and two distinct mutations in all: a composite of two groups
     if anchor_present and len(distinct) >= 2:
-        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(qrdr_support)
+        anchors = [item for item in qrdr_support if _qrdr_gene(item["determinant"]) == QRDR_ANCHOR_GENE]
+        return c.GENOTYPE_DECISIVE_SUPPORT, tuple(qrdr_support), _held_by((1, anchors), (2, qrdr_support))
 
     # for this drug any relevant evidence short of the rule above is contextual
     if relevant:
-        return c.GENOTYPE_CONTEXTUAL_SUPPORT, tuple(relevant)
+        return c.GENOTYPE_CONTEXTUAL_SUPPORT, tuple(relevant), _held_by((1, relevant))
 
     return c.GENOTYPE_NO_MAPPED_SUPPORT, ()
 

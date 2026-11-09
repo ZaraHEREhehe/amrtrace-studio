@@ -1,8 +1,9 @@
 # registry that lets versioned rule sets plug in without editing the engine
 from collections.abc import Callable
 
-# a policy takes the antibiotic and the joined items, and returns a state plus the items that decided it
-GenotypePolicy = Callable[[str, tuple[dict, ...]], tuple[str, tuple[dict, ...]]]
+# a policy takes the antibiotic and the joined items, and returns a state plus the items that decided it;
+# it may add a third part, its support groups as (need, items) pairs, so the graph can record how the state holds
+GenotypePolicy = Callable[[str, tuple[dict, ...]], tuple]
 
 _GENOTYPE_POLICIES: dict[str, GenotypePolicy] = {}
 

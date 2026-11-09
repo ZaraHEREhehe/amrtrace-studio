@@ -14,6 +14,7 @@ from .types import (
     EvalResult,
     GenotypeResult,
     PhenotypeResult,
+    SupportRecord,
     VersionVector,
 )
 
@@ -23,6 +24,7 @@ __all__ = [
     "EvalResult",
     "GenotypeResult",
     "PhenotypeResult",
+    "SupportRecord",
     "VersionVector",
     "combine",
     "evaluate",

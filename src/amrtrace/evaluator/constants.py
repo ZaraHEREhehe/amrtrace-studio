@@ -62,6 +62,13 @@ DEP_PROVENANCE_VERSION = "provenance_version"
 EDGE_DERIVED_FROM = "derived_from"
 EDGE_EVALUATED_AGAINST = "evaluated_against"
 
+# how a state is held together (A-15), stored beside the dependency records
+SUPPORT_CONTRADICTION = "contradiction"
+SUPPORT_COMPOSITE = "composite"
+SUPPORT_ALTERNATIVE = "alternative_support"
+SUPPORT_KINDS = (SUPPORT_CONTRADICTION, SUPPORT_COMPOSITE, SUPPORT_ALTERNATIVE)
+CONFLICT_GROUP = "conflict"
+
 NODE_AST_EVIDENCE = "ast_evidence"
 NODE_GENOTYPE_EVIDENCE = "genotype_evidence"
 NODE_MAPPING_RULE = "mapping_rule"
