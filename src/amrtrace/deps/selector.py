@@ -124,6 +124,12 @@ def _same_rule_content(conn, cache: dict, node_type: str, node_id: str, version:
     return cache[key]
 
 
+def _check_published(conn, release_id: str) -> None:
+    row = conn.execute("SELECT status FROM release WHERE release_id = %s", (release_id,)).fetchone()
+    if row is None or row[0] != "PUBLISHED":
+        raise LookupError(f"release {release_id} is not a published release to select as of")
+
+
 def _latest_published_release(conn) -> str:
     row = conn.execute(
         "SELECT release_id FROM release WHERE status = 'PUBLISHED' ORDER BY release_seq DESC LIMIT 1"
@@ -133,12 +139,20 @@ def _latest_published_release(conn) -> str:
     return row[0]
 
 
-# for each case, the newest published release that holds stored rows for it: those rows are its current dependencies
-def _current_releases(cursor, case_ids: set[str]) -> dict[str, str]:
+# the published releases a selection may read, newest first; as_of stops at that release, as the graph stood then
+def published_releases(cursor, as_of: str | None = None) -> list[str]:
     cursor.execute(
-        "SELECT release_id FROM release WHERE status = 'PUBLISHED' ORDER BY release_seq DESC"
+        "SELECT release_id FROM release WHERE status = 'PUBLISHED' "
+        "AND (%s::text IS NULL OR release_seq <= (SELECT release_seq FROM release WHERE release_id = %s)) "
+        "ORDER BY release_seq DESC",
+        (as_of, as_of),
     )
-    releases = [row["release_id"] for row in cursor.fetchall()]
+    return [row["release_id"] for row in cursor.fetchall()]
+
+
+# for each case, the newest published release that holds stored rows for it: those rows are its current dependencies
+def _current_releases(cursor, case_ids: set[str], as_of: str | None = None) -> dict[str, str]:
+    releases = published_releases(cursor, as_of)
 
     current = {}
     remaining = sorted(case_ids)
@@ -252,6 +266,8 @@ def select_impact_detailed(
     change_event_id: str,
     release_id: str | None = None,
     use_applicability: bool = True,
+    as_of: str | None = None,
+    use_region: bool = True,
 ) -> ImpactSelection:
     event = conn.execute(
         "SELECT changed_entities FROM change_event WHERE change_id = %s",
@@ -262,9 +278,14 @@ def select_impact_detailed(
     changed_entities = event[0] or []
 
     # a named release is read on its own; otherwise each case is judged by its own latest edges
+    if release_id is not None and as_of is not None:
+        raise ValueError("name either one release to read on its own, or the release to read as of, not both")
     named_release = release_id
     if release_id is None:
-        release_id = _latest_published_release(conn)
+        release_id = as_of or _latest_published_release(conn)
+    # as_of reads each case's latest edges as they stood at that release, so a later release cannot hide or add a case
+    if as_of is not None:
+        _check_published(conn, as_of)
 
     # every stored row that could matter, kept with the release it was recorded under
     edge_hits = []
@@ -300,7 +321,7 @@ def select_impact_detailed(
             candidates = {edge["case_id"] for edge, _ in edge_hits}
             candidates |= {case_id for case_id, _, _ in applicable_hits}
             candidates |= {case_id for case_id, _ in owner_hits}
-            current = _current_releases(cursor, candidates)
+            current = _current_releases(cursor, candidates, as_of)
             evaluated = set(current)
         else:
             evaluated = _evaluated_in(cursor, {case_id for case_id, _ in owner_hits}, named_release)
@@ -314,7 +335,8 @@ def select_impact_detailed(
         if not is_current(edge["case_id"], edge["release_id"]):
             continue
         level1_cases.add(edge["case_id"])
-        if in_changed_region(edge["node_context"], entity.get("changed_region")):
+        # use_region=False stops at level 1, the rule-level selector the ablation compares against
+        if not use_region or in_changed_region(edge["node_context"], entity.get("changed_region")):
             reasons.setdefault(edge["case_id"], set()).add(_reason(edge))
 
     applicable = {}
