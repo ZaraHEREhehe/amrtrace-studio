@@ -75,7 +75,34 @@ python -m amrtrace.monitor.check --old data/raw --old-manifest data/manifest/sha
 
 The pull needs a Google login (`gcloud auth application-default login`) and a Google Cloud project the account may
 run BigQuery jobs in, given with `--gcp-project <project id>` (NCBI's tables are public; the project only runs and
-pays for the queries, about 4.5 GB of scan, inside the free monthly allowance). It is run by hand, never in CI.
+pays for the queries: about 47 GB of scan, almost all of it the genotype table, which is inside BigQuery's free
+monthly allowance). It is run by hand, never in CI.
+
+### First real comparison: V1 to V2
+
+Built on 2026-11-09, about three months after V1, with the commands above (scan 46.8 GiB). The curation code, the
+extractor and the queries were confirmed unchanged since the commit that built Curated V1.
+
+| | V1 | V2 (V1 cohort kept) |
+|---|---:|---:|
+| Isolates | 10,584 | 10,584 (NCBI now returns 10,673; the 89 new ones are left out) |
+| AST rows | 57,228 | 57,228 |
+| Genotype rows (detailed and summary) | 413,116 | 413,116 |
+
+The check drafted two changes and nothing else:
+
+- **`AST_CORRECTED`, 1,046 rows edited, none added or removed.** Only `phenotype_normalized` changed, and in every
+  one NCBI's own raw phenotype and row checksum changed too, so these are source corrections, not curation
+  differences: 576 susceptible to resistant and 470 resistant to susceptible, in 137 isolates (about 7 or 8 drugs
+  each), which looks like submitters correcting whole AST panels.
+- **`GENOTYPE_CHANGED`, 6 isolates.** NCBI re-ran AMRFinderPlus 4.2.7 on them with reference database 2026-08-07.1
+  (was 2026-03-24.1). Their 105 summary rows are edited (`refgene_db_version`), and their 203 detailed rows appear as
+  203 removed and 203 added, because a detailed row is keyed by a hash of its content, which includes the database
+  version.
+- **Nothing else moved.** Every AST and summary row has a new id in V2, yet no other row was drafted.
+
+The 203 added detailed rows are not stored yet, so this genotype draft can only be applied once a new snapshot's
+evidence can be loaded (proposed I-20). The AST draft only edits stored rows.
 
 ## Deciding drafts
 
