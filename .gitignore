@@ -45,3 +45,5 @@ data/external/*
 
 # written by the golden test only when it fails
 golden_v1_mismatches.json
+# later source snapshots built by scripts/build_monitor_snapshot.py (A-13); large, and rebuilt from BigQuery
+data/snapshots/
