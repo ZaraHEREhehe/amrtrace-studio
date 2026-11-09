@@ -1635,3 +1635,20 @@ tr.clickable {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+
+/* Review Copilot (I-19): generated text, set apart from the evidence panels */
+.copilot-sentences {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.copilot-sentence p {
+  overflow-wrap: anywhere;
+  margin: 0.15rem 0;
+}
+
+.copilot-sources {
+  font-size: 0.85em;
+  overflow-wrap: anywhere;
+}

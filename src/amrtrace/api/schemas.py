@@ -454,3 +454,39 @@ class SourceAlertAcknowledge(BaseModel):
 class ChangeDraftApplied(BaseModel):
     draft: ChangeDraftView
     application: ChangeApplicationView
+
+
+# ---------- Review Copilot (I-19): generated text, never evidence ----------
+
+class CopilotSourceView(BaseModel):
+    kind: str
+    id: str
+    release_id: Optional[str] = None
+    node_type: Optional[str] = None
+
+
+class CopilotSentenceView(BaseModel):
+    text: str
+    template_text: str
+    sources: list[CopilotSourceView]
+
+
+class CopilotSummaryView(BaseModel):
+    case_id: str
+    generated: Literal[True] = True
+    label: str
+    outcome: str
+    generator: str
+    template_version: str
+    before_state_id: Optional[int]
+    after_state_id: Optional[int]
+    stored: bool
+    summary_id: Optional[int] = None
+    created_at: Optional[datetime] = None
+    sentences: list[CopilotSentenceView]
+    notes: list[str] = Field(default_factory=list)
+
+
+class CopilotRequest(BaseModel):
+    # templates only, or let a configured language model reword them (falls back to templates)
+    mode: Literal["templates", "language_model"] = "templates"
