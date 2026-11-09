@@ -4,18 +4,21 @@ Read-only. The rule lives in amrtrace.ledger.verification; reviewers confirm or 
 POST /cases/{case_id}/review, which appends a review_event and never edits a state.
 
     GET /cases/{case_id}/review-status     the review status of the case's current published state
-    GET /review-queue?drug=&state=&limit=&offset=
-                                           every UNVERIFIED case, ordered by case id, with the total for paging
+    GET /review-queue?drug=&state=&limit=&offset=&sort=
+                                           every UNVERIFIED case, ordered by case id or, with sort=triage, in the
+                                           A-14 review order; every item carries its triage tier and reason
 """
 
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import Literal
 
 import psycopg
 from fastapi import APIRouter, Depends, Query
 
 from amrtrace.ledger import get_review_status, list_review_queue
+from amrtrace.triage import rank_review_queue, triage_states
 
 from .db import get_connection
 from .errors import ApiError
@@ -42,13 +45,26 @@ def review_queue(
     state: str | None = Query(default=None, min_length=1),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
+    sort: Literal["case_id", "triage"] = Query(default="case_id"),
     conn: psycopg.Connection = Depends(get_connection),
 ) -> ReviewQueueView:
     """Every UNVERIFIED case, optionally for one drug or one current state code."""
-    page = list_review_queue(conn, drug=drug, state=state, limit=limit, offset=offset)
+    # with sort=triage the whole queue is ranked before paging, so every page follows the same order
+    if sort == "triage":
+        ranked = rank_review_queue(conn, drug=drug, state=state, limit=limit, offset=offset)
+        total, pairs = ranked.total, list(ranked.items)
+    else:
+        page = list_review_queue(conn, drug=drug, state=state, limit=limit, offset=offset)
+        triaged = triage_states(conn, (item.state_id for item in page.items))
+        total, pairs = page.total, [(item, triaged[item.state_id].triage) for item in page.items]
     return ReviewQueueView(
-        total=page.total,
+        total=total,
         limit=limit,
         offset=offset,
-        items=[ReviewQueueItemView(**asdict(item)) for item in page.items],
+        items=[
+            ReviewQueueItemView(
+                **asdict(item), triage_tier=t.tier, triage_rank=t.rank, triage_reason=t.reason
+            )
+            for item, t in pairs
+        ],
     )

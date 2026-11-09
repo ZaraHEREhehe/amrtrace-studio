@@ -266,6 +266,10 @@ class ReviewQueueItemView(BaseModel):
     release_id: str
     state_code: str
     labels_changed: int
+    # A-14: where the case sits in the review order, filled for every item whatever the sort
+    triage_tier: Optional[str] = None
+    triage_rank: Optional[int] = None
+    triage_reason: Optional[str] = None
 
 
 class ReviewQueueView(BaseModel):
@@ -273,6 +277,28 @@ class ReviewQueueView(BaseModel):
     limit: int
     offset: int
     items: list[ReviewQueueItemView]
+
+
+# A-14: every state a release wrote, in triage order, with the count in each tier
+class TriagedStateView(BaseModel):
+    case_id: str
+    state_id: int
+    release_id: str
+    state_code: str
+    previous_state_code: Optional[str] = None
+    labels_changed: Optional[int] = None
+    triage_tier: str
+    triage_rank: int
+    triage_reason: str
+
+
+class ReleaseTriageView(BaseModel):
+    release_id: str
+    total: int
+    limit: int
+    offset: int
+    tier_counts: dict[str, int]
+    items: list[TriagedStateView]
 
 
 class ReviewEventView(BaseModel):

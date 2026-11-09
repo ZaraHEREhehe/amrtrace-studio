@@ -1619,3 +1619,19 @@ tr.clickable {
     grid-template-columns: 1fr;
   }
 }
+
+/* A-14: the triage badge with its reason underneath, kept narrow so the queue table still fits */
+.triage-cell {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+  min-width: 150px;
+  max-width: 220px;
+}
+
+.triage-reason {
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

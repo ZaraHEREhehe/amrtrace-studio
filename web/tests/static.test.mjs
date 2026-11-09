@@ -134,7 +134,7 @@ test("Z-17 review queue has filters, state-bound review actions, and a dossier l
   assert.match(html, /data-nav="review-queue"/);
   assert.match(html, /data-view="review-queue"/);
   for (const id of [
-    "review-queue-filters", "review-queue-drug", "review-queue-state",
+    "review-queue-filters", "review-queue-drug", "review-queue-state", "review-queue-sort",
     "review-queue-results", "review-queue-pager",
     "review-queue-review-form", "review-queue-action",
     "review-queue-reason", "review-queue-corrected-state",

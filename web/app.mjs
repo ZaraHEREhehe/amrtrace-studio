@@ -74,6 +74,8 @@ import {
   reviewQueuePath,
   reviewQueueRouteId,
   reviewStatusMeta,
+  readableTriageReason,
+  triageMeta,
 } from "./review_queue.mjs";
 
 import {
@@ -2747,6 +2749,23 @@ function badge(text, className = "") {
 }
 
 
+// A-14: the triage tier as a badge, with the reason written underneath so a reviewer sees why it ranks there
+function triageBadge(item) {
+  const meta = triageMeta(item.triage_tier);
+  const cell = make("div", { className: "triage-cell" });
+  cell.append(make("span", {
+    className: `badge ${meta.cls}`.trim(),
+    text: meta.label,
+    attributes: { title: item.triage_reason ?? "" },
+  }));
+  if (item.triage_reason) {
+    const reason = readableTriageReason(item.triage_reason, (code) => stateMeta(code).label);
+    cell.append(make("div", { className: "triage-reason muted", text: reason }));
+  }
+  return cell;
+}
+
+
 // the evidence state as the prototype shows it: a readable name on its own colour
 function reviewBadge(status) {
   const meta = reviewStatusMeta(status);
@@ -3205,6 +3224,7 @@ async function loadReviewQueue(filters, offset = 0) {
   if (token !== reviewQueueRequestToken) return;
   byId("review-queue-drug").value = filters.drug;
   byId("review-queue-state").value = filters.state;
+  byId("review-queue-sort").value = filters.sort ?? "";
 
   try {
     const raw = await listReviewQueue(reviewQueuePath(filters, offset));
@@ -3223,6 +3243,7 @@ async function loadReviewQueue(filters, offset = 0) {
 
     results.append(renderDataTable(
       [
+        ["Priority", (item) => triageBadge(item)],
         ["Case", (item) => caseLink(item.case_id)],
         ["Isolate", (item) => make("code", { text: item.target_acc })],
         ["Antibiotic", "antibiotic"],
@@ -3392,6 +3413,7 @@ function submitReviewQueueFilters(event) {
   navigate("review-queue", reviewQueueRouteId({
     drug: data.get("drug"),
     state: data.get("state"),
+    sort: data.get("sort"),
   }));
 }
 

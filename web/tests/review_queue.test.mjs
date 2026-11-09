@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   REVIEW_PAGE_SIZE, REVIEW_STATES, REVIEW_STATUS_META, ReviewFormError,
   buildReviewPayload, reviewPageInfo, reviewQueueFilters, reviewQueuePath,
-  reviewQueueRouteId, reviewStatusMeta,
+  reviewQueueRouteId, reviewStatusMeta, REVIEW_SORTS, TRIAGE_META, readableTriageReason, triageMeta,
 } from "../review_queue.mjs";
 
 test("all five I-18 statuses have distinct labels", () => {
@@ -15,10 +15,10 @@ test("all five I-18 statuses have distinct labels", () => {
 });
 
 test("review filters round-trip through the shareable route", () => {
-  const data = { drug: "gentamicin", state: "UNRESOLVED" };
+  const data = { drug: "gentamicin", state: "UNRESOLVED", sort: "" };
   assert.deepEqual(reviewQueueFilters(reviewQueueRouteId(data)), data);
   assert.equal(reviewQueueRouteId({ drug: "", state: "" }), null);
-  assert.deepEqual(reviewQueueFilters(null), { drug: "", state: "" });
+  assert.deepEqual(reviewQueueFilters(null), { drug: "", state: "", sort: "" });
 });
 
 test("review queue query uses I-18's drug, state and bounded paging contract", () => {
@@ -90,4 +90,40 @@ test("invalid inputs never reach the API", () => {
     assert.throws(() => buildReviewPayload(values, stateId), (e) =>
       e instanceof ReviewFormError && e.field === field);
   }
+});
+
+// A-14: the review order
+
+
+test("the triage order round-trips through the shareable route and reaches the API", () => {
+  const data = { drug: "", state: "UNRESOLVED", sort: "triage" };
+  const routeId = reviewQueueRouteId(data);
+  assert.equal(routeId, "state=UNRESOLVED&sort=triage");
+  assert.deepEqual(reviewQueueFilters(routeId), data);
+  const url = new URL("http://localhost/api" + reviewQueuePath(data));
+  assert.equal(url.searchParams.get("sort"), "triage");
+});
+
+test("the default order sends no sort, and an unknown sort falls back to it", () => {
+  assert.equal(new URL("http://localhost" + reviewQueuePath({})).searchParams.has("sort"), false);
+  assert.equal(reviewQueueFilters("sort=random").sort, "");
+  assert.equal(reviewQueueRouteId({ sort: "random" }), null);
+  assert.deepEqual(REVIEW_SORTS, ["", "triage"]);
+});
+
+test("the four triage tiers have labels in review order", () => {
+  assert.deepEqual(Object.keys(TRIAGE_META), ["NEWLY_DISCORDANT", "STATE_CHANGED", "LABEL_CHANGED", "RE_VERIFIED"]);
+  assert.equal(triageMeta("NEWLY_DISCORDANT").label, "1 · Newly discordant");
+  assert.equal(triageMeta(null).label, "—");
+  assert.equal(triageMeta("SOMETHING_NEW").label, "SOMETHING_NEW");
+});
+
+test("a triage reason reads with state names instead of codes", () => {
+  const label = (code) => "<" + code.toLowerCase() + ">";
+  assert.equal(
+    readableTriageReason("state changed: UNRESOLVED to CONCORDANT_SUSCEPTIBLE", label),
+    "state changed: <unresolved> to <concordant_susceptible>",
+  );
+  assert.equal(readableTriageReason(null, label), "");
+  assert.equal(readableTriageReason("re-verified", label), "re-verified");
 });
