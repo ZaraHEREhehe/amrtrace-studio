@@ -6,11 +6,25 @@ from psycopg.rows import dict_row
 
 MECHANISM_REALISED_EDGE = "realised_edge"
 MECHANISM_APPLICABILITY = "applicability"
+MECHANISM_EVIDENCE_OWNER = "evidence_owner"
 
 # the node type whose new members are found through the recorded rule space
 NODE_MAPPING_RULE = "mapping_rule"
 # the node type whose stored versions can be compared by content (D-22)
 NODE_INTERPRETATION_RULE = "interpretation_rule"
+
+# a new evidence row has no stored edge yet, so its cases are found through the row itself (A-12):
+# the row's table, and the columns that name the cases it belongs to; every case column must match
+EVIDENCE_OWNERS = {
+    "ast_evidence": {"table": "ast_evidence", "id": "ast_evidence_id", "case_columns": ("target_acc", "antibiotic")},
+    "genotype_evidence": {"table": "genotype_evidence", "id": "genotype_evidence_id", "case_columns": ("target_acc",)},
+}
+
+
+# raised when a new evidence row is not stored, so its cases cannot be found; selecting nothing would hide a miss
+class UnplacedEvidence(LookupError):
+    pass
+
 
 # how a censored measurement is written, and the open range each sign stands for
 SIGN_EXACT = "=="
@@ -189,6 +203,49 @@ def _applicable_cases(
     return [(row["case_id"], row["release_id"], reason) for row in cursor.fetchall()]
 
 
+# new means it has a new version and no old one; an entity with neither is an older way of naming a changed row
+def _is_introduced_evidence(entity: dict) -> bool:
+    return (
+        entity.get("node_type") in EVIDENCE_OWNERS
+        and entity.get("old_version") is None
+        and entity.get("new_version") is not None
+    )
+
+
+# the cases a new evidence row belongs to: the same isolate (and drug, for a measured result)
+def _owner_cases(cursor, entity: dict) -> list[tuple[str, str]]:
+    owner = EVIDENCE_OWNERS[entity["node_type"]]
+    columns = owner["case_columns"]
+    # the table and column names come from the fixed map above, never from the change event
+    cursor.execute(
+        f"SELECT {', '.join(columns)} FROM {owner['table']} WHERE {owner['id']} = %s",
+        (entity["node_id"],),
+    )
+    row = cursor.fetchone()
+    if row is None:
+        raise UnplacedEvidence(
+            f"new {entity['node_type']} {entity['node_id']} is not stored, so the cases it belongs to are unknown; "
+            "load the evidence version before applying the change"
+        )
+    cursor.execute(
+        'SELECT case_id FROM "case" WHERE ' + " AND ".join(f"{column} = %s" for column in columns),
+        tuple(row[column] for column in columns),
+    )
+    described = ", ".join(f"{column} {row[column]}" for column in columns)
+    reason = f"new {entity['node_type']} {entity['node_id']} for {described}"
+    return [(found["case_id"], reason) for found in cursor.fetchall()]
+
+
+# the owner cases that the named release evaluated, so a case outside the release is never selected against it
+def _evaluated_in(cursor, case_ids: set[str], release_id: str) -> set[str]:
+    cursor.execute(
+        "SELECT c.case_id FROM unnest(%s::text[]) AS c(case_id) WHERE "
+        "EXISTS (SELECT 1 FROM dependency d WHERE d.case_id = c.case_id AND d.release_id = %s)",
+        (sorted(case_ids), release_id),
+    )
+    return {row["case_id"] for row in cursor.fetchall()}
+
+
 # use_applicability=False gives the realised-edge-only selector, kept so its blind spot stays testable
 def select_impact_detailed(
     conn,
@@ -212,6 +269,7 @@ def select_impact_detailed(
     # every stored row that could matter, kept with the release it was recorded under
     edge_hits = []
     applicable_hits = []
+    owner_hits = []
     same_content = {}
     with conn.cursor(row_factory=dict_row) as cursor:
         for entity in changed_entities:
@@ -233,13 +291,19 @@ def select_impact_detailed(
             for entity in changed_entities:
                 if _is_introduced_rule(entity):
                     applicable_hits += _applicable_cases(cursor, named_release, entity)
+                if _is_introduced_evidence(entity):
+                    owner_hits += _owner_cases(cursor, entity)
 
         # a stale row in an earlier release must not select a case that was re-evaluated since
         current = None
         if named_release is None:
             candidates = {edge["case_id"] for edge, _ in edge_hits}
             candidates |= {case_id for case_id, _, _ in applicable_hits}
+            candidates |= {case_id for case_id, _ in owner_hits}
             current = _current_releases(cursor, candidates)
+            evaluated = set(current)
+        else:
+            evaluated = _evaluated_in(cursor, {case_id for case_id, _ in owner_hits}, named_release)
 
     def is_current(case_id: str, row_release: str) -> bool:
         return current is None or current.get(case_id) == row_release
@@ -260,20 +324,30 @@ def select_impact_detailed(
         level1_cases.add(case_id)
         applicable.setdefault(case_id, set()).add(reason)
 
+    # a new row's cases count only if the release being read evaluated them
+    owned = {}
+    for case_id, reason in owner_hits:
+        if case_id not in evaluated:
+            continue
+        level1_cases.add(case_id)
+        owned.setdefault(case_id, set()).add(reason)
+
     items = tuple(
         ImpactItem(
             case_id=case_id,
             reason="; ".join(
-                sorted(reasons.get(case_id, set()) | applicable.get(case_id, set()))
+                sorted(reasons.get(case_id, set()) | applicable.get(case_id, set()) | owned.get(case_id, set()))
             ),
-            # a stored edge is the stronger evidence, so it names the mechanism when both paths agree
+            # a stored edge is the stronger evidence, so it names the mechanism when several paths agree
             mechanism=(
                 MECHANISM_REALISED_EDGE
                 if case_id in reasons
                 else MECHANISM_APPLICABILITY
+                if case_id in applicable
+                else MECHANISM_EVIDENCE_OWNER
             ),
         )
-        for case_id in sorted(set(reasons) | set(applicable))
+        for case_id in sorted(set(reasons) | set(applicable) | set(owned))
     )
     return ImpactSelection(
         change_id=change_event_id,

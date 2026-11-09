@@ -11,9 +11,6 @@ author_note: >
   depending on the changed evidence") and the over-selection principle (rule 6), not produced by running the selector.
   Drafted with LLM assistance (Claude) for Insharah, who reviews and owns them (D-10: not the selector author).
   The author had read the current selector source; no expected set was changed to fit it.
-pending:
-  until: A-12
-  reason: the selector does not yet find the cases of a newly added genotype row through its isolate
 world:
   cases: [C4N_A_MAPPED_DRUG, C4N_B_UNMAPPED_DRUG, C4N_C_OTHER_ISOLATE]
   case_isolates: {C4N_A_MAPPED_DRUG: PDT_C4N_ISO1, C4N_B_UNMAPPED_DRUG: PDT_C4N_ISO1}

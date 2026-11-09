@@ -11,9 +11,6 @@ author_note: >
   depending on the changed evidence") and the over-selection principle (rule 6), not produced by running the selector.
   Drafted with LLM assistance (Claude) for Insharah, who reviews and owns them (D-10: not the selector author).
   The author had read the current selector source; no expected set was changed to fit it.
-pending:
-  until: A-12
-  reason: the selector does not yet find the case of a newly added evidence row through its isolate and drug
 world:
   cases: [C3N_A_RESULT_ADDED, C3N_B_SAME_ISOLATE_OTHER_DRUG, C3N_C_OTHER_ISOLATE_SAME_DRUG]
   case_isolates: {C3N_A_RESULT_ADDED: PDT_C3N_ISO1, C3N_B_SAME_ISOLATE_OTHER_DRUG: PDT_C3N_ISO1}

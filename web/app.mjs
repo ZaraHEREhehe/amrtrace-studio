@@ -9,6 +9,8 @@ import {
   getCaseDiff,
   getCaseHistory,
   getCaseReviews,
+  getCaseReviewStatus,
+  listReviewQueue,
   getChange,
   getImpact,
   getRun,
@@ -62,6 +64,17 @@ import {
   changeValidationIssues,
   suggestedEntity,
 } from "./change_form.mjs";
+
+import {
+  REVIEW_PAGE_SIZE,
+  ReviewFormError,
+  buildReviewPayload,
+  reviewPageInfo,
+  reviewQueueFilters,
+  reviewQueuePath,
+  reviewQueueRouteId,
+  reviewStatusMeta,
+} from "./review_queue.mjs";
 
 import {
   decisionLabel,
@@ -1688,6 +1701,12 @@ function renderDossierOverview(dossier, history = []) {
   );
 
   titleBlock.append(title, idLine);
+  const currentReviewBadge = make("span", { attributes: { id: "dossier-current-review-status" } });
+  currentReviewBadge.append(reviewBadge(dossier.review_status));
+  titleBlock.append(
+    make("p", { className: "muted", text: "Label review status (current published state)" }),
+    currentReviewBadge,
+  );
 
   const actions = make("div", { className: "page-actions" });
   actions.append(
@@ -2336,6 +2355,19 @@ async function submitDossierReview(event) {
     );
 
     renderDossierReviews(reviews);
+    // Keep the dossier's I-18 status badge current after a successful review.
+    // The append already succeeded, so a status refresh failure must not turn
+    // this into a misleading "review failed" message.
+    try {
+      const currentStatus = await getCaseReviewStatus(activeDossierCaseId);
+      if (currentStatus.state_id === activeDossierStateId) {
+        byId("dossier-current-review-status").replaceChildren(
+          reviewBadge(currentStatus.review_status),
+        );
+      }
+    } catch {
+      // The next dossier load will obtain the fresh status.
+    }
 
     setStatus(
       status,
@@ -2661,6 +2693,11 @@ async function applyRoute() {
   const { view, id } = parseRoute(window.location.hash);
   activateView(view);
 
+  if (view === "review-queue") {
+    await loadReviewQueue(reviewQueueFilters(id));
+    return;
+  }
+
   if (view === "exports") {
     await loadExports();
     return;
@@ -2711,6 +2748,16 @@ function badge(text, className = "") {
 
 
 // the evidence state as the prototype shows it: a readable name on its own colour
+function reviewBadge(status) {
+  const meta = reviewStatusMeta(status);
+  return make("span", {
+    className: `badge ${meta.cls}`.trim(),
+    text: meta.label,
+    attributes: { title: meta.description },
+  });
+}
+
+
 function stateBadge(code) {
   const meta = stateMeta(code);
   return make("span", {
@@ -3055,6 +3102,7 @@ async function loadExplorer(filters, offset = 0) {
           ["Antibiotic", "antibiotic"],
           ["Current state", (row) => stateBadge(row.current_state)],
           ["Release", "current_release_id"],
+          ["Review status", (row) => reviewBadge(row.review_status)],
           ["Labels changed", (row) => (row.labels_changed ? badge(String(row.labels_changed), "badge-amber") : "—")],
         ],
         page,
@@ -3099,6 +3147,253 @@ function submitExplorer(event) {
   navigate("explorer", params.toString() || null);
 }
 
+
+
+let reviewQueueOffset = 0;
+let reviewQueueRequestToken = 0;
+let currentReviewQueueFilters = { drug: "", state: "" };
+let selectedReviewQueueCase = null;
+let reviewQueueDrugsLoaded = false;
+
+function closeReviewQueueCase() {
+  selectedReviewQueueCase = null;
+  byId("review-queue-dossier").hidden = true;
+  byId("review-queue-dossier").removeAttribute("href");
+  byId("review-queue-review-fieldset").disabled = true;
+  byId("review-queue-detail-card").hidden = true;
+  hideStatus(byId("review-queue-review-status"));
+}
+
+function syncQueueCorrection() {
+  const isCorrection = byId("review-queue-action").value === "CORRECT";
+  const field = byId("review-queue-correction-field");
+  const select = byId("review-queue-corrected-state");
+  field.hidden = !isCorrection;
+  select.disabled = !isCorrection;
+  select.required = isCorrection;
+  if (!isCorrection) select.value = "";
+}
+
+async function fillReviewQueueDrugs() {
+  if (reviewQueueDrugsLoaded) return;
+  try {
+    const summary = await getSummary();
+    fillSelect(
+      byId("review-queue-drug"),
+      "All antibiotics",
+      summary.drugs ?? [],
+      (item) => item.antibiotic,
+      (item) => item.antibiotic,
+    );
+    reviewQueueDrugsLoaded = true;
+  } catch {
+    // An unavailable summary should not prevent the queue loading.
+  }
+}
+
+async function loadReviewQueue(filters, offset = 0) {
+  const token = ++reviewQueueRequestToken;
+  currentReviewQueueFilters = { ...filters };
+  reviewQueueOffset = offset;
+  closeReviewQueueCase();
+  const status = byId("review-queue-status");
+  const results = byId("review-queue-results");
+  const pager = byId("review-queue-pager");
+  setStatus(status, "loading", "Loading unverified cases…");
+
+  await fillReviewQueueDrugs();
+  if (token !== reviewQueueRequestToken) return;
+  byId("review-queue-drug").value = filters.drug;
+  byId("review-queue-state").value = filters.state;
+
+  try {
+    const raw = await listReviewQueue(reviewQueuePath(filters, offset));
+    if (token !== reviewQueueRequestToken) return;
+    const page = reviewPageInfo(raw);
+    // The last item on a page may have just been reviewed; go back to the
+    // newest valid page instead of showing a misleading empty queue.
+    if (page.total > 0 && offset >= page.total) {
+      return loadReviewQueue(
+        filters,
+        Math.floor((page.total - 1) / REVIEW_PAGE_SIZE) * REVIEW_PAGE_SIZE,
+      );
+    }
+    clear(results);
+    clear(pager);
+
+    results.append(renderDataTable(
+      [
+        ["Case", (item) => caseLink(item.case_id)],
+        ["Isolate", (item) => make("code", { text: item.target_acc })],
+        ["Antibiotic", "antibiotic"],
+        ["State", (item) => stateBadge(item.state_code)],
+        ["Release", "release_id"],
+        ["Changed labels", "labels_changed"],
+        ["Review", (item) => {
+          const button = make("button", {
+            className: "button button-primary",
+            text: "Review",
+            attributes: { type: "button", "aria-label": "Review " + item.case_id },
+          });
+          button.addEventListener("click", () => void openReviewQueueCase(item));
+          return button;
+        }],
+      ],
+      page.items,
+      "No unverified cases match these filters.",
+    ));
+
+    pager.append(make("span", {
+      text: page.total ? "Showing " + formatCount(page.from) + "–" + formatCount(page.to) +
+        " of " + formatCount(page.total) : "0 unverified cases",
+    }));
+    const buttons = make("div", { className: "page-actions" });
+    const previous = make("button", {
+      className: "button", text: "← Previous", attributes: { type: "button" },
+    });
+    const next = make("button", {
+      className: "button", text: "Next →", attributes: { type: "button" },
+    });
+    previous.disabled = !page.hasPrevious;
+    next.disabled = !page.hasNext;
+    previous.addEventListener("click", () =>
+      void loadReviewQueue(filters, Math.max(0, offset - REVIEW_PAGE_SIZE)));
+    next.addEventListener("click", () =>
+      void loadReviewQueue(filters, offset + REVIEW_PAGE_SIZE));
+    buttons.append(previous, next);
+    pager.append(buttons);
+    hideStatus(status);
+    return true;
+  } catch (error) {
+    if (token === reviewQueueRequestToken) {
+      clear(results);
+      clear(pager);
+      setStatus(status, "error", errorText(error));
+    }
+    return false;
+  }
+}
+
+async function openReviewQueueCase(item) {
+  const status = byId("review-queue-review-status");
+  const card = byId("review-queue-detail-card");
+  // A queue item is only a snapshot. Re-read the current state before reviewing.
+  const token = ++reviewQueueRequestToken;
+  closeReviewQueueCase();
+  card.hidden = false;
+  setStatus(status, "loading", "Checking this case's current published state…");
+  const submit = byId("review-queue-submit");
+  const fieldset = byId("review-queue-review-fieldset");
+  fieldset.disabled = true;
+  submit.disabled = true;
+  try {
+    const current = await getCaseReviewStatus(item.case_id);
+    if (token !== reviewQueueRequestToken) return;
+    if (current.review_status !== "UNVERIFIED" ||
+        current.state_id !== item.state_id ||
+        current.release_id !== item.release_id) {
+      setStatus(status, "error", "This case has changed since the queue was loaded. Refresh the queue before reviewing.");
+      return;
+    }
+    selectedReviewQueueCase = {
+      case_id: item.case_id,
+      state_id: current.state_id,
+      release_id: current.release_id,
+    };
+    byId("review-queue-dossier").href = routeHash("dossier", item.case_id);
+    byId("review-queue-dossier").hidden = false;
+    const summary = byId("review-queue-case-summary");
+    clear(summary);
+    summary.append(definitionList({
+      Case: caseLink(item.case_id),
+      Isolate: item.target_acc,
+      Antibiotic: item.antibiotic,
+      "Current state": current.state_code,
+      "Published release": current.release_id,
+      "Changed labels": current.labels_changed,
+      "Review status": reviewBadge(current.review_status),
+    }));
+    byId("review-queue-review-form").reset();
+    syncQueueCorrection();
+    fieldset.disabled = false;
+    submit.disabled = false;
+    hideStatus(status);
+    card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  } catch (error) {
+    if (token === reviewQueueRequestToken) setStatus(status, "error", errorText(error));
+  }
+}
+
+async function submitQueueReview(event) {
+  event.preventDefault();
+  const status = byId("review-queue-review-status");
+  const submit = byId("review-queue-submit");
+  if (!selectedReviewQueueCase || submit.disabled) {
+    setStatus(status, "error", "Choose a current unverified case first.");
+    return;
+  }
+
+  const target = selectedReviewQueueCase;
+  const data = new FormData(event.currentTarget);
+  let payload;
+  try {
+    payload = buildReviewPayload({
+      reviewer: data.get("reviewer"),
+      action: data.get("action"),
+      reason: data.get("reason"),
+      corrected_state_code: data.get("corrected_state_code"),
+    }, target.state_id);
+  } catch (error) {
+    const name = error instanceof ReviewFormError ? error.field : "form";
+    setStatus(status, "error", name + ": " + error.message);
+    return;
+  }
+  submit.disabled = true;
+  setStatus(status, "loading", "Appending this review to the selected state…");
+  try {
+    const created = await createReview(target.case_id, payload);
+    if (created.state_id !== target.state_id) {
+      throw new Error("Unexpected review response: the reviewed state did not match.");
+    }
+    selectedReviewQueueCase = null;
+    byId("review-queue-review-fieldset").disabled = true;
+    byId("review-queue-detail-card").hidden = true;
+
+    // I-18 requires reading the *new* review status after an append. If
+    // that read fails, report the successful write without implying failure.
+    let currentStatusLabel = null;
+    try {
+      const updated = await getCaseReviewStatus(target.case_id);
+      currentStatusLabel = updated.state_id === target.state_id
+        ? reviewStatusMeta(updated.review_status).label
+        : "new published state — review again if needed";
+    } catch {
+      // A follow-up GET failure must never make an append look unsuccessful.
+    }
+
+    // Re-read the queue; it should no longer contain the reviewed case.
+    const reloaded = await loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset);
+    const message = "Review #" + created.review_id + " appended. " +
+      (currentStatusLabel ? "Current status: " + currentStatusLabel + ". " :
+        "Status could not be refreshed. ") +
+      "The stored case state was not edited.";
+    setStatus(byId("review-queue-status"), reloaded ? "success" : "error",
+      reloaded ? message : message + " Queue refresh failed; press Refresh to retry.");
+  } catch (error) {
+    setStatus(status, "error", errorText(error));
+  } finally {
+    submit.disabled = false;
+  }
+}
+
+function submitReviewQueueFilters(event) {
+  event.preventDefault();
+  const data = new FormData(event.currentTarget);
+  navigate("review-queue", reviewQueueRouteId({
+    drug: data.get("drug"),
+    state: data.get("state"),
+  }));
+}
 
 // the top bar search opens the dossier of whatever case was typed
 async function submitTopbarSearch(event) {
@@ -3165,6 +3460,14 @@ function boot() {
   byId("dossier-review-form").addEventListener("submit", submitDossierReview);
   byId("dossier-review-action").addEventListener("change", syncReviewCorrection);
   byId("explorer-form").addEventListener("submit", submitExplorer);
+  byId("review-queue-filters").addEventListener("submit", submitReviewQueueFilters);
+  byId("review-queue-refresh").addEventListener("click", () => void loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset));
+  byId("review-queue-close").addEventListener("click", () => {
+    ++reviewQueueRequestToken;
+    closeReviewQueueCase();
+  });
+  byId("review-queue-action").addEventListener("change", syncQueueCorrection);
+  byId("review-queue-review-form").addEventListener("submit", submitQueueReview);
   byId("topbar-search").addEventListener("submit", submitTopbarSearch);
   byId("exports-form").addEventListener("submit", submitExportSnapshot);
   byId("exports-download-hash").addEventListener("click", downloadExportHash);

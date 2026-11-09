@@ -12,6 +12,8 @@ import {
   getCaseDiff,
   getCaseHistory,
   getCaseReviews,
+  getCaseReviewStatus,
+  listReviewQueue,
   getRun,
   getRunEquivalence,
   listChanges,
@@ -67,6 +69,33 @@ test("listChangeTypes reads backend registration capabilities", async () => {
   assert.equal(types[1].can_derive_entities, false);
 });
 
+
+test("listReviewQueue fetches the correctly encoded I-18 queue path", async () => {
+  let seen;
+  const fakeFetch = async (url, options) => {
+    seen = { url, options };
+    return response(200, { total: 0, limit: 25, offset: 0, items: [] });
+  };
+  const result = await listReviewQueue(
+    "/review-queue?limit=25&offset=0&drug=gene%20test&state=UNRESOLVED",
+    fakeFetch,
+  );
+  assert.equal(seen.url, "/api/review-queue?limit=25&offset=0&drug=gene%20test&state=UNRESOLVED");
+  assert.equal(seen.options.method, "GET");
+  assert.equal(result.total, 0);
+});
+
+test("getCaseReviewStatus resolves the published state using an encoded case ID", async () => {
+  let seen;
+  const fakeFetch = async (url, options) => {
+    seen = { url, options };
+    return response(200, { case_id: "CASE/Q1", review_status: "UNVERIFIED", state_id: 9 });
+  };
+  const result = await getCaseReviewStatus("CASE/Q1", fakeFetch);
+  assert.equal(seen.url, "/api/cases/CASE%2FQ1/review-status");
+  assert.equal(seen.options.method, "GET");
+  assert.equal(result.state_id, 9);
+});
 
 test("createChange sends JSON to POST /api/changes", async () => {
   let seenUrl;

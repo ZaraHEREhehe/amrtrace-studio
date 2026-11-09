@@ -71,7 +71,7 @@ Interpretation rules follow the same idea differently. A case that looked for a 
 
 ## 5. How selection uses the graph
 
-1. **Level 1:** one indexed lookup per changed node, plus a rule-space lookup for a newly introduced mapping rule.
+1. **Level 1:** one indexed lookup per changed node, plus a rule-space lookup for a newly introduced mapping rule, and an owner lookup for a newly introduced evidence row (A-12): a new AST row selects the case of its isolate and drug, and a new genotype row selects every case of its isolate. A new row that is not stored stops the selection with `UnplacedEvidence` instead of selecting nothing.
 2. **Current release:** each case is judged by the rows of the newest published release that holds rows for it. A stale row in an older release does not select a case that was re-evaluated since.
 3. **Level 2:** when the change names a region, for example MIC values 4 and 8, edges whose stored measurement cannot fall in that region are dropped. A censored value such as `<= 4` is kept, because it could be 4.
 
@@ -96,6 +96,7 @@ On the real Ed32 to Ed33 change this gives 8,614 cases at level 1 and 254 at lev
 - **Selection time.** A typical change takes about 2 ms. A change to a node that every case depends on takes about 0.8 s with two releases, warm. Details are in `docs/design/selector_performance.md`.
 - **A rule whose determinant or antibiotic changes** is not found through the rule space. Only newly introduced rules are.
 - **A change that names a mapping rule without an old version** is treated as a new rule and also searched through the rule space. This can only select too many cases, never too few.
+- **A new genotype row selects every case of its isolate**, including drugs its determinant is not mapped to. This over-selects (rule 6) and matches how real cases already hold edges to every genotype row of their isolate. A new evidence row must be stored before its change is applied; otherwise the selection is refused.
 - **Composite and alternative support** are not represented, so a change to one of two determinants that both support a state selects the case even though the state cannot change. This over-selects; it does not miss cases.
 
 ## 8. Possible next steps

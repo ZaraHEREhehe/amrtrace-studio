@@ -45,6 +45,9 @@
           <button class="nav-button" type="button" data-nav="changes">
             <span class="nav-icon" aria-hidden="true">⊛</span>Change Events
           </button>
+          <button class="nav-button" type="button" data-nav="review-queue">
+            <span class="nav-icon" aria-hidden="true">✓</span>Review Queue
+          </button>
           <button class="nav-button" type="button" data-nav="runs">
             <span class="nav-icon" aria-hidden="true">↺</span>Runs &amp; Equivalence
           </button>
@@ -177,6 +180,90 @@
             <div id="explorer-status" class="status" aria-live="polite" hidden></div>
             <div id="explorer-results"></div>
             <div id="explorer-pager" class="pager"></div>
+          </section>
+        </section>
+
+        <!-- Z-17: review only the current published state of cases awaiting label verification -->
+        <section class="page" data-view="review-queue" hidden>
+          <header class="page-header">
+            <div>
+              <h2>Review Queue</h2>
+              <p class="muted">Interpretation labels awaiting a reviewer. Reviews are appended, never applied over a stored case state.</p>
+            </div>
+            <a class="button" href="#/explorer">Open Case Explorer</a>
+          </header>
+          <section class="card card-flush">
+            <form id="review-queue-filters" class="filter-bar">
+              <div class="field">
+                <label for="review-queue-drug">Antibiotic</label>
+                <select id="review-queue-drug" name="drug">
+                  <option value="">All antibiotics</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="review-queue-state">Current state</label>
+                <select id="review-queue-state" name="state">
+                  <option value="">All states</option>
+                  <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
+                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                  <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
+                  <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
+                  <option value="UNRESOLVED">Unresolved</option>
+                </select>
+              </div>
+              <button class="button button-primary" type="submit">Apply filters</button>
+              <button id="review-queue-refresh" class="button" type="button">Refresh</button>
+            </form>
+            <div id="review-queue-status" class="status" aria-live="polite" hidden></div>
+            <div id="review-queue-results"></div>
+            <div id="review-queue-pager" class="pager"></div>
+          </section>
+
+          <section class="card" id="review-queue-detail-card" hidden>
+            <div class="section-heading compact">
+              <h3>Review selected case</h3>
+              <button id="review-queue-close" type="button" class="button">× Close</button>
+            </div>
+            <div id="review-queue-case-summary"></div>
+            <p class="muted">This decision is attached to the selected published state. If a newer state is published, the API rejects the stale review.</p>
+            <form id="review-queue-review-form">
+              <fieldset id="review-queue-review-fieldset" class="review-fieldset" disabled>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="review-queue-reviewer">Reviewer</label>
+                  <input id="review-queue-reviewer" name="reviewer" autocomplete="off" required>
+                </div>
+                <div class="field">
+                  <label for="review-queue-action">Decision</label>
+                  <select id="review-queue-action" name="action" required>
+                    <option value="CONFIRM">Confirm current state</option>
+                    <option value="CORRECT">Record corrected state</option>
+                    <option value="MARK_UNRESOLVED">Mark unresolved</option>
+                  </select>
+                </div>
+                <div class="field field-wide">
+                  <label for="review-queue-reason">Reason for decision</label>
+                  <textarea id="review-queue-reason" name="reason" required placeholder="Explain the evidence behind this review"></textarea>
+                </div>
+                <div class="field field-wide" id="review-queue-correction-field" hidden>
+                  <label for="review-queue-corrected-state">Corrected state</label>
+                  <select id="review-queue-corrected-state" name="corrected_state_code" disabled>
+                    <option value="">Choose corrected state</option>
+                    <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
+                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                    <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
+                    <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
+                    <option value="UNRESOLVED">Unresolved</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-actions">
+                <button id="review-queue-submit" class="button button-primary" type="submit">Append review</button>
+                <a id="review-queue-dossier" class="button" href="#/dossier">Inspect full dossier</a>
+              </div>
+              </fieldset>
+            </form>
+            <div id="review-queue-review-status" class="status" aria-live="polite" hidden></div>
           </section>
         </section>
 

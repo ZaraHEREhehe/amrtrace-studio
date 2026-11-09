@@ -585,6 +585,24 @@ textarea {
 }
 
 /* status lines under forms */
+/* Review queue uses the existing card, badge and table components. */
+#review-queue-correction-field[hidden],
+#review-queue-detail-card[hidden] {
+  display: none;
+}
+
+#review-queue-results .button {
+  white-space: nowrap;
+}
+
+#review-queue-case-summary .definition-list {
+  margin-bottom: 14px;
+}
+
+#review-queue-detail-card {
+  margin-top: 16px;
+}
+
 .status {
   margin-top: 10px;
   padding: 8px 10px;
