@@ -59,3 +59,13 @@ event: a person applies or dismisses it (D-25), and applying goes through the sa
 The package is not in the genericity guard's protected list, because it reads the curated column names of the
 source data by design; it still names no drug, organism or standard.
 
+## Amendment 2 (2026-11-09, A-18)
+
+Written by Aabia with the tool and standards watchers. The watcher registry stays the one extension point for
+snapshot comparisons; A-18 adds one watcher to it (`amrfinderplus`, software versions on the isolates). Sources that
+are not snapshots (breakpoint editions, NCBI's newest AMRFinderPlus release) are read by a separate source check,
+`monitor/source_check.py`, from two committed files under `data/sources/`, so a check can be replayed. What cannot
+become a draft by itself (an edition with no table yet, a database the mapping does not cover) becomes an alert for a
+person instead; once a person stores a newer table, the same check drafts the change with the interpretation differ
+already registered. No engine package changed.
+

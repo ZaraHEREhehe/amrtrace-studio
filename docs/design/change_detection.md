@@ -1,10 +1,10 @@
-# Change detection engine (A-13)
+# Change detection engine (A-13, A-18)
 
 The change detection engine compares two source snapshots and **drafts** typed change events. A draft is a
-proposal: nothing reaches `change_event` until a person applies it (decision D-25). This note covers part 1:
-the watcher registry, the snapshot check, the AST, genotype and mapping watchers, the draft table and the
-"check now" command. Part 2 is the builder that produces a later snapshot from the September pipeline (see
-"Building a later snapshot").
+proposal: nothing reaches `change_event` until a person applies it (decision D-25). This note covers A-13 part 1
+(the watcher registry, the snapshot check, the AST, genotype and mapping watchers, the draft table and the "check
+now" command), A-13 part 2 (the builder that produces a later snapshot, see "Building a later snapshot") and A-18
+(the AMRFinderPlus and breakpoint-standard watchers, and alerts, see "Tools and standards").
 
 ## How it works
 
@@ -104,6 +104,58 @@ The check drafted two changes and nothing else:
 The 203 added detailed rows are not stored yet, so this genotype draft can only be applied once a new snapshot's
 evidence can be loaded (proposed I-20). The AST draft only edits stored rows.
 
+## Tools and standards (A-18)
+
+Two sources change outside the evidence snapshots: the AMRFinderPlus software and reference database NCBI uses,
+and the editions of the breakpoint standards. Some of what they release can be drafted; the rest needs a person
+first, so the engine raises an **alert** (migration 0011, `source_alert`). An alert is never a change event: it
+says what a person should do, and the person acknowledges it once they have acted (`GET /alerts`,
+`POST /alerts/{id}/acknowledge`). Like drafts, an alert's id is a hash of what was found, so a re-run stores nothing
+new, and the database allows only the move from OPEN to ACKNOWLEDGED.
+
+**In the snapshot check.** One more watcher, `amrfinderplus`, compares the software version NCBI recorded on each
+isolate. When isolates move to new software it drafts one `EVALUATOR_VERSION` change on the old version node.
+Tool versions are recorded per release (D-05, version level), so applying it re-verifies every case evaluated
+under the old version, not only the moved isolates. A move to a new reference **database** is not drafted here: it
+changes the isolate's genotype rows, which the genotype watcher already drafts row by row.
+
+**In the source check**, a second command, which compares what the publishers have released with what AMRTrace holds:
+
+```
+python -m amrtrace.monitor.source_check --dry-run
+python -m amrtrace.monitor.source_check --snapshot data/snapshots/AMRTRACE_RAW_V2
+python -m amrtrace.monitor.source_check --fetch
+```
+
+| Found | Result |
+|---|---|
+| An edition in the catalogue newer than the table in force, with no stored table holding it | alert `NEW_STANDARD_EDITION` |
+| A stored table newer than the table in force (it keeps every standard, none older, at least one newer or added) | draft `INTERPRETATION_VERSION`, entities from the existing interpretation differ |
+| NCBI's newest database with no mapping rules | alert `DATABASE_NOT_IN_MAPPING` |
+| NCBI's newest software newer than the version the release in force used | alert `NEWER_SOFTWARE` |
+| A snapshot's isolates analysed with a database that has no mapping rules (`--snapshot`) | alert `SNAPSHOT_DATABASE_NOT_IN_MAPPING` |
+
+So a new edition goes through three steps, each by a person: the alert says the edition exists; the person enters
+its licensed table in `data/interpretation/` and stores it; the next source check drafts the change, and the alert
+is not raised again. A change already registered by hand is not drafted a second time.
+
+The check reads two committed files, so it can always be replayed:
+
+- `data/sources/standards_catalogue.yaml`: the published editions of CLSI M100 and VET01S. A person adds an edition
+  when CLSI announces it; `--fetch` reads the CLSI product page and adds the edition its product code names
+  (for example `M100Ed36`).
+- `data/sources/amrfinderplus_releases.yaml`: NCBI's newest software and database. `--fetch` reads NCBI's
+  `version.txt` for the database and the newest GitHub release of `ncbi/amr` for the software.
+
+`--fetch` only updates these files; a person reviews and commits the change. A page that cannot be read is
+reported and skipped. Which editions a table holds is read from its version name (`CLSI_M100_ED33_VET01S_ED7` holds
+M100 Ed33 and VET01S Ed7), so a new table must follow that naming.
+
+On the D-22 database (R4 in force, `CLSI_M100_ED33_VET01S_ED7`) the committed catalogue raises one alert, CLSI M100
+Ed36 (published 26 January 2026; Ed34 and Ed35 were skipped), and nothing for VET01S, whose newest edition is still
+Ed7. The mapping covers the three databases the V1 and V2 isolates use, so no database alert is raised until a fetch
+finds a newer NCBI database.
+
 ## Deciding drafts
 
 The API lists and decides drafts: `GET /drafts?status=PENDING`, `GET /drafts/{id}`,
@@ -122,4 +174,9 @@ The API lists and decides drafts: `GET /drafts?status=PENDING`, `GET /drafts/{id
 - **Isolate-level changes are not watched.** A corrected host, for example, changes which VET01S row applies, but no
   change type covers isolate rows yet.
 - **Rule policies are not watched.** A rule policy (I-17) is written by the team, not found in a source snapshot.
+- **A new database needs a new mapping by hand.** The engine alerts when the mapping does not cover a database, but
+  building mapping rules for it (from NCBI's reference gene catalogue) is not automated; the old mapping builder was
+  not moved into this repository.
+- **The edition check relies on table names and the catalogue.** CLSI publishes no machine-readable feed, so
+  `--fetch` reads the product page's product code; if CLSI changes the page, the catalogue is updated by hand.
 - **New isolates are left out.** A later snapshot keeps the V1 cohort, because adding cases is not a change type.

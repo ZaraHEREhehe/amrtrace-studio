@@ -8,6 +8,7 @@
 /src/amrtrace/changes/          @insharahn
 /src/amrtrace/reeval/           @insharahn
 /data/interpretation/           @insharahn
+/data/sources/                  @AabiaAli
 /db/migrations/                 @insharahn
 /tests/oracle/                  @insharahn
 /src/amrtrace/ingest/           @ZaraHEREhehe
