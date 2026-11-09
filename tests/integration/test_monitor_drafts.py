@@ -304,3 +304,19 @@ def test_the_api_reports_missing_and_already_decided_drafts(client, world, snaps
     assert again.status_code == 409
     assert again.json()["error_code"] == "draft_already_decided"
     assert client.post(f"/drafts/{draft_id}/dismiss", json={"decided_by": "", "note": "x"}).status_code == 422
+
+
+# a draft that adds a result not loaded yet cannot find its cases (A-12), so it is refused and stays pending
+def test_the_api_refuses_a_draft_whose_new_row_is_not_loaded(client, world, tmp_path):
+    def add_unloaded_row(rows):
+        return [*rows, dict(rows[0], id="NCBI_NEW_ROW", ast_evidence_id="ASTV1_NOT_LOADED")]
+
+    new = open_snapshot(make_snapshot(tmp_path, NEW_ID, {AST: add_unloaded_row}))
+    run_check(world, default_watchers(), open_snapshot(MINI_COHORT), new)
+    draft_id = draft_of(world, "AST_CORRECTED").draft_id
+
+    response = client.post(f"/drafts/{draft_id}/apply", json={"decided_by": "aabia"})
+
+    assert response.status_code == 422
+    assert response.json()["error_code"] == "evidence_not_loaded"
+    assert get_draft(world, draft_id).status == PENDING

@@ -2,6 +2,7 @@
 /src/amrtrace/evaluator/        @AabiaAli
 /src/amrtrace/deps/             @AabiaAli
 /src/amrtrace/monitor/          @AabiaAli
+/src/amrtrace/triage/           @AabiaAli
 /pipeline/                      @AabiaAli
 /src/amrtrace/interpretation/   @insharahn
 /src/amrtrace/ledger/           @insharahn

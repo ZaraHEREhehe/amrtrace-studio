@@ -17,6 +17,7 @@ DEPENDENCY_COLUMNS = (
     "node_version",
     "node_context",
 )
+SUPPORT_COLUMNS = ("case_id", "release_id", "kind", "group_key", "need", "node_type", "node_id", "member")
 APPLICABILITY_COLUMNS = (
     "case_id",
     "release_id",
@@ -35,6 +36,7 @@ class MaterializeSummary:
     cases_skipped: int
     dependency_rows: int
     applicability_rows: int
+    support_rows: int = 0
 
 
 # one row per dependency record the evaluator emitted, nothing added and nothing dropped
@@ -51,6 +53,14 @@ def dependency_rows(case_id: str, release_id: str, result: EvalResult) -> list[t
             record.node_context,
         )
         for record in result.dependency_records
+    ]
+
+
+# how the case's state holds together (A-15): contradiction, composite and alternative support rows
+def support_rows(case_id: str, release_id: str, result: EvalResult) -> list[tuple]:
+    return [
+        (case_id, release_id, r.kind, r.group, r.need, r.node_type, r.node_id, r.member)
+        for r in result.support_records
     ]
 
 
@@ -121,6 +131,7 @@ def materialize(
 
         dependency_batch = []
         applicability_batch = []
+        support_batch = []
         written = set()
         skipped = set()
         for inputs, result in evaluations:
@@ -133,6 +144,7 @@ def materialize(
             written.add(inputs.case_id)
             dependency_batch.extend(dependency_rows(inputs.case_id, release_id, result))
             applicability_batch.extend(applicability_rows(inputs, release_id, versions))
+            support_batch.extend(support_rows(inputs.case_id, release_id, result))
 
         _copy_rows(
             conn,
@@ -141,10 +153,12 @@ def materialize(
             (_for_database(row) for row in dependency_batch),
         )
         _copy_rows(conn, "applicability", APPLICABILITY_COLUMNS, applicability_batch)
+        _copy_rows(conn, "support_structure", SUPPORT_COLUMNS, support_batch)
 
     return MaterializeSummary(
         cases_written=len(written),
         cases_skipped=len(skipped),
         dependency_rows=len(dependency_batch),
         applicability_rows=len(applicability_batch),
+        support_rows=len(support_batch),
     )

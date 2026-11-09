@@ -8,6 +8,14 @@ MECHANISM_REALISED_EDGE = "realised_edge"
 MECHANISM_APPLICABILITY = "applicability"
 MECHANISM_EVIDENCE_OWNER = "evidence_owner"
 
+# what the stored support structure (A-15) says a selected case's re-evaluation should show; None when it says nothing.
+# These never change which cases are selected: a case whose state holds still has a changed explanation, and the
+# equivalence check compares explanations too, so it must be re-evaluated all the same.
+EFFECT_SUPPORT_MAY_FALL = "support_may_fall"
+EFFECT_CONFLICT_MAY_RESOLVE = "conflict_may_resolve"
+EFFECT_ALTERNATIVE_HOLDS = "alternative_support_holds"
+SUPPORT_CONTRADICTION = "contradiction"
+
 # the node type whose new members are found through the recorded rule space
 NODE_MAPPING_RULE = "mapping_rule"
 # the node type whose stored versions can be compared by content (D-22)
@@ -37,6 +45,7 @@ class ImpactItem:
     case_id: str
     reason: str
     mechanism: str
+    expected_effect: str | None = None
 
 
 # the selection plus the two sizes the impact report needs
@@ -354,6 +363,7 @@ def select_impact_detailed(
         level1_cases.add(case_id)
         owned.setdefault(case_id, set()).add(reason)
 
+    effects = _expected_effects(conn, changed_entities, set(reasons) | set(applicable) | set(owned), current, named_release)
     items = tuple(
         ImpactItem(
             case_id=case_id,
@@ -368,6 +378,7 @@ def select_impact_detailed(
                 if case_id in applicable
                 else MECHANISM_EVIDENCE_OWNER
             ),
+            expected_effect=effects.get(case_id),
         )
         for case_id in sorted(set(reasons) | set(applicable) | set(owned))
     )
@@ -378,6 +389,66 @@ def select_impact_detailed(
         level1_size=len(level1_cases),
         level2_size=len(items),
     )
+
+
+# reads how each selected case's state holds (support_structure) and predicts what the change does to it:
+# a group losing members below what it needs may lose the state, a conflict row that changes may resolve,
+# and a group that keeps enough members after a removal holds the state; edits are not predicted
+def _expected_effects(conn, changed_entities, case_ids, current, named_release) -> dict[str, str]:
+    removed, edited = set(), set()
+    for entity in changed_entities:
+        if entity.get("old_version") is None:
+            continue
+        key = (entity["node_type"], entity["node_id"])
+        (removed if entity.get("new_version") is None else edited).add(key)
+    touched = removed | edited
+    if not touched or not case_ids:
+        return {}
+
+    pairs = sorted((case_id, current[case_id] if current is not None else named_release) for case_id in case_ids)
+    rows = conn.execute(
+        "SELECT s.case_id, s.kind, s.group_key, s.need, s.node_type, s.node_id, s.member "
+        "FROM support_structure s JOIN unnest(%s::text[], %s::text[]) AS p(case_id, release_id) "
+        "ON s.case_id = p.case_id AND s.release_id = p.release_id",
+        ([c for c, _ in pairs], [r for _, r in pairs]),
+    ).fetchall()
+
+    groups = {}
+    conflicts = set()
+    for case_id, kind, group_key, need, node_type, node_id, member in rows:
+        if kind == SUPPORT_CONTRADICTION:
+            if (node_type, node_id) in touched:
+                conflicts.add(case_id)
+            continue
+        group = groups.setdefault((case_id, group_key), {"need": need, "members": set(), "removed": set(), "edited": set()})
+        group["members"].add(member)
+        if (node_type, node_id) in removed:
+            group["removed"].add(member)
+        elif (node_type, node_id) in edited:
+            group["edited"].add(member)
+
+    falls, holds, unknown = set(), set(), set()
+    for (case_id, _), group in groups.items():
+        if not group["removed"] and not group["edited"]:
+            continue
+        left = len(group["members"] - group["removed"] - group["edited"])
+        if group["edited"]:
+            # an edited row may bring new support, so only a certain fall is reported
+            (falls if left + len(group["edited"]) < group["need"] else unknown).add(case_id)
+        elif left < group["need"]:
+            falls.add(case_id)
+        else:
+            holds.add(case_id)
+
+    effects = {}
+    for case_id in case_ids:
+        if case_id in falls:
+            effects[case_id] = EFFECT_SUPPORT_MAY_FALL
+        elif case_id in conflicts:
+            effects[case_id] = EFFECT_CONFLICT_MAY_RESOLVE
+        elif case_id in holds and case_id not in unknown:
+            effects[case_id] = EFFECT_ALTERNATIVE_HOLDS
+    return effects
 
 
 def select_impact(conn, change_event_id: str) -> list[ImpactItem]:

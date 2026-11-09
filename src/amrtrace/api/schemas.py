@@ -162,6 +162,8 @@ class ImpactItemView(BaseModel):
     case_id: str
     reason: str
     mechanism: str
+    # what the case's stored support structure predicts its re-evaluation will show (A-15); None when unknown
+    expected_effect: Optional[str] = None
 
 
 class ImpactSetView(BaseModel):

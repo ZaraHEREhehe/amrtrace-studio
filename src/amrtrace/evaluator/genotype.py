@@ -1,7 +1,7 @@
 # genotype stage: joins evidence to mapping rules and asks the versioned policy for a state
 from . import constants as c
 from .policy import get_genotype_policy
-from .types import CaseInputs, DependencyRecord, GenotypeResult, VersionVector
+from .types import CaseInputs, DependencyRecord, GenotypeResult, SupportRecord, VersionVector
 
 
 # pairs each evidence row with the one mapping rule that shares its link key
@@ -56,12 +56,16 @@ def evaluate_genotype(inputs: CaseInputs, versions: VersionVector) -> GenotypeRe
     items = _join_items(inputs)
 
     # an invalid analysis is never interpreted, whatever evidence is present
+    groups = ()
     if not inputs.genotype_analysis_valid:
         state, supporting = c.GENOTYPE_INVALID_ANALYSIS, ()
     else:
         policy = get_genotype_policy(versions.case_rule_version)
-        state, supporting = policy(inputs.antibiotic, items)
-        supporting = tuple(supporting)
+        decided = policy(inputs.antibiotic, items)
+        # a policy may also say how its support is grouped (A-15); a two-part answer is still understood
+        state, supporting = decided[0], tuple(decided[1])
+        if len(decided) > 2:
+            groups = tuple(decided[2])
 
     if state not in c.GENOTYPE_STATES:
         raise ValueError(f"policy returned an unknown genotype state {state!r}")
@@ -111,4 +115,28 @@ def evaluate_genotype(inputs: CaseInputs, versions: VersionVector) -> GenotypeRe
         determinants_evaluated=_stable(items, "determinant"),
         determinants_supporting=_stable(supporting, "determinant"),
         dependency_records=tuple(records),
+        support_records=_support_structure(groups),
     )
+
+
+# turns the policy's groups into records: several groups, or a group needing more than one member, is composite;
+# a group with more distinct members than it needs has alternatives, so losing one member leaves the state standing
+def _support_structure(groups: tuple) -> tuple[SupportRecord, ...]:
+    composite = len(groups) > 1 or any(need > 1 for need, _ in groups)
+    records = set()
+    for index, (need, group_items) in enumerate(groups, start=1):
+        if need < 1:
+            raise ValueError(f"a support group must need at least one member, got {need}")
+        kinds = []
+        if composite:
+            kinds.append(c.SUPPORT_COMPOSITE)
+        if len({item["determinant"] for item in group_items}) > need:
+            kinds.append(c.SUPPORT_ALTERNATIVE)
+        for kind in kinds:
+            for item in group_items:
+                member = str(item["determinant"])
+                records.add(SupportRecord(kind, f"G{index}", need, c.NODE_GENOTYPE_EVIDENCE,
+                                          str(item["genotype_evidence_id"]), member))
+                records.add(SupportRecord(kind, f"G{index}", need, c.NODE_MAPPING_RULE,
+                                          str(item["mapping_rule_id"]), member))
+    return tuple(sorted(records, key=lambda r: (r.kind, r.group, r.node_type, r.node_id)))

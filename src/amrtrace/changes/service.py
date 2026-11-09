@@ -102,8 +102,9 @@ def record_impact(conn, change_id: str, *, selector: Selector = select_impact_de
         if selection.items:
             with conn.cursor() as cursor:
                 cursor.executemany(
-                    "INSERT INTO impact_item (change_id, case_id, mechanism, reason) VALUES (%s, %s, %s, %s)",
-                    [(change_id, i.case_id, i.mechanism, i.reason) for i in selection.items],
+                    "INSERT INTO impact_item (change_id, case_id, mechanism, reason, expected_effect) "
+                    "VALUES (%s, %s, %s, %s, %s)",
+                    [(change_id, i.case_id, i.mechanism, i.reason, i.expected_effect) for i in selection.items],
                 )
     return StoredImpact(
         change_id=change_id,
@@ -158,8 +159,10 @@ def get_impact_set(conn, change_id: str) -> StoredImpact | None:
         if head is None:
             return None
         cursor.execute(
-            "SELECT case_id, reason, mechanism FROM impact_item WHERE change_id = %s ORDER BY case_id",
+            "SELECT case_id, reason, mechanism, expected_effect FROM impact_item WHERE change_id = %s ORDER BY case_id",
             (change_id,),
         )
-        items = tuple(ImpactItem(r["case_id"], r["reason"], r["mechanism"]) for r in cursor.fetchall())
+        items = tuple(
+            ImpactItem(r["case_id"], r["reason"], r["mechanism"], r["expected_effect"]) for r in cursor.fetchall()
+        )
     return StoredImpact(change_id, head["release_id"], head["level1_size"], head["level2_size"], items)

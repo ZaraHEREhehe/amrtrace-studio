@@ -25,7 +25,8 @@ def test_selector_matches_the_oracle(conn, request, path):
 
     build_world(conn, fx)
     change_id = register_fixture_event(conn, fx)
-    selected = {item.case_id for item in selector.select_impact(conn, change_id)}
+    items = selector.select_impact(conn, change_id)
+    selected = {item.case_id for item in items}
 
     expected = fx["expected"]
     required = set(expected["required_case_ids"])
@@ -33,3 +34,6 @@ def test_selector_matches_the_oracle(conn, request, path):
     missing, unexpected = required - selected, selected - allowed
     assert not missing, f"{fx['scenario']}: recall below 100%, not selected: {sorted(missing)}"
     assert not unexpected, f"{fx['scenario']}: selected cases the oracle says are not affected: {sorted(unexpected)}"
+    # a fixture may also say what the stored support structure predicts for a selected case (A-15)
+    for case_id, effect in (expected.get("expected_effects") or {}).items():
+        assert {i.case_id: i.expected_effect for i in items}.get(case_id) == effect, f"{fx['scenario']}: {case_id}"

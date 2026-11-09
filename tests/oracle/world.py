@@ -96,6 +96,14 @@ def build_world(conn, fx: dict) -> None:
             (row["genotype_evidence_id"], "ORACLE", _isolate_of(world, row["case"]), row.get("element_symbol"),
              row["genotype_evidence_id"]),
         )
+    # how a case's state holds (A-15): contradiction, composite and alternative-support rows
+    for r in world.get("support", []):
+        conn.execute(
+            "INSERT INTO support_structure (case_id, release_id, kind, group_key, need, node_type, node_id, member) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s)",
+            (r["case"], _release_id(r.get("release")), r["kind"], r["group"], r["need"], r["node_type"],
+             r["node_id"], r["member"]),
+        )
     for a in world.get("applicability", []):
         conn.execute(
             "INSERT INTO applicability (case_id, release_id, determinant_identity, candidate_antibiotic, organism, "

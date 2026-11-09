@@ -49,6 +49,22 @@ class DependencyRecord:
     node_context: dict | None
 
 
+# how a state is held together (A-15): which items form a group, and how many distinct members the group needs
+# kept beside the dependency records, never hashed or compared, so adding it changed no stored result
+@dataclass(frozen=True)
+class SupportRecord:
+    # contradiction | composite | alternative_support
+    kind: str
+    # the group the item belongs to, for example "G1"; a case's conflicting results share one group
+    group: str
+    # how many distinct members the group needs for the state to hold
+    need: int
+    node_type: str
+    node_id: str
+    # the determinant (genotype) or the category (phenotype) this item gives the group
+    member: str
+
+
 @dataclass(frozen=True)
 class PhenotypeResult:
     phenotype_state: str
@@ -56,6 +72,7 @@ class PhenotypeResult:
     dependency_records: tuple[DependencyRecord, ...]
     # one entry per result in interpretation mode, saying whether its label was submitted or derived
     label_flags: tuple[dict, ...] = ()
+    support_records: tuple[SupportRecord, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -69,6 +86,7 @@ class GenotypeResult:
     determinants_evaluated: tuple[str, ...]
     determinants_supporting: tuple[str, ...]
     dependency_records: tuple[DependencyRecord, ...]
+    support_records: tuple[SupportRecord, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -81,3 +99,4 @@ class EvalResult:
     dependency_records: tuple[DependencyRecord, ...]
     input_hash: str
     output_hash: str
+    support_records: tuple[SupportRecord, ...] = ()

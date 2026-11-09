@@ -180,3 +180,14 @@ mechanism stays `realised_edge`. Only cases that the release being read evaluate
 stored raises `UnplacedEvidence`: selecting nothing would hide a miss. The table and column names come from a fixed map
 in the selector and name no drug, organism or standard (rule 12). The realised-edge-only selector
 (`use_applicability=False`) does not do this lookup, so its blind spot stays measurable.
+
+## Amendment 5 (2026-11-09, A-15)
+
+Written by Aabia with the remaining dependency types. A genotype policy may return a third part, its support
+groups as `(need, items)` pairs: the state holds while each group keeps `need` distinct determinants. A policy that
+returns only `(state, supporting)` works as before. The evaluator turns the groups into `SupportRecord`s (`composite`
+when there are several groups or a group needs more than one member, `alternative_support` when a group has more
+distinct members than it needs), and the phenotype stage records a conflict's rows as `contradiction`. The records
+travel on `EvalResult.support_records`, which is **not** part of `output_hash`, `dependency_records` or the
+equivalence comparison, so every stored hash, release and equivalence report stays valid. The selector uses them only
+to predict each selected case's `expected_effect`; it never selects fewer cases (see `docs/design/graph_design.md`).

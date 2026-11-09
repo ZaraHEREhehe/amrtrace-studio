@@ -6,7 +6,7 @@ from amrtrace.interpretation.models import InterpretationRule, rule_from_dict
 
 from . import constants as c
 from .hashing import canonical_json
-from .types import CaseInputs, DependencyRecord, PhenotypeResult, VersionVector
+from .types import CaseInputs, DependencyRecord, PhenotypeResult, SupportRecord, VersionVector
 
 # table labels to the neutral codes used everywhere else
 _LABEL_CODES = {
@@ -123,6 +123,7 @@ def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> Phenotype
     values = set()
     rule_records = {}
     flags = []
+    row_values = []
     # rows are walked in a fixed order so the output never depends on the input order
     for row in sorted(inputs.ast_rows, key=lambda row: str(row["ast_evidence_id"])):
         reported = _reported_label(row)
@@ -166,8 +167,10 @@ def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> Phenotype
             flags.append(_label_flag(row, reported, derived, used))
         if value is not None:
             values.add(value)
+            row_values.append((str(row["ast_evidence_id"]), value))
 
     ordered_values = tuple(sorted(values))
+    state = _state_from_values(ordered_values)
 
     # every AST row stays traceable, even when rows repeat or disagree
     ast_ids = sorted({str(row["ast_evidence_id"]) for row in inputs.ast_rows})
@@ -185,8 +188,19 @@ def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> Phenotype
     records += [rule_records[key] for key in sorted(rule_records)]
 
     return PhenotypeResult(
-        phenotype_state=_state_from_values(ordered_values),
+        phenotype_state=state,
         phenotype_values=ordered_values,
         dependency_records=tuple(records),
         label_flags=tuple(flags),
+        support_records=_contradiction(state, ordered_values, row_values),
+    )
+
+
+# results that disagree hold the case in conflict together; the conflict needs every category it has now
+def _contradiction(state: str, values: tuple[str, ...], row_values: list) -> tuple[SupportRecord, ...]:
+    if state != c.PHENOTYPE_CONFLICT:
+        return ()
+    return tuple(
+        SupportRecord(c.SUPPORT_CONTRADICTION, c.CONFLICT_GROUP, len(values), c.NODE_AST_EVIDENCE, ast_id, value)
+        for ast_id, value in sorted(set(row_values))
     )

@@ -83,7 +83,7 @@ def test_no_items_or_only_placeholders_is_no_support(drug):
 
 
 def test_gentamicin_direct_support_is_decisive():
-    state, supporting = genotype_state("gentamicin", (unmapped(), direct("aac(3)-IId")))
+    state, supporting, *_ = genotype_state("gentamicin", (unmapped(), direct("aac(3)-IId")))
     assert state == DECISIVE
     assert determinants(supporting) == ["aac(3)-IId"]
 
@@ -93,7 +93,7 @@ def test_gentamicin_class_support_alone_is_not_enough():
 
 
 def test_gentamicin_context_item_is_contextual():
-    state, supporting = genotype_state(
+    state, supporting, *_ = genotype_state(
         "gentamicin", (needs_context("detC"), unmapped())
     )
     assert state == CONTEXTUAL
@@ -101,7 +101,7 @@ def test_gentamicin_context_item_is_contextual():
 
 
 def test_gentamicin_decisive_beats_contextual():
-    state, supporting = genotype_state(
+    state, supporting, *_ = genotype_state(
         "gentamicin", (needs_context("detC"), direct("aac(3)-IId"))
     )
     assert state == DECISIVE
@@ -114,7 +114,7 @@ def test_gentamicin_decisive_beats_contextual():
 @pytest.mark.parametrize("drug", ["ceftriaxone", "meropenem"])
 def test_beta_lactams_accept_direct_or_class_support(drug):
     assert genotype_state(drug, (direct("detD"),))[0] == DECISIVE
-    state, supporting = genotype_state(drug, (class_support("blaEC-5"), unmapped()))
+    state, supporting, *_ = genotype_state(drug, (class_support("blaEC-5"), unmapped()))
     assert state == DECISIVE
     assert determinants(supporting) == ["blaEC-5"]
 
@@ -133,7 +133,7 @@ def test_combination_needs_both_components():
         component("sul1", "SULFONAMIDE"),
         unmapped(),
     )
-    state, supporting = genotype_state(TMP_SMX, items)
+    state, supporting, *_ = genotype_state(TMP_SMX, items)
     assert state == DECISIVE
     assert determinants(supporting) == ["dfrA17", "sul1"]
 
@@ -142,7 +142,7 @@ def test_combination_needs_both_components():
     "subclass, determinant", [("TRIMETHOPRIM", "dfrA17"), ("SULFONAMIDE", "sul2")]
 )
 def test_one_component_alone_is_only_contextual(subclass, determinant):
-    state, supporting = genotype_state(TMP_SMX, (component(determinant, subclass),))
+    state, supporting, *_ = genotype_state(TMP_SMX, (component(determinant, subclass),))
     assert state == CONTEXTUAL
     assert determinants(supporting) == [determinant]
 
@@ -215,7 +215,7 @@ def test_anchor_gene_plus_second_gene_is_decisive():
         class_support("parC_S80I"),
         class_support("qnrS1"),
     )
-    state, supporting = genotype_state("ciprofloxacin", items)
+    state, supporting, *_ = genotype_state("ciprofloxacin", items)
     assert state == DECISIVE
     assert determinants(supporting) == ["gyrA_S83L", "parC_S80I"]
 
@@ -231,7 +231,7 @@ def test_same_mutation_seen_twice_counts_once():
 
 
 def test_single_anchor_gene_mutation_is_contextual():
-    state, supporting = genotype_state(
+    state, supporting, *_ = genotype_state(
         "ciprofloxacin", (class_support("gyrA_S83L"), unmapped())
     )
     assert state == CONTEXTUAL
@@ -258,3 +258,35 @@ def test_context_only_mutation_does_not_count_towards_the_pair():
         genotype_state("ciprofloxacin", (class_support("gyrA_S83L"), second))[0]
         == CONTEXTUAL
     )
+
+
+# A-15: the third part of the answer says how the support holds, in groups of (distinct determinants needed, items)
+
+
+def groups(answer):
+    return [(need, determinants(items)) for need, items in answer[2]]
+
+
+@pytest.mark.parametrize("drug", ["gentamicin", "ceftriaxone", "meropenem"])
+def test_any_one_decisive_item_holds_a_single_item_drug(drug):
+    assert groups(genotype_state(drug, (direct("detA"), direct("detB"), unmapped()))) == [(1, ["detA", "detB"])]
+
+
+def test_the_combination_needs_one_item_of_each_half():
+    answer = genotype_state(TMP_SMX, (component("dfrA1", "TRIMETHOPRIM"), component("sul1", "SULFONAMIDE")))
+
+    assert answer[0] == DECISIVE
+    assert groups(answer) == [(1, ["dfrA1"]), (1, ["sul1"])]
+
+
+def test_the_quinolone_rule_needs_the_anchor_and_two_distinct_mutations():
+    qrdr = item("gyrA_S83L", "CLASS_SUPPORT", "SUPPORTS_RESISTANCE"), item("parC_S80I", "CLASS_SUPPORT", "SUPPORTS_RESISTANCE")
+
+    answer = genotype_state("ciprofloxacin", qrdr)
+
+    assert answer[0] == DECISIVE
+    assert groups(answer) == [(1, ["gyrA_S83L"]), (2, ["gyrA_S83L", "parC_S80I"])]
+
+
+def test_contextual_support_is_held_by_any_contextual_item():
+    assert groups(genotype_state("gentamicin", (needs_context("detC"), needs_context("detD")))) == [(1, ["detC", "detD"])]

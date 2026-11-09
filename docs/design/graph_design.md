@@ -38,11 +38,47 @@ Next to the edges, the `applicability` table records the rule space of each case
 | Applicability / absence | Built: `applicability` edges and the `applicability` table |
 | Provenance and version | Built: seven version node types |
 | Unresolved mapping | Built as state routing in the evaluator, not as an edge type |
-| Contradiction | Partial: conflicting AST rows give an unresolved state; there is no contradiction edge |
-| Composite logic | Not built. `composed_of` exists in the schema but no edge uses it |
-| Alternative support | Not built |
+| Contradiction | Built (A-15): conflicting AST rows give an unresolved state, and each row in the conflict is a `contradiction` row in `support_structure` |
+| Composite logic | Built (A-15): items needed together are `composite` rows in `support_structure`, grouped, with how many distinct members each group needs |
+| Alternative support | Built (A-15): a group with more distinct members than it needs is recorded as `alternative_support` |
 
 One type was added that the plan did not list: `input_evidence`, for items the evaluator read whether or not they supported the state (ADR-003 section 5). Without it, a change to evidence that did not support a state could not find the case, even though correcting that evidence could change the state.
+
+### How a state holds together (A-15)
+
+The dependency rows say what a case depended on. The `support_structure` table (migration 0012) says how those items
+hold its state. The genotype policy may return a third part, its support groups as `(need, items)` pairs: a group
+holds while it keeps `need` distinct determinants. CASE_RULES_V1 returns:
+
+| Rule | Groups | Kind |
+|---|---|---|
+| Gentamicin, ceftriaxone, meropenem (any one decisive item) | one group, need 1 | alternative support when two or more determinants qualify |
+| Trimethoprim-sulfamethoxazole (both halves) | a trimethoprim group and a sulfonamide group, need 1 each | composite |
+| Ciprofloxacin (gyrA plus a second QRDR mutation) | a gyrA group (need 1) and a QRDR group (need 2) | composite |
+| Any contextual support | one group, need 1 | alternative support when two or more determinants give context |
+
+Each member is stored on both its genotype row and its mapping rule, so a change to either finds it. The phenotype
+stage records the rows of a conflict as `contradiction`, with the number of categories the conflict holds as `need`.
+
+**Outside the hash and the comparison.** The rows are written beside the dependency rows but are not part of the
+evaluation hash, the dependency records or the equivalence comparison. Adding them changed no stored result, and a
+release stored before migration 0012 simply has no rows.
+
+**What the selector does with them.** It never selects fewer cases. A case whose state is held by an alternative
+still has a changed explanation (its supporting determinants change), and the exhaustive comparison checks the
+explanation as well as the state, so skipping it would fail the release gate. Section 7 of the earlier version of
+this note expected alternative support to make selection more precise; building it showed it cannot, under a
+three-axis equivalence. Instead the selector predicts what each selected case should show, as `expected_effect` on
+the impact item:
+
+| Expected effect | When |
+|---|---|
+| `support_may_fall` | a removal leaves a group with fewer distinct members than it needs (a composite broken, or every alternative lost) |
+| `conflict_may_resolve` | a row of a conflict is corrected or removed |
+| `alternative_support_holds` | a removal leaves every touched group with enough members |
+| none | no structure is stored, the case has a single support, or a row is edited (its new content may bring new support) |
+
+The prediction is for review and triage; the exhaustive comparison remains what proves a release.
 
 ## 3. Layers
 
@@ -90,7 +126,7 @@ How much the rule level and the region save compared with coarser units (no regi
 | Versions | `rule_set_version` and `tool_version` | Seven version node types | One per version recorded in the frozen release |
 | Interpretation rules | Planned node type | Built, with the measurement on the edge, and no-match edges | Needed for region refinement and for rules added later (ADR-004 amendment 3) |
 | Evidence consumed but not supporting | Not in the taxonomy | `input_evidence` | A correction to such evidence can change the state |
-| Composite and alternative support | Optional | Not built | Not needed by the evaluated scenarios |
+| Composite and alternative support | Optional | Built as `support_structure` rows beside the graph, with contradiction (A-15) | They predict what a re-evaluation shows; they cannot reduce re-evaluation without weakening the explanation check |
 | Releases | Not specified | Each release stores a full set of rows for the cases it evaluates; older rows never change | The ledger is append-only, and each release must be explainable on its own |
 
 ## 7. Costs and limits
@@ -100,10 +136,11 @@ How much the rule level and the region save compared with coarser units (no regi
 - **A rule whose determinant or antibiotic changes** is not found through the rule space. Only newly introduced rules are.
 - **A change that names a mapping rule without an old version** is treated as a new rule and also searched through the rule space. This can only select too many cases, never too few.
 - **A new genotype row selects every case of its isolate**, including drugs its determinant is not mapped to. This over-selects (rule 6) and matches how real cases already hold edges to every genotype row of their isolate. A new evidence row must be stored before its change is applied; otherwise the selection is refused.
-- **Composite and alternative support** are not represented, so a change to one of two determinants that both support a state selects the case even though the state cannot change. This over-selects; it does not miss cases.
+- **Composite and alternative support do not reduce selection.** A change to one of two determinants that both support a state still selects the case: its state holds, but its explanation changes, and the equivalence check compares explanations. The selector marks such a case `alternative_support_holds` instead.
+- **Predictions are not made for edits or single supports.** An edited row may bring new support, and a single support has no structure; both are selected with no expected effect.
 
 ## 8. Possible next steps
 
 1. Record each case's current release when a release is published, so the selector reads only current rows. This removes most of the remaining cost on busy nodes.
-2. Represent composite and alternative support with `composed_of` edges, which would make selection more precise.
+2. Use `expected_effect` in triage and in the review queue, so cases whose state is expected to hold are reviewed last.
 3. Extend the rule-space lookup to rules whose pair changes.

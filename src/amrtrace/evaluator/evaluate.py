@@ -97,4 +97,6 @@ def evaluate(inputs: CaseInputs, versions: VersionVector) -> EvalResult:
         dependency_records=records,
         input_hash=input_hash,
         output_hash=output_hash,
+        # not part of the hash: it describes how the state holds, and adding it changed no stored result
+        support_records=phenotype.support_records + genotype.support_records,
     )
