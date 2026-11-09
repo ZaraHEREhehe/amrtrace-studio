@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -371,3 +371,39 @@ class Summary(BaseModel):
     drugs: list[DrugSummary]
     labels_changed_cases: int
     latest_release: LatestReleaseSummary | None
+
+
+# change detection drafts (task A-13): what a watcher found, waiting for a person to apply or dismiss it
+class ChangeDraftView(BaseModel):
+    draft_id: str
+    watcher: str
+    change_type: str
+    old_version: str
+    new_version: str
+    entity_count: int
+    changed_entities: list[ChangedEntityPayload]
+    summary: dict[str, Any]
+    old_snapshot_id: str
+    new_snapshot_id: str
+    detected_at: datetime
+    status: str
+    decided_by: Optional[str] = None
+    decided_at: Optional[datetime] = None
+    decision_note: Optional[str] = None
+    applied_change_id: Optional[str] = None
+
+
+class ChangeDraftApply(BaseModel):
+    decided_by: str = Field(min_length=1)
+    change_id: Optional[str] = None
+    note: Optional[str] = None
+
+
+class ChangeDraftDismiss(BaseModel):
+    decided_by: str = Field(min_length=1)
+    note: str = Field(min_length=1)
+
+
+class ChangeDraftApplied(BaseModel):
+    draft: ChangeDraftView
+    application: ChangeApplicationView
