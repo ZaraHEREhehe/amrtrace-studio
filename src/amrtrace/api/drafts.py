@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 
 from amrtrace.changes import DuplicateChange, InvalidChangeEvent, get_change_event
 from amrtrace.changes.service import ImpactAlreadyRecorded
+from amrtrace.deps.selector import UnplacedEvidence
 from amrtrace.monitor import (
     DraftAlreadyDecided,
     DraftError,
@@ -96,6 +97,9 @@ def apply(draft_id: str, payload: ChangeDraftApply, conn=Depends(get_write_conne
                        {"problems": exc.problems}) from exc
     except (DuplicateChange, ImpactAlreadyRecorded) as exc:
         raise ApiError(409, "duplicate_change", str(exc), {"draft_id": draft_id}) from exc
+    except UnplacedEvidence as exc:
+        # a new row must be loaded before its cases can be found (A-12); nothing was applied
+        raise ApiError(422, "evidence_not_loaded", str(exc), {"draft_id": draft_id}) from exc
     except DraftError as exc:
         raise ApiError(422, "invalid_draft_decision", str(exc), {"draft_id": draft_id}) from exc
     return ChangeDraftApplied(
