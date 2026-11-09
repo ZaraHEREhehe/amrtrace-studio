@@ -156,3 +156,18 @@ Raised and written by Aabia after the Ed32 interpretation release was stored (PR
    This is R1's 1,196,148 rows plus the 41,844 interpretation edges. The `applicability` table holds 344,526 rows for R2, the same as for R1. R2 has 41,858 states, of which 1,541 differ from R1 and 40,317 do not.
 4. **A release stores its own full set of rows for every case it evaluates.** Rows of earlier releases are never changed. The current dependencies of a case are the rows of the newest published release that holds rows for that case. The impact selector and the subgraph query both use this rule.
 5. **Cost.** A full release adds about 1.2 million rows to `dependency`. The effect on selection time is measured in `docs/design/selector_performance.md`.
+
+## Amendment 3 (2026-11-09, A-13)
+
+Raised and written by Aabia with the change detection engine. Migration 0010 adds one engine table, `change_draft`:
+what a watcher found between two source snapshots (change type, versions, changed entities, a summary, both
+snapshot ids), with status PENDING, APPLIED or DISMISSED. A trigger allows only one move, from PENDING to a decision,
+together with the decision columns (`decided_by`, `decided_at`, `decision_note`, `applied_change_id`); everything a
+draft found is fixed, and deletes and truncates are refused with the table's own guard function, so
+`forbid_mutation` still guards only the four ledger tables. An applied draft must name the `change_event` it became.
+
+The source data contract gains one finding: the V1 curation builds AST ids (`ASTV1_...`) and summary genotype ids
+(`GSV1_...`) from the snapshot id, so the same row gets a new id in every snapshot. Detailed genotype ids
+(`GMV1_...`) are a hash of the row and stay stable. The watchers therefore match rows by stable keys (see
+`docs/design/change_detection.md`); a future curation version should build ids without the snapshot id.
+
