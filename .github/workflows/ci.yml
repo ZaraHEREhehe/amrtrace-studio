@@ -114,6 +114,7 @@ jobs:
       - name: Install test dependencies
         run: |
           python -m pip install --disable-pip-version-check -r requirements-dev.txt
+          python -m pip install --disable-pip-version-check -r requirements-api-test.txt
           python -m pip install --disable-pip-version-check pytest-cov==7.1.0
 
       - name: Verify PostgreSQL service
