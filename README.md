@@ -86,6 +86,13 @@ Get-ChildItem .\db\migrations\*.sql | Sort-Object Name | ForEach-Object {
 
 These scripts create source records, case-state/release ledgers, dependency graph structures, change/review records, re-evaluation reports and integrity safeguards. Run migrations **only once on a fresh database**: these scripts are not automatically tracked or designed to be safely repeated.
 
+To bring an **existing** database up to date, apply only the migrations it does not have yet, for example the change-draft table:
+
+~~~powershell
+Get-Content -LiteralPath .\db\migrations\0010_change_draft.sql -Raw -Encoding UTF8 |
+    docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
+~~~
+
 ### Create a Python virtual environment
 
 ~~~powershell
@@ -232,12 +239,21 @@ sudo /usr/local/sbin/amrtrace-z12-rollback --apply
 
 The October 10, 2026 verification recorded automatic main deployment, byte-matching VM scripts, an observed healthy V2-to-V1 transition, and restoration of V2 with three successful health checks. The first rollback transcript did **not** retain the explicit `ROLLBACK_REDEPLOY_VERIFIED` line; the runbook states that evidence limitation.
 
+### Change detection ("check now")
+
+Compare two source snapshots and store what changed as **pending drafts**; nothing becomes a change event until someone applies a draft (`POST /drafts/{id}/apply`) or dismisses it (`POST /drafts/{id}/dismiss`). Add `--dry-run` to print the drafts without storing them. See [docs/design/change_detection.md](docs/design/change_detection.md).
+
+~~~powershell
+.\.venv\Scripts\python.exe -m amrtrace.monitor.check --old data/raw --old-manifest data/manifest/sha256.txt --new <new snapshot folder> --dry-run
+~~~
+
 ## 9. Repository map
 
 | Path | Responsibility |
 |---|---|
 | `src/amrtrace/` | Python evaluator, ingestion, interpretations, dependencies, ledger, changes, re-evaluation and API |
-| `src/amrtrace/api/` | FastAPI cases, changes, dossier/review and runs endpoints |
+| `src/amrtrace/api/` | FastAPI cases, changes, dossier/review, drafts and runs endpoints |
+| `src/amrtrace/monitor/` | Change detection engine: snapshot checks, watchers and drafts ([design note](docs/design/change_detection.md)) |
 | `web/` | Browser UI and Node tests |
 | `db/migrations/` | Ordered PostgreSQL schemas and integrity protections |
 | `data/` | Hash manifests and interpretation tables, plus uncommitted input/derived files |

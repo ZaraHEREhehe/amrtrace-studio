@@ -1,6 +1,7 @@
 # Replace the placeholders with real GitHub usernames (e.g. @zara-noor)
 /src/amrtrace/evaluator/        @AabiaAli
 /src/amrtrace/deps/             @AabiaAli
+/src/amrtrace/monitor/          @AabiaAli
 /src/amrtrace/interpretation/   @insharahn
 /src/amrtrace/ledger/           @insharahn
 /src/amrtrace/changes/          @insharahn
