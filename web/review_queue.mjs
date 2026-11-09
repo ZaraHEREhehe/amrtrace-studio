@@ -23,11 +23,42 @@ export function reviewStatusMeta(status) {
 
 export const REVIEW_PAGE_SIZE = 25;
 
+// A-14: the review order a reviewer can choose; the empty value keeps the API's default order by case id
+export const REVIEW_SORTS = Object.freeze(["", "triage"]);
+
+// the four triage tiers (D-28) in review order, with a readable name and a badge colour
+export const TRIAGE_META = Object.freeze({
+  NEWLY_DISCORDANT: { label: "1 · Newly discordant", cls: "badge-red" },
+  STATE_CHANGED: { label: "2 · State changed", cls: "badge-amber" },
+  LABEL_CHANGED: { label: "3 · Label changed", cls: "badge-blue" },
+  RE_VERIFIED: { label: "4 · Re-verified", cls: "" },
+});
+
+export function triageMeta(tier) {
+  return TRIAGE_META[tier] ?? { label: tier ? String(tier) : "—", cls: "" };
+}
+
+// the API names states by their codes; on screen each known code reads as the same name its state badge shows
+export function readableTriageReason(reason, labelOf) {
+  let text = String(reason ?? "");
+  for (const code of REVIEW_STATES) {
+    text = text.split(code).join(labelOf(code));
+  }
+  return text;
+}
+
+// an unknown sort in a link falls back to the default instead of breaking the page
+function cleanSort(value) {
+  const sort = String(value ?? "").trim();
+  return REVIEW_SORTS.includes(sort) ? sort : "";
+}
+
 export function reviewQueueFilters(encoded = "") {
   const params = new URLSearchParams(String(encoded ?? ""));
   return {
     drug: (params.get("drug") ?? "").trim(),
     state: (params.get("state") ?? "").trim(),
+    sort: cleanSort(params.get("sort")),
   };
 }
 
@@ -37,6 +68,8 @@ export function reviewQueueRouteId(filters) {
     const value = String(filters?.[key] ?? "").trim();
     if (value) params.set(key, value);
   }
+  const sort = cleanSort(filters?.sort);
+  if (sort) params.set("sort", sort);
   return params.toString() || null;
 }
 
@@ -55,6 +88,8 @@ export function reviewQueuePath(filters = {}, offset = 0, limit = REVIEW_PAGE_SI
     const value = String(filters?.[key] ?? "").trim();
     if (value) params.set(key, value);
   }
+  const sort = cleanSort(filters?.sort);
+  if (sort) params.set("sort", sort);
   return "/review-queue?" + params.toString();
 }
 
