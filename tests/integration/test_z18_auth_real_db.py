@@ -13,7 +13,7 @@ from amrtrace.api.auth_security import Actor, Role, hash_password
 from amrtrace.api.db import get_connection, get_write_connection
 from amrtrace.api.main import create_app
 from amrtrace.api.user_admin import execute as administer_user
-from z18_test_support import AuthenticatedClient
+from tests.z18_test_support import AuthenticatedClient
 
 pytestmark = pytest.mark.integration
 PASSWORD = "Z18-Test-Password!2026"

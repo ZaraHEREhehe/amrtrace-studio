@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
-from z18_test_support import signed_in_client, mocked_authorized_client
+from tests.z18_test_support import signed_in_client, mocked_authorized_client
 from psycopg.types.json import Jsonb
 
 from amrtrace.api.db import get_connection, get_write_connection

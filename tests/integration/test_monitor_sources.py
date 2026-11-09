@@ -9,7 +9,7 @@ from psycopg.types.json import Jsonb
 
 from amrtrace.api.db import get_connection, get_write_connection
 from amrtrace.api.main import app
-from z18_test_support import signed_in_client
+from tests.z18_test_support import signed_in_client
 from amrtrace.changes import get_change_event
 from amrtrace.changes.service import get_impact_set
 from amrtrace.ingest.baseline_states import read_frozen_baseline
