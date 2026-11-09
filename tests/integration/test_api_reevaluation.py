@@ -7,6 +7,7 @@ from pathlib import Path
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from z18_test_support import signed_in_client, mocked_authorized_client
 
 from amrtrace.api.db import (
     get_connection,
@@ -163,7 +164,7 @@ def client(run_world):
 
     try:
         with TestClient(app) as test_client:
-            yield test_client
+            yield signed_in_client(test_client, conn, role="ADMIN", username="releaseadmin")
     finally:
         app.dependency_overrides.pop(get_connection, None)
         app.dependency_overrides.pop(get_write_connection, None)
@@ -187,7 +188,7 @@ def test_gate_requires_exhaustive_comparison():
     ] = no_database_needed
 
     try:
-        with TestClient(app) as test_client:
+        with mocked_authorized_client(app) as test_client:
             response = test_client.post(
                 "/changes/ANY/reevaluate",
                 json={

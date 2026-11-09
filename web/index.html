@@ -60,6 +60,10 @@
         </div>
       </nav>
 
+      <div class="nav-group" id="admin-nav" hidden>
+        <div class="nav-group-label">Administration</div>
+        <button class="nav-button" type="button" data-nav="admin">User accounts</button>
+      </div>
       <div class="sidebar-foot">FYP F26-118 · research prototype</div>
     </aside>
 
@@ -71,6 +75,11 @@
         </div>
 
         <div class="topbar-spacer"></div>
+        <div class="auth-topbar">
+          <span id="auth-identity">Read-only visitor</span>
+          <button type="button" class="button" id="auth-show-login">Sign in</button>
+          <button type="button" class="button" id="auth-signout" hidden>Sign out</button>
+        </div>
 
         <form id="topbar-search" class="topbar-search" role="search">
           <input
@@ -84,6 +93,20 @@
           <button class="button" type="submit">Open</button>
         </form>
       </header>
+
+      <section id="auth-login-panel" class="card auth-panel" hidden>
+        <h2>Sign in</h2>
+        <p class="muted">Accounts are provisioned by an administrator. There is no public sign-up.</p>
+        <form id="auth-login-form" class="auth-login-form">
+          <label for="auth-username">Username</label>
+          <input id="auth-username" autocomplete="username" required>
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" autocomplete="current-password" required>
+          <button type="submit" class="button button-primary" id="auth-login-submit">Sign in</button>
+          <button type="button" class="button" id="auth-cancel-login">Cancel</button>
+        </form>
+        <div id="auth-status" role="status" class="status" aria-live="polite" hidden></div>
+      </section>
 
       <main class="main">
         <div id="topbar-status" class="status" aria-live="polite" hidden></div>
@@ -791,11 +814,19 @@
             </div>
           </section>
         </section>
+        <section class="page" data-view="admin" hidden>
+          <header class="page-header"><div>
+            <h2>Admin — User Accounts</h2>
+            <p class="muted">Read-only account directory. Create/disable accounts using the privileged administrator script.</p>
+          </div></header>
+          <section class="card"><div class="table-wrap" id="admin-users">Admin sign-in required.</div></section>
+        </section>
       </main>
     </div>
   </div>
 
   <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>
+  <script type="module" src="/auth_ui.mjs"></script>
 </body>
 </html>

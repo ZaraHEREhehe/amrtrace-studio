@@ -9,6 +9,7 @@ from psycopg.types.json import Jsonb
 
 from amrtrace.api.db import get_connection, get_write_connection
 from amrtrace.api.main import app
+from z18_test_support import signed_in_client
 from amrtrace.changes import get_change_event
 from amrtrace.changes.service import get_impact_set
 from amrtrace.ingest.baseline_states import read_frozen_baseline
@@ -251,7 +252,7 @@ def client(conn):
     app.dependency_overrides[get_write_connection] = same_connection
     try:
         with TestClient(app) as test_client:
-            yield test_client
+            yield signed_in_client(test_client, conn, role="ADMIN", username="alerts_admin")
     finally:
         app.dependency_overrides.pop(get_connection, None)
         app.dependency_overrides.pop(get_write_connection, None)
@@ -266,6 +267,7 @@ def test_the_api_lists_and_acknowledges_alerts(client, conn):
 
     done = client.post(f"/alerts/{created[0]}/acknowledge", json={"acknowledged_by": "zara"})
     assert done.status_code == 200 and done.json()["status"] == ACKNOWLEDGED
+    assert done.json()["acknowledged_by"] == "alerts_admin"  # Spoofed payload identity ignored
     assert client.post(f"/alerts/{created[0]}/acknowledge", json={"acknowledged_by": "zara"}).status_code == 409
     assert client.get("/alerts/ALERT-missing").status_code == 404
     assert client.post(f"/alerts/{created[1]}/acknowledge", json={"acknowledged_by": ""}).status_code == 422

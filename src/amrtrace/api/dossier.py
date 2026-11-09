@@ -35,6 +35,7 @@ from amrtrace.reeval import (
     case_diff,
 )
 
+from .auth import Actor, bind_actor, require_reviewer
 from .db import (
     get_connection,
     get_write_connection,
@@ -103,8 +104,10 @@ def review_case(
     conn: psycopg.Connection = Depends(
         get_write_connection
     ),
+    actor: Actor = Depends(require_reviewer),
 ) -> ReviewEventView:
     """Append a review to the case's current published state."""
+    bind_actor(conn, actor)
 
     _require_case(conn, case_id)
 
@@ -112,7 +115,7 @@ def review_case(
         review = add_review(
             conn,
             case_id=case_id,
-            reviewer=payload.reviewer,
+            reviewer=actor.username,
             action=payload.action,
             reason=payload.reason,
             state_id=payload.state_id,

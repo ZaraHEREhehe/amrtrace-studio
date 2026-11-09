@@ -19,6 +19,7 @@ from amrtrace.monitor import (
     list_drafts,
 )
 
+from .auth import Actor, bind_actor, require_analyst
 from .changes import _event_view, _impact_view
 from .db import get_connection, get_write_connection
 from .errors import ApiError
@@ -81,10 +82,12 @@ def draft(draft_id: str, conn=Depends(get_connection)) -> ChangeDraftView:
 
 
 @router.post("/{draft_id}/apply", response_model=ChangeDraftApplied)
-def apply(draft_id: str, payload: ChangeDraftApply, conn=Depends(get_write_connection)) -> ChangeDraftApplied:
+def apply(draft_id: str, payload: ChangeDraftApply, conn=Depends(get_write_connection),
+          actor: Actor = Depends(require_analyst)) -> ChangeDraftApplied:
+    bind_actor(conn, actor)
     try:
         application = apply_draft(
-            conn, draft_id, decided_by=payload.decided_by, change_id=payload.change_id, note=payload.note
+            conn, draft_id, decided_by=actor.username, change_id=payload.change_id, note=payload.note
         )
         record = get_change_event(conn, application.change_id)
         stored = get_draft(conn, draft_id)
@@ -111,9 +114,11 @@ def apply(draft_id: str, payload: ChangeDraftApply, conn=Depends(get_write_conne
 
 
 @router.post("/{draft_id}/dismiss", response_model=ChangeDraftView)
-def dismiss(draft_id: str, payload: ChangeDraftDismiss, conn=Depends(get_write_connection)) -> ChangeDraftView:
+def dismiss(draft_id: str, payload: ChangeDraftDismiss, conn=Depends(get_write_connection),
+            actor: Actor = Depends(require_analyst)) -> ChangeDraftView:
+    bind_actor(conn, actor)
     try:
-        return _view(dismiss_draft(conn, draft_id, decided_by=payload.decided_by, note=payload.note))
+        return _view(dismiss_draft(conn, draft_id, decided_by=actor.username, note=payload.note))
     except DraftNotFound as exc:
         raise _not_found(draft_id) from exc
     except DraftAlreadyDecided as exc:

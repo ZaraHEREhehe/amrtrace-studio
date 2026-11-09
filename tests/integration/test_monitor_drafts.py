@@ -5,6 +5,7 @@ from __future__ import annotations
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from z18_test_support import signed_in_client, mocked_authorized_client
 
 from amrtrace.api.db import get_connection, get_write_connection
 from amrtrace.api.main import app
@@ -265,7 +266,7 @@ def client(world):
     app.dependency_overrides[get_write_connection] = same_connection
     try:
         with TestClient(app) as test_client:
-            yield test_client
+            yield signed_in_client(test_client, world, role="ANALYST", username="aabia")
     finally:
         app.dependency_overrides.pop(get_connection, None)
         app.dependency_overrides.pop(get_write_connection, None)

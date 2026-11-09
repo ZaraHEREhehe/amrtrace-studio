@@ -22,6 +22,7 @@ from amrtrace.reeval import (
     reevaluate,
 )
 
+from .auth import Actor, assert_run_authority, bind_actor, require_run_user
 from .db import get_connection, get_write_connection
 from .errors import ApiError
 from .run_source import (
@@ -150,6 +151,7 @@ def run_change(
     change_id: str,
     payload: ReevaluationRequest,
     conn=Depends(get_write_connection),
+    actor: Actor = Depends(require_run_user),
 ) -> ReevaluationResponse:
     if payload.gate and not payload.run_exhaustive:
         raise ApiError(
@@ -162,6 +164,9 @@ def run_change(
             },
         )
 
+    # Selective-only runs auto-publish; Analyst must request exhaustive with gate=False.
+    assert_run_authority(actor, run_exhaustive=payload.run_exhaustive, gate=payload.gate)
+    bind_actor(conn, actor)
     try:
         context = interpretation_run_context(
             conn,
