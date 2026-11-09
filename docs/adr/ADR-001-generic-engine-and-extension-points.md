@@ -48,3 +48,14 @@ of it.
 - Z-15 acceptance: a deliberate violation fails CI, a clean `main` passes.
 - I-05 acceptance: a dummy differ registers in a test without editing registry code.
 - I-06 acceptance: tests with invented drug and standard names pass.
+
+## Amendment 1 (2026-11-09, A-13)
+
+Written by Aabia when the change detection engine was built. The consequence above held: the monitor is a producer in
+`src/amrtrace/monitor/`, and no engine package changed. It adds one extension point, a **watcher registry**: each
+source of change is a watcher with `detect(old_snapshot, new_snapshot) -> list[DraftChange]`, and each watcher calls
+the differ already registered for its change type (I-15 mapping, I-16 evidence). Its output is a draft, not a change
+event: a person applies or dismisses it (D-25), and applying goes through the same change service as `POST /changes`.
+The package is not in the genericity guard's protected list, because it reads the curated column names of the
+source data by design; it still names no drug, organism or standard.
+
