@@ -113,7 +113,7 @@ Taken from the frozen counts, which reconcile exactly on all 41,858 cases:
 `select_impact(conn, change_event_id) -> list[ImpactItem]`, `reevaluate(conn, change_event_id) -> run_id`,
 `run_exhaustive(conn, change_event_id) -> run_id`, `compare(conn, run_id, exhaustive_run_id) -> EquivalenceReport`
 and the `ChangeDiffer` protocol with `ChangedEntity` are unchanged from plan section 5.1. `ImpactItem.mechanism`
-stays `realised_edge | applicability`.
+stays `realised_edge | applicability` (Amendment 4 adds `evidence_owner`).
 
 ### 4. Adapter
 
@@ -168,3 +168,15 @@ Agreed with Insharah in the review of PR #74. Written by Aabia.
 10. **No-match edges live in `dependency`.** The `applicability` table is keyed on determinant and antibiotic (D-19), so it cannot hold a lookup for an interpretation rule. The edge of item 6 is therefore a `dependency` row. Its `node_version` is the interpretation version in force when the case looked for the rule. It is not null.
 11. **Selector behaviour for a rule that is introduced.** When a change names a node with `old_version = None`, the selector keeps every edge to that node, whatever version the edge carries. A case that looked for a rule and found none is therefore selected when the rule first appears. The check is `deps.selector.edge_version_matches`, covered by `tests/unit/deps/test_selector_versions.py`.
 12. **Item 8 is done.** The frozen V1 adapter passes `mic`, `sign` and `rule_key` when it is given interpretation rules, and passes nothing extra otherwise, so as-reported inputs and their hashes are unchanged.
+
+## Amendment 4 (2026-11-09, A-12)
+
+Written by Aabia with the selector for evidence changes. A change that introduces an evidence row (an `ast_evidence` or
+`genotype_evidence` entity with a new version and no old version) cannot be found through stored edges, because no
+case was evaluated against a row that did not exist. The selector now looks the row up in its source table and selects
+its owner cases: for an AST row the case with the row's isolate and drug, for a genotype row every case of the row's
+isolate. Those items carry a third mechanism, `evidence_owner`; when a stored edge also reaches the case, the
+mechanism stays `realised_edge`. Only cases that the release being read evaluated are selected. A new row that is not
+stored raises `UnplacedEvidence`: selecting nothing would hide a miss. The table and column names come from a fixed map
+in the selector and name no drug, organism or standard (rule 12). The realised-edge-only selector
+(`use_applicability=False`) does not do this lookup, so its blind spot stays measurable.
