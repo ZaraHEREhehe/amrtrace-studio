@@ -340,7 +340,7 @@ class ChangeDiffer(Protocol):
 class ImpactItem:
     case_id: str
     reason: str          # human-readable path
-    mechanism: str       # "realised_edge" | "applicability"
+    mechanism: str       # "realised_edge" | "applicability" | "evidence_owner" (A-12: a new evidence row)
 
 def select_impact(conn, change_event_id: str) -> list[ImpactItem]: ...
 
