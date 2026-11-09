@@ -187,4 +187,3 @@ member of a support group (case, release, kind, group, need, node type and id, m
 beside the dependency rows. It is insert-only with its own guard function, and like `impact_set` its `release_id`
 has no foreign key, so a TRUNCATE of the ledger tables does not have to list it. The same migration adds a nullable
 `expected_effect` column to `impact_item`, filled by the selector from these rows; earlier impact items keep it empty.
-

@@ -191,4 +191,3 @@ distinct members than it needs), and the phenotype stage records a conflict's ro
 travel on `EvalResult.support_records`, which is **not** part of `output_hash`, `dependency_records` or the
 equivalence comparison, so every stored hash, release and equivalence report stays valid. The selector uses them only
 to predict each selected case's `expected_effect`; it never selects fewer cases (see `docs/design/graph_design.md`).
-
