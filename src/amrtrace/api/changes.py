@@ -83,6 +83,7 @@ def _impact_view(stored) -> ImpactSetView:
                 case_id=item.case_id,
                 reason=item.reason,
                 mechanism=item.mechanism,
+                expected_effect=item.expected_effect,
             )
             for item in stored.items
         ],
