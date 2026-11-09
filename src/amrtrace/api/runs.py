@@ -26,7 +26,7 @@ from .db import get_connection, get_write_connection
 from .errors import ApiError
 from .run_source import (
     UnsupportedRunChange,
-    interpretation_run_context,
+    run_context,
 )
 from .schemas import (
     EquivalenceReportView,
@@ -163,7 +163,7 @@ def run_change(
         )
 
     try:
-        context = interpretation_run_context(
+        context = run_context(
             conn,
             change_id,
         )

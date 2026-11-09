@@ -9,7 +9,7 @@ from amrtrace.evaluator import evaluate
 from amrtrace.ingest.frozen_v1 import FrozenTables, read_frozen_tables
 from amrtrace.ingest.load_frozen_v1 import verify_hashes
 from amrtrace.ingest.materialize_baseline import _conninfo, _organism, _panel
-from amrtrace.ingest.reevaluate_change import interpretation_context
+from amrtrace.ingest.reevaluate_change import change_context, interpretation_context
 from amrtrace.interpretation.db import TableNotFound
 from amrtrace.reeval import (
     ComparisonFailed,
@@ -22,6 +22,16 @@ from amrtrace.reeval import (
 
 SHOWN_EXAMPLES = 5
 EXAMPLE_WIDTH = 150
+
+
+def compare_stored_change(
+    conn, tables: FrozenTables, change_id: str, panel: tuple[str, ...], organism: str, *, store: bool
+) -> EquivalenceReport:
+    """Any change reevaluate_change handles, compared under the same versions and the same evidence in force."""
+    context = change_context(conn, tables, change_id, panel, organism)
+    return compare_with_exhaustive(
+        conn, change_id, versions=context.versions, inputs_for=context.inputs_for, evaluate=evaluate, store=store
+    )
 
 
 def compare_interpretation_change(
@@ -86,7 +96,7 @@ def main() -> int:
         tables = read_frozen_tables(Path(arguments.data_dir))
         with psycopg.connect(_conninfo()) as conn:
             try:
-                report = compare_interpretation_change(
+                report = compare_stored_change(
                     conn, tables, arguments.change_id, _panel(conn), _organism(conn), store=arguments.commit
                 )
             except ComparisonFailed as problem:

@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any, Callable, Mapping, NamedTuple, Sequence
 
 from amrtrace.changes.differs.evidence import (
     AstCorrectedDiffer,
+    EvidenceComparison,
     EvidenceSetDiffer,
     GenotypeChangedDiffer,
     parse_evidence_set,
@@ -45,6 +46,18 @@ def genotype_key(row: Mapping[str, Any]) -> str:
     return _key(row.get("representation_source"), row["genotype_evidence_id"])
 
 
+# what matching two snapshots found: the comparison (rows named by stable key) and each key's row id in either snapshot
+class EvidenceMatch(NamedTuple):
+    comparison: EvidenceComparison
+    old_ids: dict[str, str]
+    new_ids: dict[str, str]
+
+    # the new snapshot's ids of every row that is new or edited, which is what a re-evaluation has to read
+    def new_row_ids(self) -> list[str]:
+        keys = [r.evidence_id for r in self.comparison.added] + [n.evidence_id for _, n in self.comparison.edited]
+        return sorted(self.new_ids[key] for key in keys)
+
+
 @dataclass(frozen=True)
 class EvidenceWatcher:
     name: str
@@ -70,9 +83,8 @@ class EvidenceWatcher:
             rows.append({KEY_FIELD: key, **kept})
         return rows, ids
 
-    def detect(self, old: Snapshot, new: Snapshot) -> list[DraftChange]:
-        if not (old.has_table(self.table) and new.has_table(self.table)):
-            return []
+    # the rows of both snapshots matched by stable key; the evidence loader (I-20) reads the same match
+    def match(self, old: Snapshot, new: Snapshot) -> EvidenceMatch:
         old_rows, old_ids = self._rows(old)
         new_rows, new_ids = self._rows(new)
         node_type = self.differ.node_type
@@ -80,6 +92,13 @@ class EvidenceWatcher:
             parse_evidence_set(node_type, old.snapshot_id, old_rows, id_field=KEY_FIELD),
             parse_evidence_set(node_type, new.snapshot_id, new_rows, id_field=KEY_FIELD),
         )
+        return EvidenceMatch(comparison, old_ids, new_ids)
+
+    def detect(self, old: Snapshot, new: Snapshot) -> list[DraftChange]:
+        if not (old.has_table(self.table) and new.has_table(self.table)):
+            return []
+        comparison, old_ids, new_ids = self.match(old, new)
+        node_type = self.differ.node_type
         if not (comparison.added or comparison.removed or comparison.edited):
             return []
 
