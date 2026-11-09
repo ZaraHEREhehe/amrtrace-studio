@@ -171,3 +171,11 @@ The source data contract gains one finding: the V1 curation builds AST ids (`AST
 (`GMV1_...`) are a hash of the row and stay stable. The watchers therefore match rows by stable keys (see
 `docs/design/change_detection.md`); a future curation version should build ids without the snapshot id.
 
+## Amendment 4 (2026-11-09, A-18)
+
+Raised and written by Aabia with the tool and standards watchers. Migration 0011 adds one engine table,
+`source_alert`: what the source check found that a person must act on (source, kind, subject, a message and
+details), with status OPEN or ACKNOWLEDGED. Like `change_draft`, a trigger allows only one move, from OPEN to
+ACKNOWLEDGED together with `acknowledged_by`, `acknowledged_at` and `acknowledgement_note`; everything an alert found
+is fixed, and deletes and truncates are refused with the table's own guard function. An alert is never a change
+event and nothing in the ledger refers to it.

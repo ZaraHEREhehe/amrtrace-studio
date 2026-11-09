@@ -79,11 +79,15 @@ def detect_changes(registry: WatcherRegistry, old: Snapshot, new: Snapshot) -> l
 
 
 def run_check(conn, registry: WatcherRegistry, old: Snapshot, new: Snapshot) -> CheckResult:
-    drafts = detect_changes(registry, old, new)
+    return store_drafts(conn, detect_changes(registry, old, new), old.snapshot_id, new.snapshot_id)
+
+
+# stores drafts found between two source versions (two snapshots, or two breakpoint tables); a re-run stores nothing new
+def store_drafts(conn, drafts: list[DraftChange], old_source_id: str, new_source_id: str) -> CheckResult:
     created, existing = [], []
     with atomic(conn):
         for draft in drafts:
-            draft_id = draft.draft_id(old.snapshot_id, new.snapshot_id)
+            draft_id = draft.draft_id(old_source_id, new_source_id)
             inserted = conn.execute(
                 "INSERT INTO change_draft (draft_id, watcher, change_type, old_version, new_version, "
                 "changed_entities, summary, old_snapshot_id, new_snapshot_id) "
@@ -96,12 +100,12 @@ def run_check(conn, registry: WatcherRegistry, old: Snapshot, new: Snapshot) -> 
                     draft.new_version,
                     json.dumps([entity_to_dict(e) for e in draft.changed_entities]),
                     json.dumps(dict(draft.summary), default=str),
-                    old.snapshot_id,
-                    new.snapshot_id,
+                    old_source_id,
+                    new_source_id,
                 ),
             ).rowcount
             (created if inserted else existing).append(draft_id)
-    return CheckResult(old.snapshot_id, new.snapshot_id, tuple(created), tuple(existing))
+    return CheckResult(old_source_id, new_source_id, tuple(created), tuple(existing))
 
 
 def list_drafts(conn, status: str | None = None, limit: int = 100) -> list[StoredDraft]:

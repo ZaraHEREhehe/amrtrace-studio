@@ -100,7 +100,7 @@ def test_a_broken_snapshot_description_is_refused(tmp_path):
 
 
 def test_the_default_watchers_run_in_a_fixed_order():
-    assert default_watchers().names() == ["ast_evidence", "genotype_evidence", "mapping"]
+    assert default_watchers().names() == ["amrfinderplus", "ast_evidence", "genotype_evidence", "mapping"]
 
 
 def test_a_watcher_name_can_only_be_registered_once():

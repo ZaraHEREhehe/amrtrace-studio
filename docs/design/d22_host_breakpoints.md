@@ -30,7 +30,8 @@ through interpretation.
 
 **Tables.** A rule may now carry `host`, `source` and `breakpoint_species` (migration 0009). A host rule's key
 has the host as a fifth part, for example `clsi|escherichia coli|gentamicin|mic|dog`; rules without a host keep
-their old key. Four tables, all for the five panel drugs:
+their old key. Four tables, all for the five panel drugs (a fifth, `CLSI_M100_ED36_VET01S_ED7`, was added with A-18:
+the Ed33 values under the Ed36 name, because M100 Ed34 to Ed36 change none of these breakpoints):
 
 | Table | Contents |
 |---|---|

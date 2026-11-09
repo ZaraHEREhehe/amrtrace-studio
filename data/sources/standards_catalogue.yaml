@@ -1,0 +1,27 @@
+# Published editions of the breakpoint standards AMRTrace reads (task A-18, D-25).
+# A person adds an edition when the publisher announces it; `python -m amrtrace.monitor.source_check --fetch` adds the
+# edition the publisher's page shows. The tables themselves are licensed and are entered by hand
+# (data/interpretation/); the check raises an alert while an edition newer than the table in force has no table.
+standards:
+- body: CLSI
+  document: M100
+  page: https://clsi.org/shop/standards/M100
+  editions:
+  - edition: 32
+    published: '2022'
+  - edition: 33
+    published: '2023'
+  - edition: 34
+    published: '2024'
+  - edition: 35
+    published: '2025'
+  - edition: 36
+    published: '2026-01-26'
+    source: CLSI product page (print code M100Ed36), read 2026-11-09
+- body: CLSI
+  document: VET01S
+  page: https://clsi.org/shop/standards/vet01s/
+  editions:
+  - edition: 7
+    published: '2024-01-09'
+    source: CLSI product page (PDF code VET01SEd7E), read 2026-11-09
