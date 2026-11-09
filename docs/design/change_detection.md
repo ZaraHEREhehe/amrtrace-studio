@@ -73,7 +73,9 @@ python -m amrtrace.monitor.check --old data/raw --old-manifest data/manifest/sha
   code: two builds that differ in one phenotype draft exactly one `AST_CORRECTED` change, even though every AST and
   summary row gets a new id.
 
-The pull needs a Google login (`gcloud auth application-default login`), so it is run by hand, never in CI.
+The pull needs a Google login (`gcloud auth application-default login`) and a Google Cloud project the account may
+run BigQuery jobs in, given with `--gcp-project <project id>` (NCBI's tables are public; the project only runs and
+pays for the queries, about 4.5 GB of scan, inside the free monthly allowance). It is run by hand, never in CI.
 
 ## Deciding drafts
 

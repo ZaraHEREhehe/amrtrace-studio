@@ -10,7 +10,8 @@
 #   python scripts/build_monitor_snapshot.py --snapshot-id AMRTRACE_RAW_V2
 #   python scripts/build_monitor_snapshot.py --snapshot-id AMRTRACE_RAW_V2 --from-raw   (curate an earlier pull again)
 #
-# the pull needs: pip install -r requirements-pipeline.txt, and a Google login (gcloud auth application-default login)
+# the pull needs: pip install -r requirements-pipeline.txt, a Google login (gcloud auth application-default login),
+# and a Google Cloud project you may run BigQuery jobs in (--gcp-project); NCBI's tables are public, the project only pays
 
 from __future__ import annotations
 
@@ -127,7 +128,7 @@ def ensure_empty(folder: Path, what: str) -> None:
 
 
 # runs the five V1 queries unchanged, writing into this snapshot's raw folder and its own raw manifest
-def extract(snapshot_id: str, folders: dict[str, Path], dry_run: bool) -> dict:
+def extract(snapshot_id: str, folders: dict[str, Path], dry_run: bool, project: str | None = None) -> dict:
     check_queries()
     extractor = load_v1_script("extract_raw_snapshot_v1")
     from google.cloud import bigquery
@@ -137,6 +138,8 @@ def extract(snapshot_id: str, folders: dict[str, Path], dry_run: bool) -> dict:
     extractor.QUERY_DIR = QUERY_DIR
     extractor.OUTPUT_DIR = folders["raw"]
     extractor.MANIFEST_PATH = folders["raw"] / "raw_snapshot.json"
+    # the project only runs and bills the jobs; the queries read NCBI's public tables whichever project is used
+    extractor.QUERY_PROJECT = project or extractor.QUERY_PROJECT
     client = bigquery.Client(project=extractor.QUERY_PROJECT)
 
     if dry_run:
@@ -252,6 +255,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--from-raw", action="store_true", help="curate a pull already in <out-root>/<id>/raw")
     parser.add_argument("--all-isolates", action="store_true", help="keep isolates outside the V1 cohort too")
     parser.add_argument("--cohort-isolates", default=str(V1_COHORT), help="curated isolates file of the V1 cohort")
+    parser.add_argument("--gcp-project", help="your Google Cloud project to run the queries in (default: the V1 one)")
     parser.add_argument("--out-root", default=str(SNAPSHOTS_DIR), help="folder that holds the snapshot folders")
     parser.add_argument("--allow-dirty", action="store_true", help="build from uncommitted code (testing only)")
     args = parser.parse_args(argv)
@@ -260,7 +264,7 @@ def main(argv: list[str] | None = None) -> int:
         check_snapshot_id(args.snapshot_id)
         folders = snapshot_folders(Path(args.out_root), args.snapshot_id)
         if args.dry_run:
-            extract(args.snapshot_id, folders, dry_run=True)
+            extract(args.snapshot_id, folders, dry_run=True, project=args.gcp_project)
             print("dry run: nothing was downloaded or written")
             return 0
         # like V1, a snapshot records the commit that built it, so that commit must hold all the code
@@ -272,7 +276,10 @@ def main(argv: list[str] | None = None) -> int:
         if folders["curated"].exists() and any(folders["curated"].iterdir()):
             raise BuildError(f"{folders['base']} is already built; a snapshot is never overwritten")
 
-        raw = read_raw(args.snapshot_id, folders) if args.from_raw else extract(args.snapshot_id, folders, False)
+        if args.from_raw:
+            raw = read_raw(args.snapshot_id, folders)
+        else:
+            raw = extract(args.snapshot_id, folders, False, project=args.gcp_project)
         tables = curate(args.snapshot_id, folders)
         cohort = None
         if not args.all_isolates:
