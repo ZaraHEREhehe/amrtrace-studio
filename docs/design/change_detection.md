@@ -1,9 +1,10 @@
-# Change detection engine (A-13, part 1)
+# Change detection engine (A-13)
 
 The change detection engine compares two source snapshots and **drafts** typed change events. A draft is a
 proposal: nothing reaches `change_event` until a person applies it (decision D-25). This note covers part 1:
 the watcher registry, the snapshot check, the AST, genotype and mapping watchers, the draft table and the
-"check now" command. Making the September extraction pipeline produce a second snapshot is part 2.
+"check now" command. Part 2 is the builder that produces a later snapshot from the September pipeline (see
+"Building a later snapshot").
 
 ## How it works
 
@@ -45,6 +46,66 @@ python -m amrtrace.monitor.check --old data/raw --old-manifest data/manifest/sha
 python -m amrtrace.monitor.check --old data/raw --old-manifest data/manifest/sha256.txt --new <new snapshot folder>
 ```
 
+## Building a later snapshot (part 2)
+
+The September extraction and curation code now lives in this repository, in `pipeline/ncbi_v1/`, unchanged. A
+builder reruns it for a later snapshot:
+
+```
+pip install -r requirements-pipeline.txt
+python scripts/build_monitor_snapshot.py --snapshot-id AMRTRACE_RAW_V2 --dry-run
+python scripts/build_monitor_snapshot.py --snapshot-id AMRTRACE_RAW_V2
+python -m amrtrace.monitor.check --old data/raw --old-manifest data/manifest/sha256.txt --new data/snapshots/AMRTRACE_RAW_V2 --dry-run
+```
+
+- **Nothing in V1 changes.** The builder runs the same five BigQuery queries (their hashes are checked against the V1
+  raw manifest before every pull) and the same `CURATION_RULES_V1` code, and swaps only the snapshot id and the
+  folders. It refuses the id V1, an existing snapshot folder, and uncommitted code (the commit is recorded, as for
+  V1). `--dry-run` estimates the scan and downloads nothing.
+- **Same cohort by default.** Only isolates already in the V1 cohort are kept. A new isolate is a new case, and no
+  change type adds cases. `--all-isolates` keeps everything.
+- **Evidence only.** The mapping is not rebuilt, so the mapping watcher stays silent for these snapshots. Mapping
+  changes come from the reference database (A-18).
+- **Output.** `data/snapshots/<id>/` (not committed) holds `raw/` (the Parquet files and their hashes), `curated/`
+  (the three curated tables), `snapshot.json` (which names the tables under `curated/`) and `sha256.txt`.
+  `--from-raw` curates an earlier pull again without BigQuery.
+- **Tested without BigQuery.** `tests/unit/test_build_monitor_snapshot.py` curates small fake pulls with the real V1
+  code: two builds that differ in one phenotype draft exactly one `AST_CORRECTED` change, even though every AST and
+  summary row gets a new id.
+
+The pull needs a Google login (`gcloud auth application-default login`) and a Google Cloud project the account may
+run BigQuery jobs in, given with `--gcp-project <project id>` (NCBI's tables are public; the project only runs and
+pays for the queries: about 47 GB of scan, almost all of it the genotype table, which is inside BigQuery's free
+monthly allowance). It is run by hand, never in CI.
+
+### First real comparison: V1 to V2
+
+Built on 2026-11-09, about three months after V1, with the commands above (scan 46.8 GiB). The curation code, the
+extractor and the queries were confirmed unchanged since the commit that built Curated V1.
+
+| | V1 | V2 (V1 cohort kept) |
+|---|---:|---:|
+| Isolates | 10,584 | 10,584 (NCBI now returns 10,673; the 89 new ones are left out) |
+| AST rows | 57,228 | 57,228 |
+| Genotype rows (detailed and summary) | 413,116 | 413,116 |
+
+The check drafted two changes and nothing else:
+
+- **`AST_CORRECTED`, 1,046 rows edited, none added or removed.** Only `phenotype_normalized` changed, and in every
+  one NCBI's own raw phenotype and row checksum changed too, so these are source corrections, not curation
+  differences: 576 susceptible to resistant and 470 resistant to susceptible, in 137 isolates (about 7 or 8 drugs
+  each), which looks like submitters correcting whole AST panels.
+- **`GENOTYPE_CHANGED`, 6 isolates.** NCBI re-ran AMRFinderPlus 4.2.7 on them with reference database 2026-08-07.1
+  (was 2026-03-24.1). Their 105 summary rows are edited (`refgene_db_version`), and their 203 detailed rows appear as
+  203 removed and 203 added, because a detailed row is keyed by a hash of its content, which includes the database
+  version.
+- **Nothing else moved.** Every AST and summary row has a new id in V2, yet no other row was drafted.
+
+The 203 added detailed rows are not stored yet, so this genotype draft can only be applied once a new snapshot's
+evidence can be loaded (proposed I-20). The AST draft only edits stored rows.
+
+## Deciding drafts
+
 The API lists and decides drafts: `GET /drafts?status=PENDING`, `GET /drafts/{id}`,
 `POST /drafts/{id}/apply` (`decided_by`, optional `change_id` and `note`) and `POST /drafts/{id}/dismiss`
 (`decided_by`, `note`).
@@ -55,11 +116,10 @@ The API lists and decides drafts: `GET /drafts?status=PENDING`, `GET /drafts/{id
   selects the right cases, but re-evaluation still reads the V1 evidence in the database. Loading a new snapshot's
   evidence as a new version, and re-evaluating with the version a change names, is not covered by any Iteration 2
   task yet (proposed as I-20).
-- **A new row with no stored edge** (an added AST result or determinant) is found only through its isolate, which
-  is A-12's work; until then the C3-ADDED and C4-ADDED oracle fixtures are expected failures.
+- **A new row must be stored before its draft is applied.** The selector finds the cases of an added AST result or
+  determinant through the row's isolate (A-12), so it needs the row in the database; until the new snapshot's
+  evidence can be loaded (proposed I-20), applying a draft with added rows is refused.
 - **Isolate-level changes are not watched.** A corrected host, for example, changes which VET01S row applies, but no
   change type covers isolate rows yet.
 - **Rule policies are not watched.** A rule policy (I-17) is written by the team, not found in a source snapshot.
-- **No live download yet.** Part 2 makes the September BigQuery extraction and curation scripts take a snapshot id
-  and output folder, so they can produce a second snapshot. The pull needs a Google login, so it is tested by hand and
-  by replaying stored snapshots, never in CI.
+- **New isolates are left out.** A later snapshot keeps the V1 cohort, because adding cases is not a change type.

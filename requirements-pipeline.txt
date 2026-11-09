@@ -1,0 +1,4 @@
+# Only for pulling a later NCBI snapshot with scripts/build_monitor_snapshot.py (A-13). Not needed by the app, tests or CI:
+#   pip install -r requirements-pipeline.txt
+google-cloud-bigquery==3.44.0
+pyarrow==25.0.1
