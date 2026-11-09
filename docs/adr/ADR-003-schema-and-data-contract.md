@@ -179,3 +179,12 @@ details), with status OPEN or ACKNOWLEDGED. Like `change_draft`, a trigger allow
 ACKNOWLEDGED together with `acknowledged_by`, `acknowledged_at` and `acknowledgement_note`; everything an alert found
 is fixed, and deletes and truncates are refused with the table's own guard function. An alert is never a change
 event and nothing in the ledger refers to it.
+
+## Amendment 5 (2026-11-09, A-15)
+
+Raised and written by Aabia with the remaining dependency types. Migration 0012 adds `support_structure`: one row per
+member of a support group (case, release, kind, group, need, node type and id, member), written by the materializer
+beside the dependency rows. It is insert-only with its own guard function, and like `impact_set` its `release_id`
+has no foreign key, so a TRUNCATE of the ledger tables does not have to list it. The same migration adds a nullable
+`expected_effect` column to `impact_item`, filled by the selector from these rows; earlier impact items keep it empty.
+
