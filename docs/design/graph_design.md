@@ -74,8 +74,11 @@ Interpretation rules follow the same idea differently. A case that looked for a 
 1. **Level 1:** one indexed lookup per changed node, plus a rule-space lookup for a newly introduced mapping rule, and an owner lookup for a newly introduced evidence row (A-12): a new AST row selects the case of its isolate and drug, and a new genotype row selects every case of its isolate. A new row that is not stored stops the selection with `UnplacedEvidence` instead of selecting nothing.
 2. **Current release:** each case is judged by the rows of the newest published release that holds rows for it. A stale row in an older release does not select a case that was re-evaluated since.
 3. **Level 2:** when the change names a region, for example MIC values 4 and 8, edges whose stored measurement cannot fall in that region are dropped. A censored value such as `<= 4` is kept, because it could be 4.
+4. **Reading an earlier graph (A-16):** `as_of` names a published release, and every case is then judged by its newest rows up to that release, as if no later release existed. The ablation uses it to measure a change that is already applied. `use_region=False` stops at level 1.
 
 On the real Ed32 to Ed33 change this gives 8,614 cases at level 1 and 254 at level 2, including all 154 cases the oracle requires: 0.6% of the cohort.
+
+How much the rule level and the region save compared with coarser units (no region, the whole table, the whole snapshot) is measured in `docs/design/ablation.md`.
 
 ## 6. Changes since the proposal
 
