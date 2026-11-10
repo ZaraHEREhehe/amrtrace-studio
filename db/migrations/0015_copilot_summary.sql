@@ -1,9 +1,9 @@
--- 0014: Review Copilot summaries (task I-19, decision D-27, rule 9).
+-- 0015: Review Copilot summaries (task I-19, decision D-27, rule 9).
 --
 -- A summary is generated text: a plain-language account of why a case changed, written from stored records. It is
 -- kept in its own table, apart from evidence, and no engine step (evaluation, selection, re-evaluation, comparison,
 -- release gate) reads it. Each row says which two states it explains and what wrote it (the templates, or the model
--- that reworded them). Rows are append-only: a new summary is a new row. Migrations 0001 to 0013 are applied on other
+-- that reworded them). Rows are append-only: a new summary is a new row. Migrations 0001 to 0014 are applied on other
 -- machines, so this is a new file.
 
 CREATE TABLE copilot_summary (

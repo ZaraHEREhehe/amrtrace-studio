@@ -97,12 +97,12 @@ Get-Content -LiteralPath .\db\migrations\0012_support_structure.sql -Raw -Encodi
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 Get-Content -LiteralPath .\db\migrations\0013_evidence_versions.sql -Raw -Encoding UTF8 |
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
-Get-Content -LiteralPath .\db\migrations\0014_copilot_summary.sql -Raw -Encoding UTF8 |
+Get-Content -LiteralPath .\db\migrations\0015_copilot_summary.sql -Raw -Encoding UTF8 |
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 ~~~
 
 Migration 0013 lets a later snapshot's evidence be stored beside the V1 rows (I-20); see
-`docs/design/change_detection.md`, "Loading a later snapshot's evidence". Migration 0014 adds the Review Copilot's
+`docs/design/change_detection.md`, "Loading a later snapshot's evidence". Migration 0015 adds the Review Copilot's
 own table (I-19, `docs/design/review_copilot.md`).
 
 **Existing local databases upgrading to Z-18:** the block above is an example,
@@ -118,7 +118,7 @@ docker compose stop web api
 Check the existing schema before upgrading (this is a read-only query):
 
 ~~~powershell
-docker compose exec -T db psql -X -U postgres -d amrtrace -c "SELECT to_regclass('public.source_alert') AS m0011, to_regclass('public.support_structure') AS m0012, (SELECT count(*) FROM pg_constraint WHERE conname = 'ast_evidence_source_row_snapshot_key') AS m0013, to_regclass('public.app_user') AS m0014, to_regclass('public.app_session') AS m0014_session;"
+docker compose exec -T db psql -X -U postgres -d amrtrace -c "SELECT to_regclass('public.source_alert') AS m0011, to_regclass('public.support_structure') AS m0012, (SELECT count(*) FROM pg_constraint WHERE conname = 'ast_evidence_source_row_snapshot_key') AS m0013, to_regclass('public.app_user') AS m0014, to_regclass('public.app_session') AS m0014_session, to_regclass('public.copilot_summary') AS m0015;"
 ~~~
 
 - If `source_alert` is absent, apply `0011_source_alert.sql` using its command above.
@@ -131,6 +131,8 @@ Get-Content -LiteralPath .\db\migrations\0014_application_identity.sql -Raw -Enc
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 if ($LASTEXITCODE -ne 0) { throw "Migration 0014 failed; do not continue" }
 ~~~
+
+- If `copilot_summary` is absent, apply `0015_copilot_summary.sql` using its command above, after 0014.
 
 A missing table is a useful preliminary check, not a full migration audit: if a
 migration was interrupted or its schema looks inconsistent, **stop and inspect
