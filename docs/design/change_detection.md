@@ -101,8 +101,31 @@ The check drafted two changes and nothing else:
   version.
 - **Nothing else moved.** Every AST and summary row has a new id in V2, yet no other row was drafted.
 
-The 203 added detailed rows are not stored yet, so this genotype draft can only be applied once a new snapshot's
-evidence can be loaded (proposed I-20). The AST draft only edits stored rows.
+The 203 added detailed rows were not stored when the drafts were made, so the genotype draft can only be applied
+after the snapshot's evidence is loaded (I-20, below). The AST draft only edits stored rows, but its new values are
+read from the loaded rows too.
+
+## Loading a later snapshot's evidence (I-20, D-30)
+
+A draft says which rows changed; re-evaluating it needs the new values. Three commands, in this order:
+
+```
+python -m amrtrace.ingest.load_evidence_version --old data/raw --old-manifest data/manifest/sha256.txt --new data/snapshots/AMRTRACE_RAW_V2 --commit
+python -m amrtrace.ingest.reevaluate_change --change-id <applied change> --release-id <new release> --hold --commit
+python -m amrtrace.ingest.compare_change --change-id <applied change> --commit --gate
+```
+
+- **What is loaded.** Only the rows the new snapshot adds, and the new version of every row it edits, each under its
+  own id and its own `source_snapshot_id` (migration 0013 makes NCBI's row id and the genotype signature unique per
+  snapshot). Rows are matched with the snapshot check's stable keys, so the stored rows are exactly the rows the
+  drafts name. Unchanged rows are not copied, even when their id changed, and a second run stores nothing.
+- **The evidence in force.** A release's version vector lists the evidence changes it reads (`evidence_changes`,
+  oldest first). Every re-evaluation and exhaustive check reads the frozen files with those changes applied: a
+  removed row is dropped, an edited row is replaced by its loaded version, an added row is read too. A case no change
+  touches reads exactly the rows it read before, so its stored state comes back and selective equals exhaustive.
+  Interpretation changes and the API runner read the same evidence, so a later edition never undoes a correction.
+- **What it refuses.** A change whose new rows are not loaded stops before anything is written. The loader refuses
+  an old snapshot that is not the one the release in force was built from.
 
 ## Tools and standards (A-18)
 
@@ -178,13 +201,16 @@ The API lists and decides drafts: `GET /drafts?status=PENDING`, `GET /drafts/{id
 
 ## Limits (stated honestly)
 
-- **New evidence is not yet re-evaluated with its new values.** Applying an evidence draft records the change and
-  selects the right cases, but re-evaluation still reads the V1 evidence in the database. Loading a new snapshot's
-  evidence as a new version, and re-evaluating with the version a change names, is not covered by any Iteration 2
-  task yet (proposed as I-20).
+- **One snapshot step at a time.** Evidence is loaded and re-evaluated from the snapshot the release in force was
+  built from (V1 to V2). Comparing V2 with a later V3 would name V2 ids for rows the release still reads under their
+  V1 ids, so the loader refuses it; writing the evidence in force out as a snapshot to compare from is future work
+  (D-30).
 - **A new row must be stored before its draft is applied.** The selector finds the cases of an added AST result or
-  determinant through the row's isolate (A-12), so it needs the row in the database; until the new snapshot's
-  evidence can be loaded (proposed I-20), applying a draft with added rows is refused.
+  determinant through the row's isolate (A-12), so it needs the row in the database: run
+  `load_evidence_version` first, or applying a draft with added rows is refused.
+- **Isolate rows keep their V1 values.** A genotype change re-run with a newer database moves the isolate's
+  `refgene_db_version` too, but isolate rows are not loaded, so the case's provenance edge still names the V1
+  database; only its genotype rows are new.
 - **Isolate-level changes are not watched.** A corrected host, for example, changes which VET01S row applies, but no
   change type covers isolate rows yet.
 - **Rule policies are not watched.** A rule policy (I-17) is written by the team, not found in a source snapshot.

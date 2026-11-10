@@ -86,7 +86,7 @@ Get-ChildItem .\db\migrations\*.sql | Sort-Object Name | ForEach-Object {
 
 These scripts create source records, case-state/release ledgers, dependency graph structures, change/review records, re-evaluation reports and integrity safeguards. Run migrations **only once on a fresh database**: these scripts are not automatically tracked or designed to be safely repeated.
 
-To bring an **existing** database up to date, apply only the migrations it does not have yet, for example the change-draft, source-alert and support-structure tables:
+To bring an **existing** database up to date, apply only the migrations it does not have yet, for example the change-draft, source-alert, support-structure and evidence-version migrations:
 
 ~~~powershell
 Get-Content -LiteralPath .\db\migrations\0010_change_draft.sql -Raw -Encoding UTF8 |
@@ -95,7 +95,12 @@ Get-Content -LiteralPath .\db\migrations\0011_source_alert.sql -Raw -Encoding UT
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 Get-Content -LiteralPath .\db\migrations\0012_support_structure.sql -Raw -Encoding UTF8 |
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
+Get-Content -LiteralPath .\db\migrations\0013_evidence_versions.sql -Raw -Encoding UTF8 |
+    docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 ~~~
+
+Migration 0013 lets a later snapshot's evidence be stored beside the V1 rows (I-20); see
+`docs/design/change_detection.md`, "Loading a later snapshot's evidence".
 
 From migration 0012 on, every new release writes `support_structure` rows, so a database must have 0012 applied before
 any new release is stored.

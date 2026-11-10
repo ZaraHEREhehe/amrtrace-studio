@@ -12,6 +12,7 @@ from amrtrace.ingest.frozen_v1 import (
     build_version_vector,
     read_frozen_tables,
 )
+from amrtrace.ingest.evidence_in_force import evidence_changes, evidence_in_force
 from amrtrace.ingest.interpretation_baseline import (
     BaselineComparison,
     compare_with_release,
@@ -54,6 +55,8 @@ def store_interpretation_release(
     organism: str,
 ) -> InterpretationReleaseReport:
     base_vector = _stored_version_vector(conn, base_release_id)
+    # the base release may already read later evidence (I-20); the new release reads the same rows
+    tables = evidence_in_force(conn, tables, evidence_changes(base_vector))
     ledger = _ledger_states(conn, base_release_id)
     if not ledger:
         raise LookupError(f"release {base_release_id} has no states in the ledger")
