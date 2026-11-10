@@ -1,11 +1,15 @@
 """C5 end to end: a revised rule policy, selected, re-evaluated, and checked against exhaustive recomputation (I-17).
 
 The real evaluator, selector, re-evaluation engine, comparator and gate are used. The evaluator does not read a rule
-policy yet, so this test supplies one around it (the engine takes the evaluate function as a parameter): a row whose
+policy, so this test supplies one around it (the engine takes the evaluate function as a parameter): a row whose
 label the policy marks NOT_USABLE is handed to the evaluator without a label (the row and its edge stay), and every
-policy rule a case consults is recorded as an edge to that policy_rule node at the policy version. Recording these
-edges inside the evaluator itself is follow-up work for the evaluator owner; until then a real revised policy has to be
-declared on the case-rule version node, which every case depends on (sound, but it selects every case).
+policy rule a case consults is recorded as an edge to that policy_rule node at the policy version.
+
+Two ways of declaring the same change are tested:
+- on the policy_rule node (derived by the differ): precise, but only possible once the evaluator records policy edges,
+  which is future work (D-29);
+- on the case_rule_version node every case depends on: what Iteration 2 does (D-29). It selects every case, and
+  selective still equals exhaustive; only the precision is lower.
 
 World (gentamicin, no genotype evidence, POLICY_V1 -> POLICY_V2 makes NOT_DEFINED not usable):
     A  NOT_DEFINED          UNRESOLVED (non-binary)   ->  UNRESOLVED (missing phenotype)
@@ -19,7 +23,7 @@ import dataclasses
 import pytest
 
 import amrtrace.policies  # noqa: F401  (registers CASE_RULES_V1)
-from amrtrace.changes import ChangeEvent, get_change_event, register_version
+from amrtrace.changes import ChangedEntity, ChangeEvent, get_change_event, register_version
 from amrtrace.changes.differs import parse_rule_policy, policy_rule_key
 from amrtrace.changes.service import apply_change
 from amrtrace.deps.materialize import materialize
@@ -150,3 +154,26 @@ def test_a_selector_that_misses_a_case_carrying_the_value_is_blocked(world):
     report = reevaluate_and_compare(world)
     assert not report.passed and report.missed == 1 and report.recall == 0.5
     assert gate_release(world, report) == "BLOCKED"
+
+
+# D-29: what Iteration 2 does for a real C5 change, because the evaluator records no policy_rule edges
+def test_declared_on_the_case_rule_version_node_it_selects_every_case_and_still_equals_exhaustive(world):
+    for version in ("CASE_RULES_V1", "CASE_RULES_V1_POLICY_V2"):
+        register_version(world, "case_rule_version", "CASE_RULES_V1", version)
+    event = ChangeEvent(
+        CHANGE_ID, "RULE_POLICY_REVISED", "CASE_RULES_V1", "CASE_RULES_V1_POLICY_V2",
+        (ChangedEntity("case_rule_version", "CASE_RULES_V1", "CASE_RULES_V1", "CASE_RULES_V1_POLICY_V2"),),
+        initiator="tester",
+    )
+    application = apply_change(world, event)
+    assert not application.entities_derived
+    assert [item.case_id for item in application.items] == ["A", "B", "C", "D"]
+
+    report = reevaluate_and_compare(world)
+    assert report.passed, report.to_json()
+    # B changes state; A stays UNRESOLVED with a new reason; C keeps its state but its edge to the unchanged
+    # intermediate rule now names POLICY_V2, which counts as a dependency change because the declared node is the
+    # case-rule version, not the policy rule. D is re-verified and unchanged.
+    assert (report.selected, report.affected, report.state_changed, report.missed) == (4, 3, 1, 0)
+    assert report.recall == 1.0 and report.precision == 0.75
+    assert gate_release(world, report) == "PUBLISHED"

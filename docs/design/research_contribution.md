@@ -101,7 +101,7 @@ re-evaluate about 360 times fewer cases than re-running everything, without miss
 
 - One organism, five drugs and one standards body (CLSI). The categories and links are generic (the engine holds no
   drug, organism or standard names), but only this cohort has been measured.
-- New evidence is detected and its cases selected, but re-evaluating with the new values needs the new snapshot's
-  evidence loaded (proposed I-20); the 630 changed cases were computed by a read-only evaluation, not a release.
+- New evidence is detected, loaded as a new version and re-evaluated with its new values (I-20), one snapshot step
+  at a time; the 630 changed cases above were computed by a read-only evaluation before I-20, not as a release.
 - New isolates are a new cohort, not a change, and are left out of later snapshots.
 - No user study: the claim is about correctness and cost, not about reviewers' decisions.

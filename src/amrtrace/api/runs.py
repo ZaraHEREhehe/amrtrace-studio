@@ -27,7 +27,7 @@ from .db import get_connection, get_write_connection
 from .errors import ApiError
 from .run_source import (
     UnsupportedRunChange,
-    interpretation_run_context,
+    run_context,
 )
 from .schemas import (
     EquivalenceReportView,
@@ -168,7 +168,7 @@ def run_change(
     assert_run_authority(actor, run_exhaustive=payload.run_exhaustive, gate=payload.gate)
     bind_actor(conn, actor)
     try:
-        context = interpretation_run_context(
+        context = run_context(
             conn,
             change_id,
         )
