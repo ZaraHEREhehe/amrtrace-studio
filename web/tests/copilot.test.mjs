@@ -48,13 +48,13 @@ test("the caption always carries the generated label", () => {
 test("the writer is named plainly", () => {
   assert.equal(generatorText(summary), "Written from templates");
   assert.equal(generatorText({ generator: "local:llama3.2" }), "Reworded by local model llama3.2");
-  assert.equal(generatorText({ generator: "hosted:llama-3.1-8b-instant" }), "Reworded by hosted model llama-3.1-8b-instant");
+  assert.equal(generatorText({ generator: "hosted:openai/gpt-oss-20b" }), "Reworded by hosted model openai/gpt-oss-20b");
   assert.equal(sourceText({ kind: "change_event", id: "CHG-1" }), "change CHG-1");
 });
 
 
 test("the notes say why a model was or was not used", () => {
-  const note = "hosted:llama-3.1-8b-instant was not used: RewriteFailed: HTTP 403";
+  const note = "hosted:openai/gpt-oss-20b was not used: RewriteFailed: HTTP 403";
   assert.deepEqual(copilotNotes({ ...summary, notes: [note, " "] }), [note]);
   assert.deepEqual(copilotNotes(summary), []);
   assert.deepEqual(copilotNotes(null), []);

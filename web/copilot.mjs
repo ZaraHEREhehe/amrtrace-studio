@@ -55,7 +55,7 @@ export function copilotCaption(summary) {
 }
 
 
-// why a model was or was not used, for example "hosted:llama-3.1-8b-instant was not used: ... HTTP 403"
+// why a model was or was not used, for example "hosted:openai/gpt-oss-20b was not used: ... HTTP 403"
 export function copilotNotes(summary) {
   return (summary?.notes ?? []).filter((note) => typeof note === "string" && note.trim() !== "");
 }

@@ -26,7 +26,8 @@ from .templates import CopilotSummary, Sentence
 
 DEFAULT_LOCAL_URL = "http://127.0.0.1:11434"
 HOSTED_URL = "https://api.groq.com/openai/v1/chat/completions"
-DEFAULT_HOSTED_MODEL = "llama-3.1-8b-instant"
+# Groq retires models; AMRTRACE_COPILOT_HOSTED_MODEL overrides this without a code change (GET /openai/v1/models lists them)
+DEFAULT_HOSTED_MODEL = "openai/gpt-oss-20b"
 TIMEOUT_SECONDS = 20
 # a plain name of our own: some hosted APIs (Groq's, behind Cloudflare) answer 403 to Python's default "Python-urllib"
 USER_AGENT = "amrtrace-studio-copilot/1.0"

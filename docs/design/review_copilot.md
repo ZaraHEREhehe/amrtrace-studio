@@ -27,7 +27,9 @@ Only stored records, all of which the dossier already shows:
    return the same number in the same order. A reworded sentence keeps its template's sources, and it is kept only if
    it carries exactly the identifiers and numbers of its template; otherwise the template sentence is shown. If no
    model answers, the templates stand. Order: a local model served by Ollama (`AMRTRACE_COPILOT_LOCAL_MODEL`), then
-   the free hosted fallback (`GROQ_API_KEY`). Keys live in `.env`, never in the repository.
+   the free hosted fallback (`GROQ_API_KEY`, model `openai/gpt-oss-20b` unless `AMRTRACE_COPILOT_HOSTED_MODEL` names
+   another; Groq retires models, so the name is a setting). Keys live in `.env`, never in the repository. Each
+   summary's notes say which model was used or why it was not, and the dossier card shows them.
 
 ## Where it goes
 

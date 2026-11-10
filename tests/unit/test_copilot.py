@@ -88,7 +88,9 @@ def test_a_failing_model_falls_back_to_the_next_one_then_to_templates():
 def test_models_are_configured_from_the_environment_local_first():
     assert rewriters_from_env({}) == []
     found = rewriters_from_env({"GROQ_API_KEY": "k", "AMRTRACE_COPILOT_LOCAL_MODEL": "llama3.2"})
-    assert [r.name for r in found] == ["local:llama3.2", "hosted:llama-3.1-8b-instant"]
+    assert [r.name for r in found] == ["local:llama3.2", "hosted:openai/gpt-oss-20b"]
+    chosen = rewriters_from_env({"GROQ_API_KEY": "k", "AMRTRACE_COPILOT_HOSTED_MODEL": "qwen/qwen3.8-27b"})
+    assert [r.name for r in chosen] == ["hosted:qwen/qwen3.8-27b"]
 
 
 def test_both_model_clients_read_the_sentences_from_their_answers(monkeypatch):
