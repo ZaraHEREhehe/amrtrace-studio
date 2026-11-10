@@ -1870,6 +1870,7 @@ function renderDossierOverview(dossier, history = []) {
 
   activeDossierStateId = current?.state_id ?? null;
   byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
+  byId("dossier-copilot-write").disabled = !can("review_case");
 
   if (current?.release_id) {
     exportLink.href = exportUrl(current.release_id, "json");
@@ -3525,6 +3526,7 @@ function boot() {
   subscribeSession(() => {
     syncGateControl();
     byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
+    byId("dossier-copilot-write").disabled = !can("review_case");
     if (!can("review_case")) byId("review-queue-review-fieldset").disabled = true;
   });
 

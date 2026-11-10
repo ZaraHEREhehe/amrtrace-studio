@@ -27,6 +27,7 @@ from amrtrace.copilot import (
 from amrtrace.ledger import ReleaseNotFound
 from amrtrace.reeval.diff import CaseNotFound
 
+from .auth import Actor, require_reviewer
 from .db import get_connection, get_write_connection
 from .errors import ApiError
 from .schemas import CopilotRequest, CopilotSummaryView
@@ -77,6 +78,7 @@ def write_case_copilot(
     case_id: str,
     payload: CopilotRequest,
     conn: psycopg.Connection = Depends(get_write_connection),
+    actor: Actor = Depends(require_reviewer),
 ) -> CopilotSummaryView:
     """Writes and stores a summary of the current comparison; a model, when asked for and configured, only rewords."""
     summary = _summary(conn, case_id, None, None)

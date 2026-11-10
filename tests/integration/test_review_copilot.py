@@ -15,6 +15,7 @@ from pathlib import Path
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
+from tests.z18_test_support import signed_in_client
 
 import amrtrace.policies  # noqa: F401
 from amrtrace.api.db import get_connection, get_write_connection
@@ -185,7 +186,13 @@ def client(world):
         app.dependency_overrides.pop(get_write_connection, None)
 
 
-def test_the_api_labels_the_summary_as_generated_and_stores_it_apart(world, client, monkeypatch):
+@pytest.fixture
+def reviewer(world, client):
+    # writing a summary needs a signed-in Reviewer or Admin since Z-18; reading stays public
+    return signed_in_client(client, world[0], role="REVIEWER", username="copilotreviewer")
+
+
+def test_the_api_labels_the_summary_as_generated_and_stores_it_apart(world, client, reviewer, monkeypatch):
     conn, changed = world
     case_id = changed[0]
     fresh = client.get(f"/cases/{case_id}/copilot")
@@ -198,7 +205,7 @@ def test_the_api_labels_the_summary_as_generated_and_stores_it_apart(world, clie
     # no model configured: asking for one keeps the templates and says so
     monkeypatch.delenv("AMRTRACE_COPILOT_LOCAL_MODEL", raising=False)
     monkeypatch.delenv("GROQ_API_KEY", raising=False)
-    written = client.post(f"/cases/{case_id}/copilot", json={"mode": "language_model"})
+    written = reviewer.post(f"/cases/{case_id}/copilot", json={"mode": "language_model"})
     assert written.status_code == 201, written.text
     assert written.json()["stored"] is True and written.json()["generator"] == "templates"
     assert any("no language model" in note for note in written.json()["notes"])
@@ -209,6 +216,17 @@ def test_the_api_labels_the_summary_as_generated_and_stores_it_apart(world, clie
     # the summary is not evidence: nothing about it appears in the case's own record
     record = str(client.get(f"/cases/{case_id}").json())
     assert GENERATED_LABEL not in record and again["sentences"][0]["text"] not in record
+
+
+def test_writing_a_summary_needs_a_reviewer_or_admin(world, client):
+    conn, changed = world
+    case_id = changed[0]
+    anonymous = client.post(f"/cases/{case_id}/copilot", json={"mode": "templates"})
+    assert anonymous.status_code == 401, anonymous.text
+    analyst = signed_in_client(client, conn, role="ANALYST", username="copilotanalyst")
+    forbidden = analyst.post(f"/cases/{case_id}/copilot", json={"mode": "templates"})
+    assert forbidden.status_code == 403, forbidden.text
+    assert conn.execute("SELECT count(*) FROM copilot_summary WHERE case_id = %s", (case_id,)).fetchone()[0] == 0
 
 
 def test_the_api_reports_an_unknown_case(client):
