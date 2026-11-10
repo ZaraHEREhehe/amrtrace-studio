@@ -22,40 +22,19 @@ export function sourceText(source) {
 }
 
 
-// who wrote the text, said plainly
-export function generatorText(summary) {
-  const generator = summary?.generator ?? "templates";
-  if (generator === "templates") {
-    return "Written from templates";
-  }
-  return `Reworded by ${generator.replace(/^(local|hosted):/, "$1 model ")}`;
-}
-
-
 // one row per sentence: the text and the stored records it came from
 export function copilotRows(summary) {
   return (summary?.sentences ?? []).map((sentence, index) => ({
     number: index + 1,
     text: sentence.text,
     sources: (sentence.sources ?? []).map(sourceText),
-    reworded: sentence.text !== sentence.template_text,
   }));
 }
 
 
-// the line under the heading: the label, whether it is stored, and who wrote it
+// the line under the heading: says the text is generated and is not evidence (rule 9), and nothing else
+export const COPILOT_CAPTION = "Generated from stored records. Not evidence, and never used to assign a state.";
+
 export function copilotCaption(summary) {
-  if (!summary) {
-    return "No summary is available for this case.";
-  }
-  const stored = summary.stored
-    ? `stored as summary ${summary.summary_id}`
-    : "not stored yet";
-  return `${summary.label} ${generatorText(summary)}, ${stored}.`;
-}
-
-
-// why a model was or was not used, for example "hosted:openai/gpt-oss-20b was not used: ... HTTP 403"
-export function copilotNotes(summary) {
-  return (summary?.notes ?? []).filter((note) => typeof note === "string" && note.trim() !== "");
+  return summary ? COPILOT_CAPTION : "No summary is available for this case.";
 }

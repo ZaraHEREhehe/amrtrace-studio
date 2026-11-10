@@ -1652,14 +1652,3 @@ tr.clickable {
   font-size: 0.85em;
   overflow-wrap: anywhere;
 }
-
-.copilot-notes {
-  margin: 0 0 0.5rem;
-  padding-left: 1.25rem;
-  font-size: 0.85em;
-  overflow-wrap: anywhere;
-}
-
-.copilot-notes:empty {
-  display: none;
-}

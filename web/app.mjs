@@ -32,7 +32,6 @@ import {
 
 import {
   copilotCaption,
-  copilotNotes,
   copilotRows,
 } from "./copilot.mjs";
 
@@ -2017,11 +2016,6 @@ function renderDossierCopilot(summary) {
   const list = byId("dossier-copilot");
   clear(list);
   byId("dossier-copilot-caption").textContent = copilotCaption(summary);
-  const notes = byId("dossier-copilot-notes");
-  clear(notes);
-  for (const note of copilotNotes(summary)) {
-    notes.append(make("li", { text: note }));
-  }
 
   for (const row of copilotRows(summary)) {
     const item = make("li", { className: "copilot-sentence" });
@@ -2029,7 +2023,7 @@ function renderDossierCopilot(summary) {
       make("p", { text: row.text }),
       make("p", {
         className: "muted copilot-sources",
-        text: `From: ${row.sources.join("; ")}${row.reworded ? " (reworded by a language model)" : ""}`,
+        text: `From: ${row.sources.join("; ")}`,
       }),
     );
     list.append(item);
