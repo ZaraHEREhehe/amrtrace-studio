@@ -18,9 +18,14 @@ returns one ChangedEntity per rule that was added, removed or changed:
 changed_region is always None: a rule governs exactly one value, so the rule itself is the region.
 
 validate_entities() checks the policy_rule entities of an event: their versions must be null or the event's
-versions, and they have no changed_region. Other node types may still be declared by hand for this type (a revised
-policy can also be declared on the case-rule version node every case depends on), so they are left to the generic
-checks.
+versions, and they have no changed_region. Other node types may still be declared by hand for this type, so they are
+left to the generic checks.
+
+Known limitation (D-29): the evaluator does not record policy_rule edges, so no stored case points at a policy_rule
+node yet. In Iteration 2 a real C5 change is therefore declared on the case_rule_version node, which every case
+depends on: it selects every case, which can never miss one. The policy_rule entities this differ produces become
+precise once the evaluator records one edge per value it consulted (future work; every stored graph would need
+rebuilding).
 
 Nothing here names a value, treatment, drug or standard (rule 12): everything specific arrives as data.
 """
