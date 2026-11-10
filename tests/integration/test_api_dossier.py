@@ -6,6 +6,7 @@ import json
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.z18_test_support import signed_in_client, mocked_authorized_client
 
 from amrtrace.api.db import (
     get_connection,
@@ -168,7 +169,7 @@ def client(dossier_database):
 
     try:
         with TestClient(app) as test_client:
-            yield test_client
+            yield signed_in_client(test_client, dossier_database, role="REVIEWER", username="reviewer1")
     finally:
         app.dependency_overrides.pop(
             get_connection,

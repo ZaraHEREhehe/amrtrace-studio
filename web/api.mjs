@@ -1,3 +1,5 @@
+import { csrfToken, clearSession } from "./auth_client.mjs";
+
 const API_ROOT = "/api";
 
 
@@ -24,6 +26,11 @@ export async function requestJson(
       ...(options.headers ?? {}),
     },
   };
+
+  if (!["GET", "HEAD", "OPTIONS"].includes(requestOptions.method.toUpperCase())) {
+    const csrf = csrfToken();
+    if (csrf) requestOptions.headers["X-CSRF-Token"] = csrf;
+  }
 
   if (options.body !== undefined) {
     requestOptions.headers["Content-Type"] = "application/json";
@@ -60,6 +67,7 @@ export async function requestJson(
   }
 
   if (!response.ok) {
+    if (response.status === 401) clearSession();
     throw new ApiError(
       response.status,
       payload?.error_code ?? "http_error",

@@ -15,6 +15,8 @@ from amrtrace.monitor import (
     list_alerts,
 )
 
+from .auth import require_admin
+from .auth_security import Actor
 from .db import get_connection, get_write_connection
 from .errors import ApiError
 from .schemas import SourceAlertAcknowledge, SourceAlertView
@@ -48,9 +50,12 @@ def alert(alert_id: str, conn=Depends(get_connection)) -> SourceAlertView:
 
 
 @router.post("/{alert_id}/acknowledge", response_model=SourceAlertView)
-def acknowledge(alert_id: str, payload: SourceAlertAcknowledge, conn=Depends(get_write_connection)) -> SourceAlertView:
+def acknowledge(alert_id: str, payload: SourceAlertAcknowledge, conn=Depends(get_write_connection),
+                actor: Actor = Depends(require_admin)) -> SourceAlertView:
+    # Source-alert acknowledgement is an Admin-owned detection management decision.
+    # Never trust the caller's claimed name for an auditable write.
     try:
-        return _view(acknowledge_alert(conn, alert_id, acknowledged_by=payload.acknowledged_by, note=payload.note))
+        return _view(acknowledge_alert(conn, alert_id, acknowledged_by=actor.username, note=payload.note))
     except AlertNotFound as exc:
         raise _not_found(alert_id) from exc
     except AlertAlreadyAcknowledged as exc:

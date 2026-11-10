@@ -24,6 +24,7 @@ from amrtrace.changes.service import (
 )
 from amrtrace.interpretation import TableNotFound, load_table_from_db
 
+from .auth import Actor, bind_actor, require_analyst
 from .db import get_connection, get_write_connection
 from .errors import ApiError
 from .schemas import (
@@ -123,8 +124,11 @@ def list_change_types() -> list[dict[str, object]]:
 def create_change(
     payload: ChangeCreate,
     conn=Depends(get_write_connection),
+    actor: Actor = Depends(require_analyst),
 ) -> ChangeApplicationView:
-    event = _domain_event(payload)
+    bind_actor(conn, actor)
+    # Ignore client-supplied initiator; the authenticated identity is authoritative.
+    event = _domain_event(payload.model_copy(update={"initiator": actor.username}))
 
     try:
         result = apply_change(

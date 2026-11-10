@@ -30,6 +30,8 @@ import {
   writeCaseCopilot,
 } from "./api.mjs";
 
+import { can, currentAccount, subscribeSession } from "./auth_client.mjs";
+
 import {
   copilotCaption,
   copilotRows,
@@ -756,7 +758,7 @@ async function submitChange(event) {
       type,
       old_version: formData.get("old_version"),
       new_version: formData.get("new_version"),
-      initiator: formData.get("initiator"),
+      initiator: currentAccount()?.username ?? "",
       declared_scope: formData.get("declared_scope"),
       derive_entities: byId("change-derive").checked,
       can_derive_entities: Boolean(availableChangeTypes.find((item) => item.type === type)?.can_derive_entities),
@@ -1532,6 +1534,15 @@ function syncGateControl() {
   const exhaustive = byId("run-exhaustive");
   const gate = byId("run-gate");
 
+  if (!can("release_gate")) {
+    exhaustive.checked = true;
+    exhaustive.disabled = !can("run_evaluation") || !can("release_gate");
+    gate.checked = false;
+    gate.disabled = true;
+    return;
+  }
+
+  exhaustive.disabled = false;
   if (!exhaustive.checked) {
     gate.checked = false;
     gate.disabled = true;
@@ -1858,7 +1869,7 @@ function renderDossierOverview(dossier, history = []) {
   container.append(lower);
 
   activeDossierStateId = current?.state_id ?? null;
-  byId("dossier-review-fieldset").disabled = activeDossierStateId === null;
+  byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
 
   if (current?.release_id) {
     exportLink.href = exportUrl(current.release_id, "json");
@@ -2383,9 +2394,7 @@ async function submitDossierReview(event) {
   );
 
   const payload = {
-    reviewer: String(
-      data.get("reviewer") ?? "",
-    ).trim(),
+    reviewer: currentAccount()?.username ?? "",
     action,
     reason: String(
       data.get("reason") ?? "",
@@ -2440,6 +2449,7 @@ async function submitDossierReview(event) {
     );
 
     form.reset();
+    byId("dossier-reviewer").value = currentAccount()?.username ?? "";
     syncReviewCorrection();
   } catch (error) {
     setStatus(
@@ -2755,6 +2765,8 @@ function bindNavigation() {
 async function applyRoute() {
   const { view, id } = parseRoute(window.location.hash);
   activateView(view);
+
+  if (view === "admin") return; // dedicated admin module loads its own data
 
   if (view === "review-queue") {
     await loadReviewQueue(reviewQueueFilters(id));
@@ -3397,8 +3409,9 @@ async function openReviewQueueCase(item) {
     }));
     byId("review-queue-review-form").reset();
     syncQueueCorrection();
-    fieldset.disabled = false;
-    submit.disabled = false;
+    fieldset.disabled = !can("review_case");
+    submit.disabled = !can("review_case");
+    byId("review-queue-reviewer").value = currentAccount()?.username ?? "";
     hideStatus(status);
     card.scrollIntoView({ block: "nearest", behavior: "smooth" });
   } catch (error) {
@@ -3420,7 +3433,7 @@ async function submitQueueReview(event) {
   let payload;
   try {
     payload = buildReviewPayload({
-      reviewer: data.get("reviewer"),
+      reviewer: currentAccount()?.username ?? "",
       action: data.get("action"),
       reason: data.get("reason"),
       corrected_state_code: data.get("corrected_state_code"),
@@ -3509,6 +3522,11 @@ function toggleChangeForm() {
 
 function boot() {
   bindNavigation();
+  subscribeSession(() => {
+    syncGateControl();
+    byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
+    if (!can("review_case")) byId("review-queue-review-fieldset").disabled = true;
+  });
 
   byId("change-form").addEventListener("submit", submitChange);
   byId("change-type").addEventListener("change", () => {
