@@ -26,6 +26,7 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
 from fastapi.testclient import TestClient
+from tests.z18_test_support import signed_in_client
 
 import amrtrace.policies  # noqa: F401
 from amrtrace.api.db import get_connection, get_write_connection
@@ -283,7 +284,8 @@ def client(scratch_world):
     app.dependency_overrides[get_write_connection] = override
     try:
         with TestClient(app) as test_client:
-            yield test_client
+            # re-evaluation with the gate needs a signed-in Admin since Z-18
+            yield signed_in_client(test_client, conn, role="ADMIN", username="evidenceadmin")
     finally:
         app.dependency_overrides.pop(get_connection, None)
         app.dependency_overrides.pop(get_write_connection, None)

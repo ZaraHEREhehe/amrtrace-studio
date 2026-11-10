@@ -60,6 +60,8 @@ test("nginx proxies /api to the compose API service", () => {
     nginx,
     /proxy_pass http:\/\/api:8000\//,
   );
+  // Preserve the browser-facing port for the Z-18 Origin check.
+  assert.match(nginx, /proxy_set_header Host \$http_host;/);
 
   assert.match(
     nginx,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.z18_test_support import signed_in_client, mocked_authorized_client
 from psycopg.types.json import Jsonb
 
 from amrtrace.api.db import get_connection, get_write_connection
@@ -217,7 +218,7 @@ def client(api_change_database):
 
     try:
         with TestClient(app) as test_client:
-            yield test_client
+            yield signed_in_client(test_client, api_change_database, role="ANALYST", username="api-test")
     finally:
         app.dependency_overrides.pop(get_connection, None)
         app.dependency_overrides.pop(get_write_connection, None)
@@ -258,7 +259,7 @@ def test_malformed_change_request_uses_project_error_shape():
     app.dependency_overrides[get_write_connection] = no_database_needed
 
     try:
-        with TestClient(app) as test_client:
+        with mocked_authorized_client(app) as test_client:
             response = test_client.post(
                 "/changes",
                 json={"change_id": "INCOMPLETE"},

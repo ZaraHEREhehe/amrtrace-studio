@@ -86,7 +86,7 @@ Get-ChildItem .\db\migrations\*.sql | Sort-Object Name | ForEach-Object {
 
 These scripts create source records, case-state/release ledgers, dependency graph structures, change/review records, re-evaluation reports and integrity safeguards. Run migrations **only once on a fresh database**: these scripts are not automatically tracked or designed to be safely repeated.
 
-To bring an **existing** database up to date, apply only the migrations it does not have yet, for example the change-draft, source-alert, support-structure and evidence-version migrations:
+To bring an **existing** database up to date, apply only the migrations it does not have yet, for example the change-draft, source-alert and support-structure tables:
 
 ~~~powershell
 Get-Content -LiteralPath .\db\migrations\0010_change_draft.sql -Raw -Encoding UTF8 |
@@ -101,6 +101,41 @@ Get-Content -LiteralPath .\db\migrations\0013_evidence_versions.sql -Raw -Encodi
 
 Migration 0013 lets a later snapshot's evidence be stored beside the V1 rows (I-20); see
 `docs/design/change_detection.md`, "Loading a later snapshot's evidence".
+
+**Existing local databases upgrading to Z-18:** the block above is an example,
+**not** a command to rerun blindly. These SQL files are not repeatable migrations;
+apply each file **only if it has not already been applied**, in numeric order.
+For an existing local stack, keep `db` running but stop application writers during
+the upgrade:
+
+~~~powershell
+docker compose stop web api
+~~~
+
+Check the existing schema before upgrading (this is a read-only query):
+
+~~~powershell
+docker compose exec -T db psql -X -U postgres -d amrtrace -c "SELECT to_regclass('public.source_alert') AS m0011, to_regclass('public.support_structure') AS m0012, (SELECT count(*) FROM pg_constraint WHERE conname = 'ast_evidence_source_row_snapshot_key') AS m0013, to_regclass('public.app_user') AS m0014, to_regclass('public.app_session') AS m0014_session;"
+~~~
+
+- If `source_alert` is absent, apply `0011_source_alert.sql` using its command above.
+- If `support_structure` is absent, apply `0012_support_structure.sql` using its command above.
+- If `m0013` is `0`, apply `0013_evidence_versions.sql` using its command above.
+- If `app_user` is absent, apply **0014**, after 0011, 0012 and 0013 are present:
+
+~~~powershell
+Get-Content -LiteralPath .\db\migrations\0014_application_identity.sql -Raw -Encoding UTF8 |
+    docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
+if ($LASTEXITCODE -ne 0) { throw "Migration 0014 failed; do not continue" }
+~~~
+
+A missing table is a useful preliminary check, not a full migration audit: if a
+migration was interrupted or its schema looks inconsistent, **stop and inspect
+it** rather than rerunning SQL or guessing. Back up existing local data you
+need to retain before upgrading. Never run these local commands against Azure
+production; use [the deployment preflight](docs/deploy/z18_auth_preflight.md)
+with the deployment owner instead. After migration and local Admin provisioning,
+resume the local application with `docker compose up -d --build api web`.
 
 From migration 0012 on, every new release writes `support_structure` rows, so a database must have 0012 applied before
 any new release is stored.
@@ -124,6 +159,37 @@ $env:PYTHONPATH = "src"
 ~~~
 
 The Docker-based API already has its own database settings. These variables allow Python commands running on Windows to access the same local PostgreSQL server.
+
+### Create the first local Admin account and sign in (Z-18)
+
+After **all migrations through `0014_application_identity.sql`** are applied,
+create an application-level Admin account. This is distinct from the PostgreSQL
+`postgres` user and the runtime `amrtrace_app` database role. Use the local
+Python environment and `AMRTRACE_PG_*` / `PYTHONPATH` settings from above:
+
+~~~powershell
+.\.venv\Scripts\python.exe -m amrtrace.api.user_admin create --username localadmin --role ADMIN
+~~~
+
+The command **prompts twice for a password without displaying it**. Do not put
+application passwords on the command line, in `.env`, or in Git. The account
+is stored in the local `app_user` table; the Admin can then view user roles in
+the browser's Admin page. Additional accounts and role changes are performed
+with the same privileged local CLI (for example,
+`python -m amrtrace.api.user_admin create --username analyst1 --role ANALYST`).
+
+Open **http://localhost:8080**, choose **Sign in**, and enter the `localadmin`
+username and the password you just created. The browser keeps the session in
+an HttpOnly cookie and uses a CSRF token for writes. Check that the Admin page
+loads and **Sign out** ends the session. If you already have a local account,
+do not create the same username again; use the existing credentials or the
+CLI's `set-password` operation if legitimately authorized.
+
+**After Z-18, write operations require authentication and the appropriate
+role.** Anonymous read-only endpoints (including `/api/cases`) remain available
+by design; a successful `/health` check alone does not establish that login is
+configured. `GET` endpoints are intentionally public at the API layer; any
+separate perimeter login for the deployed demo remains in place.
 
 ### Load the included 660-case mini-cohort
 

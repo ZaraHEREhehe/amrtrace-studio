@@ -1635,3 +1635,19 @@ tr.clickable {
   white-space: normal;
   overflow-wrap: anywhere;
 }
+
+/* Z-18: identity controls are additive; existing page layout stays intact. */
+.auth-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.auth-topbar #auth-identity { font-size: 0.85rem; opacity: 0.85; }
+.auth-panel { margin: 12px 22px; }
+.auth-login-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.auth-login-form input { min-width: 160px; }
+#admin-users table { width: 100%; }
+#auth-login-panel[hidden], #admin-nav[hidden] { display: none; }
+@media (max-width: 700px) { .auth-topbar { justify-content: flex-end; } }
+
+/* Z-18: role-gated controls must stay hidden even when button/layout rules set display.
+   Browser user-agent [hidden] styling has lower priority than author CSS. */
+[hidden] {
+  display: none !important;
+}
