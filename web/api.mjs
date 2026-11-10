@@ -262,6 +262,29 @@ export function getCaseDiff(
 }
 
 
+// Review Copilot (I-19): generated text about why a case changed, never evidence
+export function getCaseCopilot(caseId, fetchImpl = globalThis.fetch) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/copilot`,
+    {},
+    fetchImpl,
+  );
+}
+
+
+export function writeCaseCopilot(
+  caseId,
+  mode = "templates",
+  fetchImpl = globalThis.fetch,
+) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/copilot`,
+    { method: "POST", body: { mode } },
+    fetchImpl,
+  );
+}
+
+
 export function listPublishedReleases(fetchImpl = globalThis.fetch) {
   return requestJson("/releases", {}, fetchImpl);
 }

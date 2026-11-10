@@ -31,6 +31,11 @@ services:
       AMRTRACE_PG_USER: ${POSTGRES_USER:-postgres}
       AMRTRACE_PG_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       AMRTRACE_PG_DBNAME: ${POSTGRES_DB:-amrtrace}
+      # optional Review Copilot models (I-19, D-27); empty means templates only
+      AMRTRACE_COPILOT_LOCAL_MODEL: ${AMRTRACE_COPILOT_LOCAL_MODEL:-}
+      AMRTRACE_COPILOT_LOCAL_URL: ${AMRTRACE_COPILOT_LOCAL_URL:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      AMRTRACE_COPILOT_HOSTED_MODEL: ${AMRTRACE_COPILOT_HOSTED_MODEL:-}
     ports:
       - "${API_PORT:-8000}:8000"
     depends_on:

@@ -8,6 +8,7 @@ from .alerts import router as alerts_router
 from .auth import router as auth_router
 from .cases import router as cases_router
 from .changes import router as changes_router
+from .copilot import router as copilot_router
 from .dossier import router as dossier_router
 from .drafts import router as drafts_router
 from .releases import router as releases_router
@@ -28,6 +29,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
     app.include_router(cases_router)
     app.include_router(changes_router)
+    app.include_router(copilot_router)
     app.include_router(dossier_router)
     app.include_router(drafts_router)
     app.include_router(releases_router)

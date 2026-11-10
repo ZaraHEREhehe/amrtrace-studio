@@ -6,6 +6,7 @@ import {
   listPublishedReleases,
   getCase,
   getCaseDependencies,
+  getCaseCopilot,
   getCaseDiff,
   getCaseHistory,
   getCaseReviews,
@@ -26,9 +27,15 @@ import {
   resolveCase,
   searchCases,
   startReevaluation,
+  writeCaseCopilot,
 } from "./api.mjs";
 
 import { can, currentAccount, subscribeSession } from "./auth_client.mjs";
+
+import {
+  copilotCaption,
+  copilotRows,
+} from "./copilot.mjs";
 
 import {
   caseName,
@@ -1863,6 +1870,7 @@ function renderDossierOverview(dossier, history = []) {
 
   activeDossierStateId = current?.state_id ?? null;
   byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
+  byId("dossier-copilot-write").disabled = !can("review_case");
 
   if (current?.release_id) {
     exportLink.href = exportUrl(current.release_id, "json");
@@ -2015,6 +2023,57 @@ function renderDossierDiff(diff) {
 }
 
 
+// the Review Copilot panel (I-19): generated text, labelled as such, each sentence with the records it came from
+function renderDossierCopilot(summary) {
+  const list = byId("dossier-copilot");
+  clear(list);
+  byId("dossier-copilot-caption").textContent = copilotCaption(summary);
+
+  for (const row of copilotRows(summary)) {
+    const item = make("li", { className: "copilot-sentence" });
+    item.append(
+      make("p", { text: row.text }),
+      make("p", {
+        className: "muted copilot-sources",
+        text: `From: ${row.sources.join("; ")}`,
+      }),
+    );
+    list.append(item);
+  }
+}
+
+
+async function loadDossierCopilot(caseId) {
+  const status = byId("dossier-copilot-status");
+  hideStatus(status);
+  try {
+    renderDossierCopilot(await getCaseCopilot(caseId));
+  } catch (error) {
+    renderDossierCopilot(null);
+    setStatus(status, "error", errorText(error));
+  }
+}
+
+
+async function writeDossierCopilot() {
+  if (!activeDossierCaseId) {
+    return;
+  }
+  const status = byId("dossier-copilot-status");
+  const caseId = activeDossierCaseId;
+  setStatus(status, "loading", "Writing a summary from the stored records…");
+  try {
+    const summary = await writeCaseCopilot(caseId, "language_model");
+    if (caseId === activeDossierCaseId) {
+      renderDossierCopilot(summary);
+      hideStatus(status);
+    }
+  } catch (error) {
+    setStatus(status, "error", errorText(error));
+  }
+}
+
+
 function renderDossierDependencies(subgraph) {
   const summary = byId(
     "dossier-dependency-summary",
@@ -2074,6 +2133,7 @@ async function loadDossier(caseId) {
     "dossier-history",
     "dossier-reviews",
     "dossier-diff",
+    "dossier-copilot",
     "dossier-dependency-summary",
     "dossier-graph",
     "dossier-node-inspector",
@@ -2124,6 +2184,8 @@ async function loadDossier(caseId) {
     renderDossierReviews(reviews);
     renderDossierDiff(diff);
     renderDossierDependencies(dependencies);
+    // generated text loads on its own, so a copilot problem never hides the evidence panels
+    void loadDossierCopilot(caseId);
 
     byId("dossier-before-release").value =
       diff.before?.release_id ?? "";
@@ -3464,6 +3526,7 @@ function boot() {
   subscribeSession(() => {
     syncGateControl();
     byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
+    byId("dossier-copilot-write").disabled = !can("review_case");
     if (!can("review_case")) byId("review-queue-review-fieldset").disabled = true;
   });
 
@@ -3497,6 +3560,7 @@ function boot() {
   byId("run-exhaustive").addEventListener("change", syncGateControl);
   byId("dossier-form").addEventListener("submit", submitDossierLookup);
   byId("dossier-diff-form").addEventListener("submit", submitDossierDiff);
+  byId("dossier-copilot-write").addEventListener("click", () => void writeDossierCopilot());
   byId("dossier-review-form").addEventListener("submit", submitDossierReview);
   byId("dossier-review-action").addEventListener("change", syncReviewCorrection);
   byId("explorer-form").addEventListener("submit", submitExplorer);
