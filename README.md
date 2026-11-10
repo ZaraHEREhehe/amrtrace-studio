@@ -95,7 +95,12 @@ Get-Content -LiteralPath .\db\migrations\0011_source_alert.sql -Raw -Encoding UT
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 Get-Content -LiteralPath .\db\migrations\0012_support_structure.sql -Raw -Encoding UTF8 |
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
+Get-Content -LiteralPath .\db\migrations\0013_evidence_versions.sql -Raw -Encoding UTF8 |
+    docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 ~~~
+
+Migration 0013 lets a later snapshot's evidence be stored beside the V1 rows (I-20); see
+`docs/design/change_detection.md`, "Loading a later snapshot's evidence".
 
 **Existing local databases upgrading to Z-18:** the block above is an example,
 **not** a command to rerun blindly. These SQL files are not repeatable migrations;
@@ -110,17 +115,18 @@ docker compose stop web api
 Check the existing schema before upgrading (this is a read-only query):
 
 ~~~powershell
-docker compose exec -T db psql -X -U postgres -d amrtrace -c "SELECT to_regclass('public.source_alert') AS m0011, to_regclass('public.support_structure') AS m0012, to_regclass('public.app_user') AS m0013, to_regclass('public.app_session') AS m0013_session;"
+docker compose exec -T db psql -X -U postgres -d amrtrace -c "SELECT to_regclass('public.source_alert') AS m0011, to_regclass('public.support_structure') AS m0012, (SELECT count(*) FROM pg_constraint WHERE conname = 'ast_evidence_source_row_snapshot_key') AS m0013, to_regclass('public.app_user') AS m0014, to_regclass('public.app_session') AS m0014_session;"
 ~~~
 
 - If `source_alert` is absent, apply `0011_source_alert.sql` using its command above.
 - If `support_structure` is absent, apply `0012_support_structure.sql` using its command above.
-- If `app_user` is absent, apply **0013**, after both 0011 and 0012 are present:
+- If `m0013` is `0`, apply `0013_evidence_versions.sql` using its command above.
+- If `app_user` is absent, apply **0014**, after 0011, 0012 and 0013 are present:
 
 ~~~powershell
-Get-Content -LiteralPath .\db\migrations\0013_application_identity.sql -Raw -Encoding UTF8 |
+Get-Content -LiteralPath .\db\migrations\0014_application_identity.sql -Raw -Encoding UTF8 |
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
-if ($LASTEXITCODE -ne 0) { throw "Migration 0013 failed; do not continue" }
+if ($LASTEXITCODE -ne 0) { throw "Migration 0014 failed; do not continue" }
 ~~~
 
 A missing table is a useful preliminary check, not a full migration audit: if a
@@ -156,7 +162,7 @@ The Docker-based API already has its own database settings. These variables allo
 
 ### Create the first local Admin account and sign in (Z-18)
 
-After **all migrations through `0013_application_identity.sql`** are applied,
+After **all migrations through `0014_application_identity.sql`** are applied,
 create an application-level Admin account. This is distinct from the PostgreSQL
 `postgres` user and the runtime `amrtrace_app` database role. Use the local
 Python environment and `AMRTRACE_PG_*` / `PYTHONPATH` settings from above:

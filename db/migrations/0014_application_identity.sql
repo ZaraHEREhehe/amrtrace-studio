@@ -1,4 +1,4 @@
--- 0013: Z-18 application identity and RBAC (after 0011 source alerts and 0012 support structure). PostgreSQL role amrtrace_app is NOT an application user.
+-- 0014: Z-18 application identity and RBAC (after 0011 source alerts, 0012 support structure and 0013 evidence versions). PostgreSQL role amrtrace_app is NOT an application user.
 -- Compatible with existing populated databases: no existing ledger row is updated.
 -- New actor_user_id is NULL for historical/CLI rows; every authenticated HTTP write binds
 -- amrtrace.actor_user_id on its request-scoped connection before any INSERT.

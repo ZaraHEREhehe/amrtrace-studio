@@ -190,7 +190,7 @@ def test_migration_stamps_new_records_and_preserves_legacy(harness):
 
 
 def test_upgrade_from_populated_0010_database_preserves_ledger():
-    """Apply 0013 to a DB with historical rows after migrations 0001-0012.
+    """Apply 0014 to a DB with historical rows after migrations 0001-0013.
 
     The disposable database is created and deleted by this test. It never uses
     AMRTRACE_PG_DBNAME and cannot access the deployed application database.
@@ -201,9 +201,9 @@ def test_upgrade_from_populated_0010_database_preserves_ledger():
     from psycopg.conninfo import make_conninfo
 
     migration_dir = Path(__file__).resolve().parents[2] / "db" / "migrations"
-    base = sorted(path for path in migration_dir.glob("*.sql") if path.name < "0013_")
-    assert base and base[-1].name == "0012_support_structure.sql"
-    upgrade = migration_dir / "0013_application_identity.sql"
+    base = sorted(path for path in migration_dir.glob("*.sql") if path.name < "0014_")
+    assert base and base[-1].name == "0013_evidence_versions.sql"
+    upgrade = migration_dir / "0014_application_identity.sql"
     assert upgrade.is_file()
     common = dict(
         host=os.environ.get("AMRTRACE_PG_HOST", "localhost"),
@@ -219,7 +219,7 @@ def test_upgrade_from_populated_0010_database_preserves_ledger():
             for path in base:
                 conn.execute(path.read_text(encoding="utf-8"))
                 conn.commit()
-            # These existing rows must survive the 0013 migration unmodified.
+            # These existing rows must survive the 0014 migration unmodified.
             conn.execute("INSERT INTO change_event(change_id,type,initiator) "
                          "VALUES ('Z18-PRIOR','EVALUATOR_VERSION','legacy')")
             conn.execute("INSERT INTO isolate(target_acc) VALUES ('Z18-PRIOR-ISOLATE')")
