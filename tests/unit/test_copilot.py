@@ -1,6 +1,8 @@
 # Review Copilot (I-19): the language-model layer may only reword, and no engine package can read the copilot
 
 import ast
+import io
+import urllib.error
 from pathlib import Path
 
 import pytest
@@ -105,6 +107,36 @@ def test_both_model_clients_read_the_sentences_from_their_answers(monkeypatch):
     assert calls[1][1] == {"Authorization": "Bearer secret"}
     with pytest.raises(language_model.RewriteFailed):
         LocalRewriter("m").rewrite(["x", "y"])
+
+
+def test_requests_name_the_client_and_an_http_refusal_explains_itself(monkeypatch):
+    """Groq answers 403 to Python's default user agent; the request names AMRTrace, and a refusal is reported."""
+    seen = []
+
+    class Answer(io.BytesIO):
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_urlopen(request, timeout):
+        seen.append(request)
+        return Answer(b'{"choices": [{"message": {"content": "{\\"sentences\\": [\\"ok\\"]}"}}]}')
+
+    monkeypatch.setattr(language_model.urllib.request, "urlopen", fake_urlopen)
+    assert HostedRewriter("secret").rewrite(["x"]) == ["ok"]
+    assert seen[0].get_header("User-agent") == language_model.USER_AGENT
+    assert seen[0].get_header("Authorization") == "Bearer secret"
+
+    def refuse(request, timeout):
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, io.BytesIO(b"error code: 1010"))
+
+    monkeypatch.setattr(language_model.urllib.request, "urlopen", refuse)
+    result = reword(summary("Release R3 changed this case."), [HostedRewriter("secret")])
+    assert result.generator == "templates"
+    assert "HTTP 403" in result.notes[-1] and "error code: 1010" in result.notes[-1]
+    assert "secret" not in result.notes[-1]
 
 
 # ---------- rule 9: generated text is never an input to state assignment ----------

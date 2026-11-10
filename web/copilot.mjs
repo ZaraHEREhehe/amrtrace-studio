@@ -53,3 +53,9 @@ export function copilotCaption(summary) {
     : "not stored yet";
   return `${summary.label} ${generatorText(summary)}, ${stored}.`;
 }
+
+
+// why a model was or was not used, for example "hosted:llama-3.1-8b-instant was not used: ... HTTP 403"
+export function copilotNotes(summary) {
+  return (summary?.notes ?? []).filter((note) => typeof note === "string" && note.trim() !== "");
+}

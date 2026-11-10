@@ -16,6 +16,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import urllib.error
 import urllib.request
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
@@ -27,6 +28,8 @@ DEFAULT_LOCAL_URL = "http://127.0.0.1:11434"
 HOSTED_URL = "https://api.groq.com/openai/v1/chat/completions"
 DEFAULT_HOSTED_MODEL = "llama-3.1-8b-instant"
 TIMEOUT_SECONDS = 20
+# a plain name of our own: some hosted APIs (Groq's, behind Cloudflare) answer 403 to Python's default "Python-urllib"
+USER_AGENT = "amrtrace-studio-copilot/1.0"
 
 INSTRUCTIONS = (
     "You reword short factual sentences about an antimicrobial-resistance case for a reviewer. Rewrite each sentence "
@@ -61,10 +64,17 @@ def keeps_facts(template: str, reworded: str) -> bool:
 def _post_json(url: str, payload: dict, headers: Mapping[str, str] | None = None) -> dict:
     request = urllib.request.Request(
         url, data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", **(headers or {})}, method="POST",
+        headers={"Content-Type": "application/json", "Accept": "application/json", "User-Agent": USER_AGENT,
+                 **(headers or {})},
+        method="POST",
     )
-    with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # noqa: S310 (fixed URLs)
-        return json.loads(response.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:  # noqa: S310 (fixed URLs)
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        # say what the service answered (never the request, which carries the key), so the note explains the fallback
+        detail = exc.read(300).decode("utf-8", "replace").strip()
+        raise RewriteFailed(f"HTTP {exc.code} from {url}" + (f": {detail}" if detail else "")) from exc
 
 
 def _sentences_from(content: str, expected: int) -> list[str]:
