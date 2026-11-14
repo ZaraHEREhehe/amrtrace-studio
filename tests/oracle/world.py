@@ -57,6 +57,7 @@ def build_world(conn, fx: dict) -> None:
     load_baseline_release(
         conn, RELEASE_ID, {"oracle_scenario": fx["scenario"]},
         [BaselineState(case_id=c, state_code="UNRESOLVED", explanation={}) for c in world["cases"]],
+        publish=True,
     )
     for later in world.get("later_releases", []):
         load_later_release(

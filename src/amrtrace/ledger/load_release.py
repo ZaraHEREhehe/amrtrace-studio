@@ -88,10 +88,13 @@ def load_baseline_release(
     *,
     expected_count: Optional[int] = None,
     batch_size: int = 2000,
-    publish: bool = True,
+    publish: bool = False,
     require_first: bool = True,
 ) -> LoadReport:
-    """Create release_id, store every state, check the count, and publish it as a baseline.
+    """Create release_id, store every state and check the count. The release stays a DRAFT unless publish=True.
+
+    A baseline is normally published by materialize_baseline once its graph is stored and checked (A-17, A-19);
+    publish=True is for callers that knowingly publish a ledger-only release, such as small test worlds.
 
     expected_count: if given, a different number of states aborts the load and nothing is kept.
     require_first: a baseline must be the first release; refuse if any release already exists.

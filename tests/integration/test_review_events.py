@@ -28,7 +28,7 @@ def S(case_id, code="CONCORDANT_SUSCEPTIBLE"):
 @pytest.fixture
 def r1(conn, seed_cases):
     seed_cases("c1", "c2")
-    load_baseline_release(conn, "R1", VV1, [S("c1"), S("c2", "UNRESOLVED")], expected_count=2)
+    load_baseline_release(conn, "R1", VV1, [S("c1"), S("c2", "UNRESOLVED")], expected_count=2, publish=True)
 
 
 def test_review_defaults_to_the_current_state(conn, r1):

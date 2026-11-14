@@ -34,7 +34,7 @@ def count(conn, table):
 
 def test_loads_publishes_and_keeps_every_field(conn, seed_cases):
     seed_cases(*CASES)
-    report = load_baseline_release(conn, "R1", VV, states(), expected_count=5, batch_size=2)   # 3 batches
+    report = load_baseline_release(conn, "R1", VV, states(), expected_count=5, batch_size=2, publish=True)   # 3 batches
     assert (report.loaded, report.status) == (5, "PUBLISHED")
     assert get_release(conn, "R1").version_vector == VV
     first = get_history(conn, "C1")[0]
@@ -46,7 +46,7 @@ def test_loads_publishes_and_keeps_every_field(conn, seed_cases):
 
 def test_history_and_as_of_reads_work_on_the_baseline(conn, seed_cases):
     seed_cases(*CASES)
-    load_baseline_release(conn, "R1", VV, states())
+    load_baseline_release(conn, "R1", VV, states(), publish=True)
     assert get_current_state(conn, "C3").release_id == "R1"
     assert get_state_as_of(conn, "C3", "R1").state_code == "CONCORDANT_SUSCEPTIBLE"
     assert [s.release_id for s in get_history(conn, "C3")] == ["R1"]
@@ -90,7 +90,7 @@ def test_a_bad_state_value_keeps_nothing(conn, seed_cases):
 
 def test_a_baseline_must_be_the_first_release(conn, seed_cases):
     seed_cases(*CASES)
-    load_baseline_release(conn, "R1", VV, states())
+    load_baseline_release(conn, "R1", VV, states(), publish=True)
     with pytest.raises(LedgerError, match="first release"):
         load_baseline_release(conn, "R2", VV, states())
     assert [r.release_id for r in list_releases(conn)] == ["R1"]
@@ -98,7 +98,7 @@ def test_a_baseline_must_be_the_first_release(conn, seed_cases):
 
 def test_loading_the_same_release_id_twice_is_refused(conn, seed_cases):
     seed_cases(*CASES)
-    load_baseline_release(conn, "R1", VV, states())
+    load_baseline_release(conn, "R1", VV, states(), publish=True)
     with pytest.raises(LedgerError):
         load_baseline_release(conn, "R1", VV, states(), require_first=False)
     assert count(conn, "case_state") == 5
@@ -107,6 +107,25 @@ def test_loading_the_same_release_id_twice_is_refused(conn, seed_cases):
 def test_publish_can_be_deferred(conn, seed_cases):
     seed_cases(*CASES)
     assert load_baseline_release(conn, "R1", VV, states(), publish=False).status == "DRAFT"
+
+
+# A-19 (SRF09): with no graph yet, the loader must not publish unless the caller asks for it
+def test_the_default_leaves_the_baseline_a_draft(conn, seed_cases):
+    seed_cases(*CASES)
+    report = load_baseline_release(conn, "R1", VV, states())
+    assert report.status == "DRAFT"
+    assert get_release(conn, "R1").status == "DRAFT"
+
+
+# A-19 (SRF09): a load that breaks half way keeps nothing, and the retry gives a draft, never a published release
+def test_an_interrupted_load_keeps_nothing_and_its_retry_is_still_a_draft(conn, seed_cases):
+    seed_cases(*CASES)
+    with pytest.raises(UnknownReference):
+        load_baseline_release(conn, "R1", VV, states(CASES + ["NO_SUCH_CASE"]), batch_size=2)
+    assert count(conn, "case_state") == 0
+    assert list_releases(conn) == []
+    report = load_baseline_release(conn, "R1", VV, states(), expected_count=5, batch_size=2)
+    assert (report.loaded, report.status) == (5, "DRAFT")
 
 
 def test_batch_size_is_checked(conn):

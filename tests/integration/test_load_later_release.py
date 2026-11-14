@@ -29,6 +29,7 @@ def r1(conn, seed_cases):
         conn, "R1", VV1,
         [S("c1"), S("c2", "UNRESOLVED"), S("c3", "CONCORDANT_RESISTANT")],
         expected_count=3,
+        publish=True,
     )
 
 

@@ -93,7 +93,7 @@ def world(conn):
     evaluations = [(i, run(i, VERSIONS)) for i in inputs_for(sorted(LABELS))]
     load_baseline_release(conn, "R1", {"value_policy_version": "POLICY_V1"}, [
         BaselineState(i.case_id, r.state_code, r.explanation, r.phenotype_state, r.genotype_state, r.uncertainty_reason,
-                      "DB1", "EV1", r.input_hash, r.output_hash) for i, r in evaluations])
+                      "DB1", "EV1", r.input_hash, r.output_hash) for i, r in evaluations], publish=True)
     materialize(conn, "R1", evaluations, VERSIONS)
     for version in POLICIES:
         register_version(conn, "policy_rule", policy_rule_key(POLICY, "NOT_DEFINED"), version)
