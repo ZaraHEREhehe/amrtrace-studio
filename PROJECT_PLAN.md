@@ -969,3 +969,4 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | 63 | G-09 visuals | Zara | TODO | | |
 | 64 | Z-20 | Zara | TODO | | Could |
 | 65 | G-11 | Insharah | TODO | | |
+| R01 | Z-23 | Zara | IN-REVIEW | PR for #176 pending CI/review | CLI prints trusted validation reasons for invalid username, password length/control characters, and password mismatch; DB diagnostics remain redacted. 11 focused local tests passed with an isolated psycopg stub; full CI and Aabia review pending. |

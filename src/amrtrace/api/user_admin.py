@@ -20,6 +20,22 @@ from .auth_security import Role, hash_password, validate_username
 from .db import database_conninfo
 
 
+
+# Only trusted, application-authored validation messages may be shown on stderr.
+# In particular, unexpected errors must not expose connection strings or SQL.
+_SAFE_FAILURE_REASONS = frozenset({
+    "Passwords differ",
+    "Password length must be between 12 and 1024 characters",
+    "Password cannot contain control characters",
+    "Username must be 3-64 characters, start with a letter, and contain only letters, digits, dot, dash or underscore",
+    "An already hashed password is required",
+    "An approved role is required",
+    "Database connection is required",
+    "Unsupported admin operation",
+    "Account not found",
+})
+
+
 def _args(argv: list[str] | None = None):
     p = argparse.ArgumentParser(description="Provision AMRTrace Studio app users")
     sub = p.add_subparsers(dest="action", required=True)
@@ -85,9 +101,16 @@ def main(argv: list[str] | None = None) -> int:
         with psycopg.connect(database_conninfo(), autocommit=True) as conn:
             execute(args.action, args.username, role=getattr(args, "role", None),
                     encoded_password=encoded, conn=conn)
-    except (ValueError, psycopg.Error, LookupError) as exc:
-        # Safe errors only; database errors may contain SQL context but never a password.
-        print(f"User administration failed: {type(exc).__name__}", file=sys.stderr)
+    except (ValueError, LookupError) as exc:
+        reason = str(exc)
+        # Do not echo text from an unexpected ValueError (e.g. DB configuration).
+        if reason not in _SAFE_FAILURE_REASONS:
+            reason = "Invalid administration request"
+        print(f"User administration failed: {reason}", file=sys.stderr)
+        return 1
+    except psycopg.Error:
+        # Driver errors may contain SQL and connection details; never echo them.
+        print("User administration failed: Database operation failed", file=sys.stderr)
         return 1
     print(f"User administration completed: {args.action}")
     return 0
