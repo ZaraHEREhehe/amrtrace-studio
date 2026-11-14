@@ -108,7 +108,7 @@ def test_only_versions_that_differ_are_listed(conn, monkeypatch):
     # both release vectors carry a "panel" key with the same value: it must not appear as a change
     real_load, real_reevaluate = compare_world.load_baseline_release, compare_world.reevaluate
     monkeypatch.setattr(compare_world, "load_baseline_release",
-                        lambda conn, rid, vector, states: real_load(conn, rid, {**vector, "panel": "P"}, states))
+                        lambda conn, rid, vector, states, **k: real_load(conn, rid, {**vector, "panel": "P"}, states, **k))
     monkeypatch.setattr(compare_world, "reevaluate",
                         lambda conn, cid, rid, vector, *a, **k: real_reevaluate(conn, cid, rid, {**vector, "panel": "P"}, *a, **k))
     for node in ("T1", "T2"):

@@ -295,6 +295,27 @@ def test_a_graph_step_that_fails_leaves_the_draft_unpublished_and_empty(
     assert published_releases(conn) == 0
 
 
+# A-19 (SRF09): the interruption is followed by a retry; the release is published only by the run that stores the graph
+def test_an_interrupted_graph_step_can_be_retried_and_only_the_retry_publishes(
+    conn, tables, draft, monkeypatch
+):
+    real_materialize = materialize_module.materialize
+
+    def breaks_after_writing(*args, **kwargs):
+        real_materialize(*args, **kwargs)
+        raise RuntimeError("graph step failed")
+
+    monkeypatch.setattr(materialize_module, "materialize", breaks_after_writing)
+    with pytest.raises(RuntimeError, match="graph step failed"):
+        materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM)
+    assert (release_status(conn), stored_rows(conn), published_releases(conn)) == ("DRAFT", 0, 0)
+
+    monkeypatch.setattr(materialize_module, "materialize", real_materialize)
+    report = materialize_baseline(conn, tables, RELEASE, PANEL, ORGANISM)
+    assert report.status == "PUBLISHED"
+    assert (release_status(conn), stored_rows(conn)) == ("PUBLISHED", 22)
+
+
 def test_a_graph_missing_cases_is_refused_and_the_draft_stays_unpublished(
     conn, tables, draft, monkeypatch
 ):
