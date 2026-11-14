@@ -18,8 +18,6 @@ derivation: >
   C2. ED_B (applicability DETE -> meropenem, no edge) is newly covered by the new pair, as in C7: this is the newly
   applicable case. ED_C names DETE for ceftriaxone, which neither version links; ED_D names another determinant for
   meropenem; ED_E has only a tool-version edge.
-pending:   # added after the first run, in its own commit; the expected sets above are unchanged
-  selection: {until: A-20, reason: "an edited rule is followed only through stored edges, so the case newly covered by its new pair is missed; A-20 (#170) adds the pair lookup or refuses the edit"}
 register_through: apply_change   # the change service, where A-20 may refuse a same-id pair edit
 world:
   cases: [ED_A_OLD_PAIR_EDGE, ED_B_NEWLY_APPLICABLE, ED_C_SAME_DET_THIRD_DRUG, ED_D_OTHER_DET_NEW_DRUG, ED_E_UNRELATED]
