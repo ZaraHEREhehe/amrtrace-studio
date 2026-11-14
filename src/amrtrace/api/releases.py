@@ -122,7 +122,7 @@ def published_release_identity(
             LEFT JOIN reeval_run s ON s.run_id = er.selective_run_id
             LEFT JOIN reeval_run e ON e.run_id = er.exhaustive_run_id
             WHERE er.release_id = %s
-               OR (er.change_id = %s AND %s IS NOT NULL)
+               OR (er.change_id = %s AND %s::text IS NOT NULL)
             -- Prefer this exact release if a legacy or malformed report with
             -- the same change ID also exists. We still consider a foreign report
             -- when no exact match exists, so it is reported as a mismatch.
