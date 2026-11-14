@@ -548,6 +548,62 @@ CI uses a small **mini-cohort fixture** (the 154 CLSI cases + ~500 control cases
 | Reprocessing ratio                             | reported per scenario (selected / total)                                |
 | Failure transparency                           | 100% explicit status; no silent partial success                         |
 | Graph measurement (promised in proposal 4.4.7) | node count, edge count, table/index size, traversal latency (task A-04) |
+| Workflow cost (A-24)                           | reported per scenario, stage by stage; a case-count reduction is never reported as a speedup |
+
+### 7.1 What each metric counts (A-22, R01 AMR-010, T30)
+
+Every reported metric names its sets, its versions and its denominator. The sets for one change:
+
+| Set | Meaning | Where it comes from |
+|---|---|---|
+| Current cases (N) | Cases with a published state in the release the selection reads | `_universe` in `reeval/compare.py` |
+| Selected (S) | Cases the selector returns | the stored impact set |
+| Required (Q) | Cases the oracle says must be selected | the oracle fixture, written from the requirement |
+| Allowed (A) | Extra cases the oracle accepts (may change, need not) | the oracle fixture |
+| Affected (F) | Cases whose state, uncertainty or dependency explanation differs after the change | the exhaustive run |
+| State changed (C) | Cases whose evidence state differs after the change (C is part of F) | the exhaustive run |
+
+| Metric | Formula | Name to use |
+|---|---|---|
+| Recall | \|S ∩ F\| / \|F\|, and \|S ∩ Q\| / \|Q\| against the oracle | "recall" (both must be 100%) |
+| Precision, by effect | \|S ∩ F\| / \|S\| | "precision by any change" (what `reeval/compare.py` reports) |
+| Precision, by oracle | \|S ∩ (Q ∪ A)\| / \|S\| | "precision against the oracle" (what `docs/design/ablation.md` reports) |
+| Reprocessing ratio | \|S\| / N | "share of cases re-evaluated selectively" |
+
+The two precisions differ when a selected case changes its explanation but not its state. On the D-22 database:
+
+| Change | N | S | Q | F | C | Recall | Precision by any change | Precision against the oracle | Reprocessing |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| CHG-VET01S-ED7 (R3, read as of R2) | 41,858 | 5,556 | 5,556 | 5,556 | 2,679 | 100% | 100% | 100% | 13.27% |
+| CHG-CLSI-ED33 (R4, read as of R3) | 41,858 | 116 | 112 | 116 | 112 | 100% | 100% | 96.6% (112 / 116) | 0.28% |
+
+The original results are kept as they were recorded; only their names are made exact. The mid-evaluation figures
+(254 selected, 98.43%) belong to the D-21 build and the old 154-case oracle and are not compared with these.
+
+### 7.2 Reading the reprocessing target per scenario
+
+The proposal set a median reprocessing ratio below 50%; the mid evaluation reported against a below-5% target. A
+fixed share cannot apply to every change, because the share a correct selector must re-evaluate is set by the data:
+
+- **A revision inside existing rules** (CHG-CLSI-ED33) moves breakpoints for cases already on the rule; the oracle needs
+  112 of 41,858 (0.27%), and the selector re-evaluates 0.28%. The below-5% target is met here and is the right test.
+- **A change that adds rules for a whole group** (CHG-VET01S-ED7) affects every animal case the new rules cover; the
+  oracle needs 5,556 of 41,858 (13.27%). No correct selector can go below that, so a below-5% target cannot apply. The
+  measure here is that the selection equals the required set (precision 100%).
+
+Recorded by Aabia (A-22, 2026-11-14): the reprocessing ratio is reported per scenario next to the oracle's required
+share, and judged by precision against the oracle; a fixed percentage applies only to changes inside existing rules.
+This replaces a single target for every change and is to be confirmed in the next supervision record (SRF05).
+
+### 7.3 What the case-count reduction does and does not mean
+
+Selecting 116 cases where re-running everything takes 41,858 is about 361 times fewer **cases**. It is not a measured
+speedup: with the exhaustive check on every release, the gated workflow costs slightly more than a full recompute
+(43.9 s against 41.8 s for CHG-CLSI-ED33; `docs/design/selector_performance.md`, A-24). Selective re-evaluation alone
+took 1.8 s for that change. Because its cost follows the size of the change and an exhaustive run follows the size
+of the cohort, it is expected to pull further ahead on a larger cohort; that is reasoning, not a measurement. Per
+case it is not cheaper (about 15 ms for R4 and 4.8 ms for R3, against about 1 ms in the exhaustive run), so it pays
+only when a change touches a small share of the cohort.
 
 ---
 
@@ -972,3 +1028,4 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | R01 | Z-23 | Zara | DONE | PR #182 (Closes #176), merged 2026-11-14; CI passed | CLI prints trusted validation reasons for invalid username, password length/control characters, and password mismatch; DB diagnostics remain redacted. 11 focused local tests passed with an isolated psycopg stub; full GitHub CI passed before merge. |
 | R01 | I-22 | Insharah | DONE | PR #183 (Closes #165), merged 2026-11-14 | R01 review follow-up (T24, T39, D-10). Five fixtures in `tests/oracle/fixtures/independent/`, written from the requirement texts and committed (stamped on cef3129) before the runner and before any selector output on them was seen; each states its derivation. A-20: an omitted entity in a declared mapping change (the omitted added and retired rules' cases must be found, or the declaration refused naming them) and a same-id mapping pair edit (the newly applicable case ED_B must be found, or the edit refused); both fail on main and are marked pending A-20 (#170) in a separate commit. A-15: alternative support, composite support and contradiction with the expected effect of each selected case, checked in their own test apart from selection; all pass on main. Runner: `tests/oracle/test_independent_cases.py` |
 | R01 | Z-22 | Zara | DONE | PR #184 (Closes #175), merged 2026-11-14 after Aabia approval; CI 8/8 passed | Release-bound dossier and comparison reads, exact-byte JSON export SHA-256 and release response identity, 422 refusal messages and regression checks. Full GitHub CI passed and Aabia approved before merge; non-blocking identity-query and real-DB test follow-ups tracked separately. |
+| R01 | A-22 | Aabia | IN-REVIEW | A-22 PR (closes #172) | R01 review follow-up (AMR-010, AMR-018, T29, T30, SR01 correction 6). Section 7.1 names the sets behind every metric (current, selected, required, allowed, affected, state changed) and the two precisions: CLSI Ed33 is 100% by any change and 96.6% (112 / 116) against the oracle; original results kept. Section 7.2 reads the reprocessing target per scenario: below 5% applies to changes inside existing rules (Ed33: 0.28%), not to a change that adds rules for a whole group (VET01S needs 13.27%); recorded for confirmation in the next supervision record (SRF05). Section 7.3 bounds the 361-fold figure as a case-count reduction, using A-24's measured cost. `docs/design/ablation.md` and `research_contribution.md` updated to match; the research note now compares narrowly with the closest frozen-snapshot study, does not claim the field lacks versioned history (DVC), and states what case-level tracking adds and its tested limits. |
