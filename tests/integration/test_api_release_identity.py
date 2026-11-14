@@ -22,7 +22,9 @@ class FakeCursor:
     def execute(self, statement, params):
         assert "FROM equivalence_report er" in statement
         assert "er.change_id = %s" in statement
-        assert len(params) == 3
+        assert len(params) == 4
+        assert "CASE WHEN er.release_id = %s THEN 0 ELSE 1 END" in statement
+        assert params[0] == params[-1]
 
     def fetchone(self):
         return self.row
