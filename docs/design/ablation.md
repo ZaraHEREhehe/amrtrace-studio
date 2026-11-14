@@ -32,7 +32,9 @@ Notes on the definitions:
 These follow the definitions in `reeval/compare.py`, using the oracle fixture as ground truth:
 
 - **Recall** = required cases selected / required cases.
-- **Precision** = selected cases the oracle accepts (required or allowed extra) / selected cases.
+- **Precision** = selected cases the oracle accepts (required or allowed extra) / selected cases. This is
+  "precision against the oracle" in `PROJECT_PLAN.md` section 7.1; the release report's precision counts any change
+  to a case's stored result, so for CLSI-REAL it is 100% where this table shows 96.6%.
 - **Reprocessing ratio** = selected cases / current cases.
 
 ## 3. Results on the synthetic oracle fixtures
@@ -96,8 +98,10 @@ every level for both changes.
 
 What the real results show:
 
-- **On a real edition change, the fine graph re-runs 116 cases where B3 re-runs 41,858.** That is about 360 times
-  fewer. All 112 required cases are still selected; the 4 extra cases are re-verified, not missed.
+- **On a real edition change, the fine graph re-runs 116 cases where B3 re-runs 41,858.** That is about 361 times
+  fewer cases. All 112 required cases are still selected; the 4 extra cases are re-verified, not missed. This is a
+  reduction in cases, not in time: with the exhaustive check on every release the gated workflow costs about as
+  much as a full recompute (`docs/design/selector_performance.md`, A-24).
 - **The region does most of the work for CLSI.** Ed33 changed breakpoints inside rules that many cases already use.
   Without the region, every case on a changed rule is selected (5,705, precision 2.0%). With the region, only cases
   whose MIC falls where a category moved are selected (116).

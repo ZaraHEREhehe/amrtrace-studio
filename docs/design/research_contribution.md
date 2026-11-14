@@ -13,8 +13,9 @@ re-runs AMRFinderPlus with new databases, and CLSI publishes new breakpoint edit
 that make a classification stay correct as its inputs move. **Categorisation** turns each case, each piece of
 evidence and each change into a small set of typed categories that can be compared across releases. **Link
 discovery** records, for every case, exactly which evidence and rules it depends on, including rules and rows that
-do not exist yet, so a change finds its cases without re-running everything. Together they let the system answer
-"which conclusions does this change invalidate?" exactly, and prove the answer against an exhaustive recomputation.
+do not exist yet, so a change finds exactly the cases it can affect. Together they let the system answer "which
+conclusions does this change invalidate?" exactly, and prove the answer against an exhaustive recomputation before
+the result is published.
 
 ## 2. Data categorisation
 
@@ -81,8 +82,13 @@ The same CLSI Ed32 to Ed33 change, selected at four granularities on the real co
 | Whole table | 39,323 | 0.3% |
 | Whole snapshot (re-run everything) | 41,858 | 0.3% |
 
-Recall is 100% at every level, checked against an independent oracle and an exhaustive recomputation. The fine links
-re-evaluate about 360 times fewer cases than re-running everything, without missing one.
+Recall is 100% at every level against the oracle, and the fine level's release also matched an exhaustive
+recomputation with 0 mismatches. Precision here is against the oracle; counted by any change to a case's stored
+result it is 100% (`PROJECT_PLAN.md` section 7.1). The fine links re-evaluate about 361 times fewer cases than
+re-running everything, without missing one. That is a reduction in cases, not in time: because the exhaustive check
+runs before every release, the whole gated workflow took 43.9 s against 41.8 s for a full recompute alone
+(`docs/design/selector_performance.md`, A-24). What the links buy is an exact, checked list of the conclusions a
+change can affect.
 
 ## 4. Why this is a research contribution, not preprocessing
 
@@ -94,8 +100,24 @@ re-evaluate about 360 times fewer cases than re-running everything, without miss
   row whose id changes with every snapshot, and a rule whose edition changes but whose content does not are each
   invisible to a file comparison. Each needed its own mechanism, and each was found by running real data.
 - **Every result is checked.** Selective re-evaluation is compared with exhaustive recomputation before a release is
-  published; the oracle is written by a different team member; and all real numbers above are reproducible from
-  the scripts named.
+  published. The real-data D-22 oracles were built by the selector's author from the raw files without the engine
+  and re-run independently by Insharah (PR #121); the I-22 fixtures were written by Insharah before the code they
+  test (D-10). All real numbers above are reproducible from the scripts named.
+
+### 4.1 The closest work, and what is new here
+
+- **The closest study.** The closest 2026 study we found (Alshehri 2026, *International Journal of Molecular
+  Sciences*, DOI 10.3390/ijms27167157) works from a frozen data snapshot and describes what a future rolling analysis
+  would need. AMRTrace addresses that rolling setting for its own cohort. This is a comparison with that study only.
+- **Versioned data already exists.** General tools version datasets and models (for example DVC), and DVC pipelines
+  re-run a stage when one of its input files changes. AMRTrace does not claim the field lacks versioned history.
+- **What is added.** Versioning tracks files and pipeline stages. AMRTrace tracks each case's conclusion: which
+  evidence rows and rules it used, which rules it looked for and did not find, and which MIC region a rule's change
+  must touch. At file or table level a breakpoint revision re-runs 93.9% to 100% of cases (the "whole table" and
+  "whole snapshot" rows in section 3.3); at case and region level it re-runs 0.28%, and the result is proven equal to a
+  full recompute before it is published.
+- **Tested within these limits.** One organism, five drugs, CLSI, two real changes (CLSI Ed32 to Ed33 and VET01S Ed7
+  introduced) and synthetic fixtures for the other change types.
 
 ## 5. Limits
 
@@ -104,4 +126,8 @@ re-evaluate about 360 times fewer cases than re-running everything, without miss
 - New evidence is detected, loaded as a new version and re-evaluated with its new values (I-20), one snapshot step
   at a time; the 630 changed cases above were computed by a read-only evaluation before I-20, not as a release.
 - New isolates are a new cohort, not a change, and are left out of later snapshots.
-- No user study: the claim is about correctness and cost, not about reviewers' decisions.
+- No user study: the claim is about correctness and the number of cases re-evaluated, not about reviewers'
+  decisions.
+- No measured speedup: with the exhaustive check on every release, the gated workflow costs about as much as a full
+  recompute. Selective re-evaluation is expected to pull ahead on a larger cohort, because its cost follows the size
+  of the change, but no larger cohort has been run.
