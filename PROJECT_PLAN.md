@@ -1025,6 +1025,14 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | 63 | G-09 visuals | Zara | TODO | | |
 | 64 | Z-20 | Zara | TODO | | Could |
 | 65 | G-11 | Insharah | TODO | | |
+| R01 | I-21 | Insharah | TODO | Issue #164 | One publication guard for every route (AMR-001/021, T23). Remove the A-19 xfail markers that this fix makes pass. |
+| R01 | I-23 | Insharah | TODO | Issue #166 | Gate bound to the persisted comparison report (AMR-012, T25). Remove the A-19 xfail markers that this fix makes pass. |
+| R01 | I-24 | Insharah | TODO | Issue #167 | Review Copilot chat panel (extends I-19). |
+| R01 | I-25 | Insharah | TODO | Issue #168 | Review Copilot chat: retrieval and answers (RAG backend, extends I-19). |
+| R01 | Z-26 | Zara | TODO | Issue #179 | Fresh peer reproduction on the final build (T26); after I-21, I-23 and Z-22. |
+| R01 | G-12 | Zara | TODO | Issue #180 | Current diagrams, faculty recheck, and report and poster owners (T38, T40). |
+| R01 | G-13 | Aabia, Insharah, Zara | TODO | Issue #181 | Assistance and ownership evidence, own workbook entries, and personal API keys (T27, SRF10). |
+| R01 | G-14 | Aabia | TODO | Issue #174 | Workbook sections 1 to 3 and SR01 corrections (SRF15, SRF16). |
 | R01 | Z-23 | Zara | DONE | PR #182 (Closes #176), merged 2026-11-14; CI passed | CLI prints trusted validation reasons for invalid username, password length/control characters, and password mismatch; DB diagnostics remain redacted. 11 focused local tests passed with an isolated psycopg stub; full GitHub CI passed before merge. |
 | R01 | I-22 | Insharah | DONE | PR #183 (Closes #165), merged 2026-11-14 | R01 review follow-up (T24, T39, D-10). Five fixtures in `tests/oracle/fixtures/independent/`, written from the requirement texts and committed (stamped on cef3129) before the runner and before any selector output on them was seen; each states its derivation. A-20: an omitted entity in a declared mapping change (the omitted added and retired rules' cases must be found, or the declaration refused naming them) and a same-id mapping pair edit (the newly applicable case ED_B must be found, or the edit refused); both fail on main and are marked pending A-20 (#170) in a separate commit. A-15: alternative support, composite support and contradiction with the expected effect of each selected case, checked in their own test apart from selection; all pass on main. Runner: `tests/oracle/test_independent_cases.py` |
 | R01 | Z-22 | Zara | DONE | PR #184 (Closes #175), merged 2026-11-14 after Aabia approval; CI 8/8 passed | Release-bound dossier and comparison reads, exact-byte JSON export SHA-256 and release response identity, 422 refusal messages and regression checks. Full GitHub CI passed and Aabia approved before merge; non-blocking identity-query and real-DB test follow-ups tracked separately. |
