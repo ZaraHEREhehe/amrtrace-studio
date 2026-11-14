@@ -102,7 +102,7 @@ def build_baseline(conn):
     evaluations = [(i, evaluate(i, V1)) for i in (make_inputs(c, "MAP1") for c in CASES)]
     load_baseline_release(conn, "R1", {"mapping_version": "MAP1"}, [
         BaselineState(i.case_id, r.state_code, r.explanation, r.phenotype_state, r.genotype_state, r.uncertainty_reason,
-                      "DB1", "EV1", r.input_hash, r.output_hash) for i, r in evaluations])
+                      "DB1", "EV1", r.input_hash, r.output_hash) for i, r in evaluations], publish=True)
     materialize(conn, "R1", evaluations, V1)
 
 
