@@ -199,6 +199,31 @@ The API lists and decides drafts: `GET /drafts?status=PENDING`, `GET /drafts/{id
 `POST /drafts/{id}/apply` (`decided_by`, optional `change_id` and `note`) and `POST /drafts/{id}/dismiss`
 (`decided_by`, `note`).
 
+## Declared and derived entities (A-20)
+
+A change event either declares its changed entities or leaves them empty. The change service treats the two cases
+as follows (`changes/service.py`):
+
+| The event | The type has a differ, and both versions can be read | Otherwise |
+|---|---|---|
+| declares no entities | the differ works them out from the two versions (`entities_derived = true`) | refused: `CannotDeriveEntities` (API 422) |
+| declares entities | the declaration must include every entity the differ finds; an omission is refused with `UndeclaredEntities` (API 422), naming each missing entity, and nothing is stored | the declaration is used as it is |
+
+- **More is allowed, less is not.** An entity the versions do not show is kept, because selecting more cases than
+  needed is safe and selecting fewer is not (rule 6). Entities are matched by node type and node id.
+- **"Can be read" means something is stored.** A loader is the one given to `apply_change` for the type, or else
+  the differ's own `load_version`. Mapping changes read the rules stored under each `mapping_version`, the same way
+  the run source does. A version with no rules stored under it (for example a monitor draft's new version, whose
+  rules are compared from snapshot files) cannot be read, so the check steps aside and the declaration stands.
+- **A rule that keeps its id but links another pair.** The selector follows an edited mapping rule through its
+  stored edges, as before, and now also looks up the pair the rule links after the change in the applicability
+  records. A case whose rule space contains the new pair has no edge to the rule, because no rule covered that pair
+  before; it is selected with the reason "applicability (...) for edited mapping_rule ...". A rule whose pair did
+  not change can only add cases through this lookup, which is safe.
+- **Tested by independent cases.** Insharah's I-22 fixtures `a20_omitted_entity` and `a20_same_id_pair_edit`, written
+  before this code, pass; `tests/integration/test_declared_entities.py` covers the refusal, a complete and an
+  over-complete declaration, derivation, unstored versions and the API answer.
+
 ## Limits (stated honestly)
 
 - **One snapshot step at a time.** Evidence is loaded and re-evaluated from the snapshot the release in force was
@@ -219,4 +244,7 @@ The API lists and decides drafts: `GET /drafts?status=PENDING`, `GET /drafts/{id
   not moved into this repository.
 - **The edition check relies on table names and the catalogue.** CLSI publishes no machine-readable feed, so
   `--fetch` reads the product page's product code; if CLSI changes the page, the catalogue is updated by hand.
+- **A declaration is checked only where a version can be read.** Interpretation changes are checked when their
+  tables are stored and a loader is given (the API gives one); mapping changes when rules are stored under both
+  version names. Elsewhere an incomplete declaration is still taken as it is.
 - **New isolates are left out.** A later snapshot keeps the V1 cohort, because adding cases is not a change type.
