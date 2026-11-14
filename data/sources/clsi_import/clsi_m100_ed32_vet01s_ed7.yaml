@@ -1,0 +1,28 @@
+# import spec for CLSI_M100_ED32_VET01S_ED7: which rows of the AMR clinical_breakpoints data stand in for this table (A-23).
+# The guideline labels are years; the year to edition mapping below is our assumption, not confirmed upstream.
+# No breakpoint values here: they are read from a local snapshot and written only to a draft.
+interpretation_version: CLSI_M100_ED32_VET01S_ED7
+standard: CLSI
+organism: Escherichia coli
+# species row first, then the Enterobacterales group row
+organism_codes: [B_ESCHR_COLI, "B_[ORD]_ENTRBCTR"]
+human_guideline: "CLSI 2022"   # assumed M100 Ed32
+drugs:
+  ceftriaxone: CRO
+  ciprofloxacin: CIP
+  gentamicin: GEN
+  meropenem: MEM
+  trimethoprim-sulfamethoxazole: SXT
+vet:
+  species_guideline: "CLSI 2024"   # assumed VET01S Ed7
+  grey_guideline: "CLSI 2023"      # VET01S Ed7 is built on M100 Ed33 (its grey rows)
+  # VET01S has no ceftriaxone rows and does not recommend ciprofloxacin (footnote c), so no host rules for them
+  drugs: [gentamicin, meropenem, trimethoprim-sulfamethoxazole]
+  # our host group: the AMR host name, or null where VET01S has no species rows at all
+  hosts:
+    cat: cats
+    cattle: cattle
+    dog: dogs
+    other animal: null
+    poultry: poultry
+    swine: swine

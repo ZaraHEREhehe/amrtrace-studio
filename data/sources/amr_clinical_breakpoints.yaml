@@ -1,0 +1,33 @@
+# Source record for the AMR R package's clinical_breakpoints data, used by scripts/clsi_import.py (A-23).
+# The data itself is not in this repository: keep a local copy in data/external/ (ignored by git).
+name: AMR clinical_breakpoints
+upstream_repository: https://github.com/msberends/AMR
+upstream_commit: 49a0f377137ad875fb998f6c2faee0697968ab19
+path_in_repository: data-raw/datasets/clinical_breakpoints.txt
+sha256: fde8ca11e0234def62158333650bed3d3a3f554cc5de5280947cf5aa946f50aa
+format: tab-separated text, one row per guideline, host, method, organism and drug
+upstream_licence: GPL-2 (the AMR package)
+derived_from: WHONET AMR Interpretation Engine breakpoints (AClark-WHONET/AMRIE), under the Mass General Brigham Open Access License 1.0
+standards_rights: CLSI M100 and VET01S are licensed CLSI publications; the AMR data does not grant rights in them
+reuse_status: >-
+  Pending. Asked the AMR maintainer whether a small converted part may be kept in this repository and shown in the
+  project report, and what attribution is needed. Until then no value derived from this data is committed; drafts
+  are written to data/processed/clsi_drafts/, which git ignores.
+edition_mapping_status: >-
+  Human rows: supported by the data, not confirmed by the maintainer. The data labels CLSI rows by year ("CLSI 2022"),
+  not by edition. Three revisions with known editions first appear in that edition's publication year: gentamicin for
+  Enterobacterales lowered to S <= 2, R >= 8 (M100 Ed33, 2023) first appears under "CLSI 2023"; aztreonam-avibactam
+  (added in Ed36, 2026) and the Acinetobacter amikacin and gentamicin revisions (Ed36) first appear under "CLSI 2026".
+  So the specs read CLSI 2022 = M100 Ed32, 2023 = Ed33, 2026 = Ed36. Veterinary rows: assumed only. "CLSI 2024"
+  veterinary rows (labelled "VET01") are read as VET01S Ed7 (published January 2024); no dated veterinary revision of
+  our drugs was available to test this. The 2023 human rows are used as VET01S Ed7's grey rows, because Ed7 is built
+  on M100 Ed33. Asked the maintainer on 2026-11-11.
+known_differences_from_our_policy:
+  - The AMR package's as.sir() does not fall back to a human row when an animal row is missing; our VET01S policy does
+    (ADR-005), and the importer applies that fallback itself.
+  - Notes and footnotes are not compared, only the S and R breakpoints.
+comparison:
+  date: 2026-11-14
+  result: >-
+    Drafts built from this snapshot for all five active tables (100 rules) match the active tables rule for rule. Only
+    dog gentamicin comes from a species row; the other 17 host rules per veterinary table come from the grey rows.
