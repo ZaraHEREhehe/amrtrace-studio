@@ -122,14 +122,21 @@ def published_release_identity(
             LEFT JOIN reeval_run s ON s.run_id = er.selective_run_id
             LEFT JOIN reeval_run e ON e.run_id = er.exhaustive_run_id
             WHERE er.release_id = %s
-               OR (er.change_id = %s AND %s IS NOT NULL)
-            ORDER BY er.report_id DESC
+               OR (er.change_id = %s AND %s::text IS NOT NULL)
+            -- Prefer this exact release if a legacy or malformed report with
+            -- the same change ID also exists. We still consider a foreign report
+            -- when no exact match exists, so it is reported as a mismatch.
+            -- Migration 0007 allows only one completed exhaustive run per
+            -- change; this ordering also protects against bad imported rows.
+            ORDER BY CASE WHEN er.release_id = %s THEN 0 ELSE 1 END,
+                     er.report_id DESC
             LIMIT 1
             """,
             (
                 release_id,
                 release.triggered_by_change_id,
                 release.triggered_by_change_id,
+                release_id,
             ),
         )
         stored = cur.fetchone()
