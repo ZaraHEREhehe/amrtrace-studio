@@ -29,6 +29,8 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
+from psycopg.rows import dict_row
+
 from amrtrace.changes.types import ChangedEntity
 
 MAPPING_RULE_NODE_TYPE = "mapping_rule"
@@ -149,10 +151,30 @@ def compare_mapping_sets(old: MappingSet, new: MappingSet) -> MappingComparison:
     )
 
 
+def load_mapping_set(conn, mapping_version: str) -> MappingSet | None:
+    """The rules stored under one mapping version, read the same way the run source reads them (A-20).
+
+    None when no rule is stored under that name: a version that is only named (its rules kept elsewhere, as a
+    monitor draft or a hand-added rule does) cannot be read, and must not look like a version with no rules.
+    """
+    with conn.cursor(row_factory=dict_row) as cursor:
+        cursor.execute(
+            "SELECT * FROM mapping_rule WHERE mapping_version = %s ORDER BY mapping_rule_id", (mapping_version,)
+        )
+        rows = cursor.fetchall()
+    if not rows:
+        return None
+    return parse_mapping_set(mapping_version, rows)
+
+
 class MappingSetDiffer:
     """Shared by both mapping change types; the subclasses below only set change_type."""
 
     change_type = ""
+
+    # the change service uses this when no loader is given, so a declared change can be checked against its versions
+    def load_version(self, conn, version: str) -> MappingSet | None:
+        return load_mapping_set(conn, version)
 
     def compare(self, old: MappingSet, new: MappingSet) -> MappingComparison:
         return compare_mapping_sets(old, new)
