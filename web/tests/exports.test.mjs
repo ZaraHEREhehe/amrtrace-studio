@@ -171,7 +171,7 @@ test("JSON export preserves the API response bytes exactly", async () => {
       ok: true,
       status: 200,
       headers: {
-        get: () => digest,
+        get: (name) => name === "X-AMRTrace-Release-ID" ? "R1" : digest,
       },
       arrayBuffer: async () => original.slice().buffer,
     };
@@ -207,7 +207,7 @@ test("JSON with corrupted bytes is rejected", async () => {
   const fakeFetch = async () => ({
     ok: true,
     status: 200,
-    headers: { get: () => digest },
+    headers: { get: (name) => name === "X-AMRTrace-Release-ID" ? "R1" : digest },
     arrayBuffer: async () => corrupted.buffer,
   });
 
@@ -235,7 +235,7 @@ test("JSON is rejected if the selected hash is stale", async () => {
   const fakeFetch = async () => ({
     ok: true,
     status: 200,
-    headers: { get: () => actual },
+    headers: { get: (name) => name === "X-AMRTrace-Release-ID" ? "R1" : actual },
     arrayBuffer: async () => original.buffer,
   });
 
@@ -291,7 +291,7 @@ test("JSON export fails closed without server digest header", async () => {
   const fakeFetch = async () => ({
     ok: true,
     status: 200,
-    headers: { get: () => null },
+    headers: { get: (name) => name === "X-AMRTrace-Release-ID" ? "R1" : null },
     arrayBuffer: async () => bytes.buffer,
   });
   await assert.rejects(
@@ -322,3 +322,74 @@ test("snapshot hash request reports network failures", async () => {
       error.errorCode === "network_error",
   );
 });
+
+
+test("verified JSON export rejects a wrong release despite matching SHA-256", async () => {
+  const { createHash, webcrypto } = await import("node:crypto");
+  const { getVerifiedExportJson, ApiError } = await import("../api.mjs");
+  const bytes = new TextEncoder().encode('{"as_of_release":"R_OTHER","cases":[]}');
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  const fakeFetch = async () => ({
+    ok: true, status: 200,
+    headers: { get: (name) => name === "X-AMRTrace-Release-ID" ? "R_OTHER" : digest },
+    arrayBuffer: async () => bytes.buffer,
+  });
+  await assert.rejects(
+    () => getVerifiedExportJson("R1", digest, fakeFetch, webcrypto.subtle),
+    (error) => error instanceof ApiError && error.errorCode === "export_release_mismatch",
+  );
+});
+
+test("verified JSON export refuses missing or malformed release headers", async () => {
+  const { createHash, webcrypto } = await import("node:crypto");
+  const { getVerifiedExportJson, ApiError } = await import("../api.mjs");
+  const bytes = new TextEncoder().encode('{"as_of_release":"R1","cases":[]}');
+  const digest = createHash("sha256").update(bytes).digest("hex");
+  for (const header of [null, "%INVALID"]) {
+    const fakeFetch = async () => ({
+      ok: true, status: 200,
+      headers: { get: (name) => name === "X-AMRTrace-Release-ID" ? header : digest },
+      arrayBuffer: async () => bytes.buffer,
+    });
+    await assert.rejects(
+      () => getVerifiedExportJson("R1",digest,fakeFetch,webcrypto.subtle),
+      (error) => error instanceof ApiError && error.errorCode === "export_release_mismatch",
+    );
+  }
+});
+
+
+
+test("snapshot hash 422 shows server detail for a refused request", async () => {
+  const { getSnapshotHash, ApiError } = await import("../api.mjs");
+  const fakeFetch = async () => ({
+    ok: false,
+    status: 422,
+    text: async () => JSON.stringify({
+      detail: "The chosen release cannot be published without a comparison",
+    }),
+  });
+  await assert.rejects(
+    () => getSnapshotHash("R1", fakeFetch),
+    (error) => error instanceof ApiError &&
+      error.message === "The chosen release cannot be published without a comparison",
+  );
+});
+
+test("verified export 422 shows server detail for a refused request", async () => {
+  const { getVerifiedExportJson, ApiError } = await import("../api.mjs");
+  const fakeFetch = async () => ({
+    ok: false,
+    status: 422,
+    text: async () => JSON.stringify({
+      detail: "The selected release failed publication validation",
+    }),
+  });
+  const cryptoImpl = {digest: async () => new Uint8Array(32)};
+  await assert.rejects(
+    () => getVerifiedExportJson("R1", "a".repeat(64), fakeFetch, cryptoImpl),
+    (error) => error instanceof ApiError &&
+      error.message === "The selected release failed publication validation",
+  );
+});
+

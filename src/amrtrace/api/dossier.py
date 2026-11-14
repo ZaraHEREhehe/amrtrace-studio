@@ -7,7 +7,9 @@ duplicate ledger or diff logic.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict
+from urllib.parse import quote
 from typing import Literal
 
 import psycopg
@@ -221,10 +223,8 @@ def export_release(
                 conn,
                 as_of_release,
             )
-            digest = snapshot_hash(
-                conn,
-                as_of_release,
-            )
+            # Hash the exact response bytes, avoiding a second as-of DB query.
+            digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
 
             return Response(
                 content=body,
@@ -233,6 +233,7 @@ def export_release(
                     "Content-Disposition":
                         'attachment; filename="amrtrace-export.json"',
                     "X-AMRTrace-Snapshot-SHA256": digest,
+                    "X-AMRTrace-Release-ID": quote(as_of_release, safe=""),
                 },
             )
 
@@ -247,6 +248,7 @@ def export_release(
             headers={
                 "Content-Disposition":
                     'attachment; filename="amrtrace-export.sha256"',
+                    "X-AMRTrace-Release-ID": quote(as_of_release, safe=""),
             },
         )
 

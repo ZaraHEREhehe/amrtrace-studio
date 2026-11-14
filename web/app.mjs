@@ -2,7 +2,7 @@ import {
   ApiError,
   createChange,
   createReview,
-  exportUrl,
+  getReleaseIdentity,
   listPublishedReleases,
   getCase,
   getCaseDependencies,
@@ -93,7 +93,11 @@ import {
   gateLabel,
   mismatchValue,
   orderedAxes,
+  assertRunReportIdentity,
+  runRefusalReason,
 } from "./run_view.mjs";
+
+import { assertDossierIdentity, assertReleaseIdentity } from "./release_identity.mjs";
 
 import {
   interpretationRows,
@@ -1399,6 +1403,7 @@ async function submitReevaluation(event) {
       result.selective_run.run_id;
 
     if (result.equivalence) {
+      assertRunReportIdentity(result.selective_run, result.equivalence);
       renderEquivalence(result.equivalence);
     } else {
       byId("equivalence-detail").append(
@@ -1417,11 +1422,7 @@ async function submitReevaluation(event) {
       `Run ${result.selective_run.run_id} completed.`,
     );
   } catch (error) {
-    setStatus(
-      status,
-      "error",
-      errorText(error),
-    );
+    setStatus(status, "error", runRefusalReason(error) ?? errorText(error));
   } finally {
     submit.disabled = false;
   }
@@ -1445,6 +1446,7 @@ async function loadRunAndEquivalence(runId) {
 
     try {
       const report = await getRunEquivalence(runId);
+      assertRunReportIdentity(run, report);
       renderEquivalence(report);
     } catch (error) {
       if (
@@ -1873,9 +1875,10 @@ function renderDossierOverview(dossier, history = []) {
   byId("dossier-copilot-write").disabled = !can("review_case");
 
   if (current?.release_id) {
-    exportLink.href = exportUrl(current.release_id, "json");
+    // Use verified Exports flow instead of bypassing browser SHA-256 checks.
+    exportLink.href = routeHash("exports", current.release_id);
     exportLink.hidden = false;
-    exportLink.setAttribute("download", `amrtrace-${current.release_id}.json`);
+    exportLink.removeAttribute("download");
   } else {
     exportLink.hidden = true;
     exportLink.removeAttribute("href");
@@ -2119,7 +2122,10 @@ function renderDossierDependencies(subgraph) {
 }
 
 
+let dossierLoadToken = 0;
+
 async function loadDossier(caseId) {
+  const token = ++dossierLoadToken;
   const status = byId("dossier-status");
 
   activeDossierCaseId = null;
@@ -2148,6 +2154,8 @@ async function loadDossier(caseId) {
   );
 
   try {
+    const dossier = await getCase(caseId);
+    if (token !== dossierLoadToken) return;
     const dependencyPromise =
       getCaseDependencies(caseId)
         .then((value) => value)
@@ -2163,19 +2171,14 @@ async function loadDossier(caseId) {
           throw error;
         });
 
-    const [
-      dossier,
-      history,
-      reviews,
-      diff,
-      dependencies,
-    ] = await Promise.all([
-      getCase(caseId),
+    const [history, reviews, diff, dependencies] = await Promise.all([
       getCaseHistory(caseId),
       getCaseReviews(caseId),
-      getCaseDiff(caseId),
+      getCaseDiff(caseId, { afterRelease: dossier.current_state?.release_id ?? null }),
       dependencyPromise,
     ]);
+    if (token !== dossierLoadToken) return;
+    assertDossierIdentity(dossier, history, diff, dependencies, reviews);
 
     activeDossierCaseId = caseId;
 
@@ -2197,11 +2200,8 @@ async function loadDossier(caseId) {
 
     hideStatus(status);
   } catch (error) {
-    setStatus(
-      status,
-      "error",
-      errorText(error),
-    );
+    if (token !== dossierLoadToken) return;
+    setStatus(status, "error", errorText(error));
   }
 }
 
@@ -2477,6 +2477,7 @@ function syncExportSelection() {
   byId("exports-release-status").textContent =
     releaseId ? "Published" : "Not loaded";
   byId("exports-hash").textContent = "Not loaded";
+  byId("exports-comparison").textContent = "Not loaded";
 
   hideStatus(byId("exports-hash-status"));
 
@@ -2499,6 +2500,7 @@ async function loadExportHash() {
   setStatus(status, "loading", "Loading snapshot hash…");
 
   try {
+    const identity = assertReleaseIdentity(releaseId, await getReleaseIdentity(releaseId));
     const digest = await getSnapshotHash(releaseId);
 
     if (token !== exportsHashToken ||
@@ -2507,6 +2509,9 @@ async function loadExportHash() {
     }
 
     byId("exports-hash").textContent = digest;
+    byId("exports-comparison").textContent = identity.report_id === null
+      ? "No stored comparison (baseline or legacy release)"
+      : `PASS · report #${identity.report_id} · run ${identity.selective_run_id}`;
     byId("exports-copy-hash").disabled = false;
     byId("exports-download-hash").disabled = false;
     byId("exports-download-json").disabled = false;
@@ -2659,11 +2664,11 @@ function downloadExportHash() {
   }
 }
 
-async function loadExports() {
+async function loadExports(preferredReleaseId = null) {
   const token = ++exportsLoadToken;
   const selector = byId("exports-release");
   const status = byId("exports-status");
-  const previousId = selector.value;
+  const previousId = preferredReleaseId ?? selector.value;
 
   selector.disabled = true;
   setStatus(status, "loading", "Loading published releases…");
@@ -2710,9 +2715,19 @@ async function loadExports() {
     }
 
     selector.disabled = false;
-    selector.value = ordered.some(
+    const requestedIsAvailable = ordered.some(
       (release) => release.release_id === previousId,
-    ) ? previousId : ordered[0].release_id;
+    );
+    if (preferredReleaseId && !requestedIsAvailable) {
+      selector.value = "";
+      syncExportSelection();
+      setStatus(
+        status, "error",
+        `Release ${preferredReleaseId} is not published or is unavailable.`,
+      );
+      return;
+    }
+    selector.value = requestedIsAvailable ? previousId : ordered[0].release_id;
 
     syncExportSelection();
     hideStatus(status);
@@ -2775,7 +2790,7 @@ async function applyRoute() {
   }
 
   if (view === "exports") {
-    await loadExports();
+    await loadExports(id);
     return;
   }
 

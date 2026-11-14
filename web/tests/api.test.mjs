@@ -429,3 +429,20 @@ test("the dashboard summary and the filtered case list call the same-origin API"
     "/api/cases?limit=50&offset=0",
   ]);
 });
+
+test("422 refusal with string detail is exposed by the API client", async () => {
+  const { requestJson, ApiError } = await import("../api.mjs");
+  const fakeFetch = async () => ({
+    ok: false,
+    status: 422,
+    text: async () => JSON.stringify({
+      detail: "An exhaustive comparison is required before publication",
+    }),
+  });
+  await assert.rejects(
+    () => requestJson("/changes/CHANGE-2/reevaluate", {method:"POST"}, fakeFetch),
+    (error) => error instanceof ApiError && error.status === 422 &&
+      error.message === "An exhaustive comparison is required before publication",
+  );
+});
+

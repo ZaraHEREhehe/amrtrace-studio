@@ -71,7 +71,9 @@ export async function requestJson(
     throw new ApiError(
       response.status,
       payload?.error_code ?? "http_error",
-      payload?.message ?? `Request failed with status ${response.status}`,
+      (response.status === 422 && typeof payload?.detail === "string"
+        ? payload.detail
+        : payload?.message) ?? `Request failed with status ${response.status}`,
       payload?.details ?? null,
     );
   }
@@ -289,6 +291,10 @@ export function listPublishedReleases(fetchImpl = globalThis.fetch) {
   return requestJson("/releases", {}, fetchImpl);
 }
 
+export function getReleaseIdentity(releaseId, fetchImpl = globalThis.fetch) {
+  return requestJson(`/releases/${encodeURIComponent(releaseId)}/identity`, {}, fetchImpl);
+}
+
 export async function getVerifiedExportJson(
   releaseId,
   expectedDigest,
@@ -340,8 +346,25 @@ export async function getVerifiedExportJson(
     throw new ApiError(
       response.status,
       payload?.error_code ?? "http_error",
-      payload?.message ?? `Request failed with status ${response.status}`,
+      (response.status === 422 && typeof payload?.detail === "string"
+        ? payload.detail
+        : payload?.message) ?? `Request failed with status ${response.status}`,
       payload?.details ?? null,
+    );
+  }
+
+  // Reject a mismatched or missing release identity, even with a valid hash.
+  let responseRelease;
+  try {
+    responseRelease = decodeURIComponent(response.headers?.get("X-AMRTrace-Release-ID") ?? "");
+  } catch {
+    responseRelease = null;
+  }
+  if (responseRelease !== releaseId) {
+    throw new ApiError(
+      response.status,
+      "export_release_mismatch",
+      "Export response belongs to another release",
     );
   }
 
@@ -418,7 +441,9 @@ export async function getSnapshotHash(
     throw new ApiError(
       response.status,
       payload?.error_code ?? "http_error",
-      payload?.message ?? `Request failed with status ${response.status}`,
+      (response.status === 422 && typeof payload?.detail === "string"
+        ? payload.detail
+        : payload?.message) ?? `Request failed with status ${response.status}`,
       payload?.details ?? null,
     );
   }
