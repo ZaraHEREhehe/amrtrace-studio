@@ -25,7 +25,7 @@ COHORT_CASES = 660
 def loaded(conn):
     load_frozen_v1(conn, COHORT, COHORT / "sha256.txt")
     vector, states = read_frozen_baseline(str(COHORT / CASE_STATES_FILE))
-    load_baseline_release(conn, "R1", vector, states, expected_count=len(states))
+    load_baseline_release(conn, "R1", vector, states, expected_count=len(states), publish=True)
     return conn
 
 
