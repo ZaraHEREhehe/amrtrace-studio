@@ -110,7 +110,7 @@ def make_world(conn, cases=CASES, evaluator=evaluate, inputs=inputs_for_cases, v
             evaluator_version=versions.evaluator_version, input_hash=r.input_hash, output_hash=r.output_hash)
         for i, r in evaluations
     ]
-    load_baseline_release(conn, "R1", {"interpretation_version": versions.interpretation_version}, states)
+    load_baseline_release(conn, "R1", {"interpretation_version": versions.interpretation_version}, states, publish=True)
     materialize(conn, "R1", evaluations, versions)
 
 
@@ -369,7 +369,7 @@ def mapping_world(conn):
     evaluations = [(i, map_evaluate(i, MAP_V1)) for i in map_inputs(GENES)]
     load_baseline_release(conn, "R1", {"mapping_version": "M1"}, [
         BaselineState(i.case_id, r.state_code, r.explanation, r.phenotype_state, r.genotype_state, None, "DB1", "EV1",
-                      r.input_hash, r.output_hash) for i, r in evaluations])
+                      r.input_hash, r.output_hash) for i, r in evaluations], publish=True)
     materialize(conn, "R1", evaluations, MAP_V1)
     conn.execute("INSERT INTO mapping_rule (mapping_rule_id, mapping_version, source_db_version, determinant_identity, "
                  "candidate_antibiotic, rule_status) VALUES ('NEWRULE', 'M2', 'DB', 'gene1', 'gentamicin', 'ACTIVE')")
