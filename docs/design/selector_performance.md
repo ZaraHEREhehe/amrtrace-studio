@@ -156,3 +156,51 @@ If more full releases are stored, the right change is structural, not a wider in
 python scripts\selector_timing.py
 python scripts\run_real_oracle.py --new-table data\interpretation\clsi_m100_ed33.yaml
 ```
+
+## Total workflow cost (A-24, 2026-11-14)
+
+R01 asked for the cost of the whole gated workflow, not only selection (AMR-010, T30). `scripts/workflow_cost.py`
+reports each stage for a stored change. It only reads: the selective and exhaustive stages are the `reeval_run`
+timestamps recorded when the release was made, and selection and publication are re-measured with read-only queries
+(five timed repeats after one warm-up call). A change can have one completed selective and one completed exhaustive
+run, so a fresh full run would need the release chain rebuilt; the recorded runs are the real ones that made R3 and R4.
+
+**Environment.** Aabia's laptop, Windows 11, 8 logical CPUs, Python 3.12.10, PostgreSQL 16.15 in Docker
+(`amrtrace-pg-d22`), commit `8c954a3`. The recorded runs are from 2026-10-18 on the same laptop; selection and
+publication were re-measured on 2026-11-14.
+
+| Stage (seconds) | CHG-VET01S-ED7 (R3) | CHG-CLSI-ED33 (R4) | How |
+|---|---|---|---|
+| Selection | 0.185 | 0.370 | re-measured, graph as of R2 / R3, median of 5 |
+| Selective re-evaluation | 26.568 | 1.770 | recorded run |
+| Exhaustive re-evaluation and comparison | 44.653 | 41.772 | recorded run (one stored span) |
+| Publication | 0.003 | 0.004 | re-measured: two state counts; the two status updates not timed |
+| **Total** | **71.409** | **43.915** | |
+| Cases re-evaluated selectively | 5,556 of 41,858 | 116 of 41,858 | |
+
+**What this shows.**
+
+- **The exhaustive check dominates.** It re-evaluates all 41,858 cases whatever the change, so it costs about the same
+  (42 to 45 s) for both changes and is 63% of R3's total and 95% of R4's.
+- **With the gate on every release, the selective path saves no time end to end.** R4's gated workflow (43.9 s) costs
+  slightly more than its exhaustive recompute alone (41.8 s); R3's costs more again, because 5,556 cases are re-evaluated
+  twice. The selective path is what is published, and the exhaustive run is the proof that it is right.
+- **What selection does buy** is a result proven equal to a full recompute (0 mismatches on all three axes) that names
+  exactly which cases changed and why. The cut from 41,858 to 116 cases re-evaluated (about 361-fold) is a
+  reduction in **cases**, not a measured speedup of the workflow.
+- **When it would save time.** Selective re-evaluation alone takes 1.8 s for R4 and 26.6 s for R3. That cost would be
+  the workflow's cost only if the exhaustive check were not run on every release (for example, sampled, or run once to
+  establish trust); that is a policy the project has not adopted, and it would weaken D-08.
+
+**Not measured.** The two one-row status updates at publication; the comparison separately from the exhaustive
+evaluation (stored as one span); time between stages, when a person starts the next command; repeated full runs
+(each recorded stage is one run).
+
+### How to repeat it
+
+With the D-22 settings (see the README) in the shell:
+
+```powershell
+python scripts\workflow_cost.py
+```
+
