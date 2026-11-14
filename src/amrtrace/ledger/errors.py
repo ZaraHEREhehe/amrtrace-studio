@@ -39,3 +39,7 @@ class ReviewNotAllowed(LedgerError):
 
 class ReleaseNotPublished(LedgerError):
     """Only a published release can be exported."""
+
+
+class PublicationRefused(LedgerError):
+    """A release written by a change has no passing comparison stored and bound to it (the publication rule, I-21)."""

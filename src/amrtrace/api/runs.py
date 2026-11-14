@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query, status
 from amrtrace.changes import ChangeNotFound
 from amrtrace.evaluator import evaluate
 from amrtrace.interpretation import TableNotFound
+from amrtrace.ledger import PublicationRefused
 from amrtrace.reeval import (
     AlreadyCompared,
     AlreadyReevaluated,
@@ -164,7 +165,8 @@ def run_change(
             },
         )
 
-    # Selective-only runs auto-publish; Analyst must request exhaustive with gate=False.
+    # Since I-21 no run publishes on its own: the release stays a DRAFT until a passing comparison gates it.
+    # Who may ask for which run is unchanged (Z-18): selective-only and gated runs need release_gate.
     assert_run_authority(actor, run_exhaustive=payload.run_exhaustive, gate=payload.gate)
     bind_actor(conn, actor)
     try:
@@ -210,7 +212,6 @@ def run_change(
             context.versions,
             inputs_for=context.inputs_for,
             evaluate=evaluate,
-            publish=not payload.run_exhaustive,
         )
     except AlreadyReevaluated as exc:
         raise ApiError(
@@ -309,6 +310,13 @@ def run_change(
             "gate_refused",
             str(exc),
             {"change_id": change_id},
+        ) from exc
+    except PublicationRefused as exc:
+        raise ApiError(
+            422,
+            "publication_refused",
+            str(exc),
+            {"change_id": change_id, "release_id": payload.release_id},
         ) from exc
     except ReevaluationError as exc:
         raise ApiError(

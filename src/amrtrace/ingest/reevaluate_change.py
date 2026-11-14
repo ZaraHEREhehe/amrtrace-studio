@@ -160,9 +160,10 @@ def reevaluate_stored_change(
     release_id: str,
     panel: tuple[str, ...],
     organism: str,
-    publish: bool = True,
+    publish: bool = False,
 ) -> ReevalReport:
-    """publish=False leaves the new release a DRAFT, so the exhaustive comparison can gate it (compare_change)."""
+    """The new release stays a DRAFT, so the exhaustive comparison can gate it (compare_change --gate). publish=True
+    is refused by the publication rule (I-21): nothing is published without a passing comparison."""
     context = change_context(conn, tables, change_id, panel, organism)
     return reevaluate(
         conn,
@@ -183,7 +184,7 @@ def reevaluate_interpretation_change(
     release_id: str,
     panel: tuple[str, ...],
     organism: str,
-    publish: bool = True,
+    publish: bool = False,
 ) -> ReevalReport:
     """Kept for callers that only handle interpretation changes; refuses any other type."""
     change_type = _change_type(conn, change_id)
@@ -194,7 +195,8 @@ def reevaluate_interpretation_change(
     return reevaluate_stored_change(conn, tables, change_id, release_id, panel, organism, publish=publish)
 
 
-def render_report(report: ReevalReport, stored: bool, held: bool = False) -> str:
+def render_report(report: ReevalReport, stored: bool, held: bool = True) -> str:
+    # held is kept for older callers: since I-21 every release written here is held as a DRAFT
     lines = [
         f"change {report.change_id}: {report.selected:,} cases selected against release {report.base_release_id}",
         f"run {report.run_id}: {report.status}",
@@ -216,7 +218,7 @@ def render_report(report: ReevalReport, stored: bool, held: bool = False) -> str
             f"  {notice.case_id}: {notice.reviewer} corrected {notice.previous_state_code} -> "
             f"{notice.corrected_state_code}; now {notice.new_state_code} ({verdict})"
         )
-    if report.release_id is not None and held:
+    if report.release_id is not None:
         lines.append(f"release {report.release_id} is a DRAFT: run compare_change --gate to publish or block it")
     lines.append("STORED" if stored else "DRY RUN: everything above was rolled back, nothing is stored (use --commit to keep it)")
     return "\n".join(lines)
@@ -232,7 +234,8 @@ def main() -> int:
     parser.add_argument("--manifest", default="data/manifest/sha256.txt")
     parser.add_argument("--commit", action="store_true", help="keep the result; without it everything is rolled back")
     parser.add_argument("--hold", action="store_true",
-                        help="leave the new release a DRAFT until compare_change --gate has checked it")
+                        help="accepted for older scripts: the new release always stays a DRAFT until "
+                             "compare_change --gate has checked it (I-21)")
     arguments = parser.parse_args()
 
     try:
@@ -242,7 +245,6 @@ def main() -> int:
             try:
                 report = reevaluate_stored_change(
                     conn, tables, arguments.change_id, arguments.release_id, _panel(conn), _organism(conn),
-                    publish=not arguments.hold,
                 )
             except ReevaluationFailed as problem:
                 # the failed run row is the only thing written; keep it only when asked to store results
@@ -254,7 +256,7 @@ def main() -> int:
         print(f"STOP: {type(problem).__name__}: {problem}")
         return 1
 
-    print(render_report(report, stored=arguments.commit, held=arguments.hold))
+    print(render_report(report, stored=arguments.commit))
     return 0
 
 

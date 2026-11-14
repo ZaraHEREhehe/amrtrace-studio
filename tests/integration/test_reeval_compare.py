@@ -127,8 +127,12 @@ def select(conn, event=CHANGE, **kw):
 
 
 def selective(conn, evaluator=evaluate, change_id="CHG-I", publish=False, versions=V2):
-    return reevaluate(conn, change_id, "R2", {"interpretation_version": "T2"}, versions,
-                      inputs_for=lambda ids: list(inputs_for_cases(ids)), evaluate=evaluator, publish=publish)
+    report = reevaluate(conn, change_id, "R2", {"interpretation_version": "T2"}, versions,
+                        inputs_for=lambda ids: list(inputs_for_cases(ids)), evaluate=evaluator)
+    if publish:
+        # since I-21 a change release is published only by the gate, after a stored comparison that passed
+        assert gate_release(conn, compare(conn, evaluator, change_id, store=True)) == "PUBLISHED"
+    return report
 
 
 def compare(conn, evaluator=evaluate, change_id="CHG-I", **kw):
