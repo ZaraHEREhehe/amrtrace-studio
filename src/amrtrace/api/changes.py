@@ -18,6 +18,7 @@ from amrtrace.changes import (
 )
 from amrtrace.changes.service import (
     CannotDeriveEntities,
+    UndeclaredEntities,
     ImpactAlreadyRecorded,
     apply_change,
     get_impact_set,
@@ -146,7 +147,7 @@ def create_change(
             {"problems": exc.problems},
         ) from exc
 
-    except (CannotDeriveEntities, TableNotFound) as exc:
+    except (CannotDeriveEntities, UndeclaredEntities, TableNotFound) as exc:
         raise ApiError(
             422,
             "invalid_change_event",

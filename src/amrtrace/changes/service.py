@@ -45,6 +45,19 @@ class InconsistentSelection(ChangeServiceError):
     """The selector returned numbers that do not add up; nothing is stored."""
 
 
+class UndeclaredEntities(ChangeServiceError):
+    """The declared entities leave out entities that the type's differ finds between the two versions (A-20)."""
+
+    def __init__(self, change_id: str, omitted: tuple[ChangedEntity, ...]):
+        self.change_id = change_id
+        self.omitted = omitted
+        names = ", ".join(f"{e.node_type} {e.node_id}" for e in omitted)
+        super().__init__(
+            f"change {change_id}: the declared entities leave out {names}, which the two versions show; "
+            "declare them too, or send no entities so they are worked out from the versions"
+        )
+
+
 @dataclass(frozen=True)
 class StoredImpact:
     change_id: str
@@ -65,12 +78,20 @@ class ChangeApplication:
     entities_derived: bool
 
 
+# the loader given for the type, or the one its differ offers for reading its own versions
+def _loader_for(event: ChangeEvent, registry, loaders) -> VersionLoader | None:
+    loader = (loaders or {}).get(event.type)
+    if loader is None:
+        loader = getattr(registry.get_differ(event.type), "load_version", None)
+    return loader
+
+
 def _entities_from_differ(conn, event: ChangeEvent, registry, loaders) -> tuple[ChangedEntity, ...]:
     if not registry.has_differ(event.type):
         raise CannotDeriveEntities(
             f"change {event.change_id}: type {event.type} has no differ, so the changed entities must be declared"
         )
-    loader = (loaders or {}).get(event.type)
+    loader = _loader_for(event, registry, loaders)
     if loader is None:
         raise CannotDeriveEntities(
             f"change {event.change_id}: no loader was given for type {event.type}, "
@@ -79,7 +100,35 @@ def _entities_from_differ(conn, event: ChangeEvent, registry, loaders) -> tuple[
     differ = registry.get_differ(event.type)
     old = loader(conn, event.old_version)
     new = loader(conn, event.new_version)
+    # a loader answers None for a version it has nothing stored for, so the difference cannot be worked out
+    unread = [v for v, loaded in ((event.old_version, old), (event.new_version, new)) if loaded is None]
+    if unread:
+        raise CannotDeriveEntities(
+            f"change {event.change_id}: nothing is stored for version {', '.join(map(str, unread))}, "
+            "so the changed entities must be declared"
+        )
     return tuple(differ.diff(old, new))
+
+
+def _check_declared_entities(conn, event: ChangeEvent, registry, loaders) -> None:
+    """Refuse a declaration that leaves out an entity the differ finds between the two versions.
+
+    Extra declared entities are kept, because selecting more than needed is safe and selecting less is not. The check
+    runs only when the type has a differ, both versions are named and a loader can read them (a version with nothing
+    stored under it cannot be read); otherwise the declaration is the only source, as before.
+    """
+    if not registry.has_differ(event.type) or not event.old_version or not event.new_version:
+        return
+    if _loader_for(event, registry, loaders) is None:
+        return
+    try:
+        derived = _entities_from_differ(conn, event, registry, loaders)
+    except CannotDeriveEntities:
+        return
+    declared = {(e.node_type, e.node_id) for e in event.changed_entities}
+    omitted = tuple(e for e in derived if (e.node_type, e.node_id) not in declared)
+    if omitted:
+        raise UndeclaredEntities(event.change_id, omitted)
 
 
 def record_impact(conn, change_id: str, *, selector: Selector = select_impact_detailed) -> StoredImpact:
@@ -126,7 +175,8 @@ def apply_change(
     """Validate and register a change event, select the cases it touches, and store that selection.
 
     If the event declares no changed entities, the differ registered for its type works them out from the
-    old and new versions (read with the loader given for that type). All or nothing.
+    old and new versions (read with the loader given for that type, or the differ's own). If it declares them and
+    the versions can be read, the declaration must include every entity the differ finds (A-20). All or nothing.
     """
     if registry is None:
         registry = default_registry
@@ -137,6 +187,8 @@ def apply_change(
                 event, changed_entities=_entities_from_differ(conn, event, registry, loaders)
             )
             derived = True
+        else:
+            _check_declared_entities(conn, event, registry, loaders)
         register_change_event(conn, event)
         stored = record_impact(conn, event.change_id, selector=selector)
     return ChangeApplication(
