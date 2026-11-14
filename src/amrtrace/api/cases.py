@@ -293,7 +293,18 @@ def get_case(
         release = get_release(conn, current.release_id)
         version_vector = dict(release.version_vector)
 
-    review_status = get_review_status(conn, case_id).review_status if current is not None else None
+    review_record = get_review_status(conn, case_id) if current is not None else None
+    if review_record is not None and (
+        review_record.state_id != current.state_id
+        or review_record.release_id != current.release_id
+    ):
+        raise ApiError(
+            409,
+            "stale_dossier",
+            "Case release changed during the dossier read; reload",
+            {"case_id": case_id, "release_id": current.release_id},
+        )
+    review_status = review_record.review_status if review_record is not None else None
 
     return CaseDossier(
         **case,

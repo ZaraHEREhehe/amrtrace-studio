@@ -80,3 +80,29 @@ export function mismatchValue(value) {
 
   return JSON.stringify(value);
 }
+
+
+export function assertRunReportIdentity(run, report) {
+  const matched = run?.run_id === report?.selective_run_id ||
+    run?.run_id === report?.exhaustive_run_id;
+  if (!matched || !run || !report ||
+      run.release_id !== report.release_id ||
+      run.change_id !== report.change_id) {
+    throw new Error(
+      "The comparison report does not belong to the selected run and release. Reload and verify the release identity.",
+    );
+  }
+  return report;
+}
+
+
+export function runRefusalReason(error) {
+  if (error?.status === 422) {
+    const detail = error.details?.detail ?? error.details?.reason;
+    if (typeof detail === "string" && detail.trim()) return detail.trim();
+    if (typeof error.message === "string" && error.message.trim()) return error.message.trim();
+    return "The publication request was refused (422).";
+  }
+  return null;
+}
+

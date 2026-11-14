@@ -107,7 +107,7 @@ test("case dossier exposes the complete Z-11 workflow", () => {
   assert.match(app, /getCaseDiff/);
   assert.match(app, /createReview/);
   assert.match(app, /renderDossierDependencies/);
-  assert.match(app, /exportUrl/);
+  assert.match(app, /routeHash\("exports", current\.release_id\)/);
 });
 
 
