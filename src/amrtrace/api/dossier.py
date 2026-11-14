@@ -248,7 +248,7 @@ def export_release(
             headers={
                 "Content-Disposition":
                     'attachment; filename="amrtrace-export.sha256"',
-                    "X-AMRTrace-Release-ID": quote(as_of_release, safe=""),
+                "X-AMRTrace-Release-ID": quote(as_of_release, safe=""),
             },
         )
 
