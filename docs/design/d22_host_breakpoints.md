@@ -2,6 +2,7 @@
 
 Status: implemented on `feat/D-22-vet01s-host-rules`, run on the full cohort on 2026-10-18.
 Driver: Aabia. Breakpoint values: the AMRTrace Breakpoint Reference (CLSI M100 Ed32 to Ed36, CLSI VET01S Ed7 Table 2A).
+The written policy, its sources, what the results show and its limits: ADR-005 (`docs/adr/ADR-005-host-and-not-defined-policy.md`, A-21).
 
 ## Why
 
