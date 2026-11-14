@@ -1,0 +1,88 @@
+scenario: I22-A15-ALTERNATIVE
+description: >
+  Genotype rows are re-annotated: some are no longer called (removed) and one is re-called with new content (edited).
+  Each affected case's state is held by a group of determinants of which one is enough (alternative support). Every
+  case with a stored edge to a changed row is selected, because its explanation changes even when its state holds
+  (graph_design.md, "What the selector does with them"). The support annotations then predict what re-evaluation
+  should show for each selected case. The annotations are checked in their own test, apart from selection.
+authored_by: insharah
+authored_on_base_commit: cef312953fd51cb3e6333c6aae0e8aac0af59937      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns it (D-10: not the selector author). Written
+  from docs/design/graph_design.md ("How a state holds together", the expected-effect table) and migration 0012
+  before any selector output on this world was seen. The author did not read the A-15 effect code or its tests.
+derivation: >
+  A group holds while it keeps `need` distinct members (0012). A member is a determinant; it is stored on its genotype
+  row and on its mapping rule (graph_design.md). A determinant still counts only while at least one genotype row still
+  calls it: a mapping rule alone does not put a determinant in an isolate. So: AL_A loses DETA1 but keeps DETA2 (1 of
+  need 1): alternative_support_holds. AL_B loses both genotype calls, DETB1 and DETB2; their mapping rules are
+  unchanged but no determinant is left (0 of need 1): support_may_fall. AL_C loses one of two rows that call DETC, so
+  DETC is still called, and DETD is untouched (2 of need 1): alternative_support_holds. AL_D's changed row is edited,
+  and an edit makes no prediction (its new content may bring new support): none. AL_E has a single support and no
+  structure: none. AL_F's rows did not change: not selected.
+world:
+  cases: [AL_A_ONE_OF_TWO_LOST, AL_B_BOTH_CALLS_LOST, AL_C_ONE_CALL_OF_TWO_LOST, AL_D_MEMBER_EDITED, AL_E_SINGLE_SUPPORT, AL_F_UNTOUCHED]
+  case_antibiotics: {AL_B_BOTH_CALLS_LOST: meropenem, AL_C_ONE_CALL_OF_TWO_LOST: ceftriaxone}
+  versions:
+    - {node_type: genotype_evidence, node_id: GEN_AL_A1, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_AL_B1, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_AL_B2, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_AL_C1, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_AL_D1, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_AL_D1, version: EVIDENCE_V2}
+    - {node_type: genotype_evidence, node_id: GEN_AL_E1, version: EVIDENCE_V1}
+  edges:
+    - {case: AL_A_ONE_OF_TWO_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_A1}
+    - {case: AL_A_ONE_OF_TWO_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_A2}
+    - {case: AL_A_ONE_OF_TWO_LOST, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_AL_A1, node_version: MAPPING_SET_V1}
+    - {case: AL_A_ONE_OF_TWO_LOST, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_AL_A2, node_version: MAPPING_SET_V1}
+    - {case: AL_B_BOTH_CALLS_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_B1}
+    - {case: AL_B_BOTH_CALLS_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_B2}
+    - {case: AL_B_BOTH_CALLS_LOST, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_AL_B1, node_version: MAPPING_SET_V1}
+    - {case: AL_B_BOTH_CALLS_LOST, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_AL_B2, node_version: MAPPING_SET_V1}
+    - {case: AL_C_ONE_CALL_OF_TWO_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_C1}
+    - {case: AL_C_ONE_CALL_OF_TWO_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_C2}
+    - {case: AL_C_ONE_CALL_OF_TWO_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_C3}
+    - {case: AL_D_MEMBER_EDITED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_D1}
+    - {case: AL_D_MEMBER_EDITED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_D2}
+    - {case: AL_E_SINGLE_SUPPORT, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_E1}
+    - {case: AL_F_UNTOUCHED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_F1}
+    - {case: AL_F_UNTOUCHED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_AL_F2}
+  support:   # one row per item in a group; the group holds while it keeps `need` distinct members
+    - {case: AL_A_ONE_OF_TWO_LOST, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_A1, member: DETA1}
+    - {case: AL_A_ONE_OF_TWO_LOST, kind: alternative_support, group: ALT, need: 1, node_type: mapping_rule, node_id: MAPRULE_AL_A1, member: DETA1}
+    - {case: AL_A_ONE_OF_TWO_LOST, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_A2, member: DETA2}
+    - {case: AL_A_ONE_OF_TWO_LOST, kind: alternative_support, group: ALT, need: 1, node_type: mapping_rule, node_id: MAPRULE_AL_A2, member: DETA2}
+    - {case: AL_B_BOTH_CALLS_LOST, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_B1, member: DETB1}
+    - {case: AL_B_BOTH_CALLS_LOST, kind: alternative_support, group: ALT, need: 1, node_type: mapping_rule, node_id: MAPRULE_AL_B1, member: DETB1}
+    - {case: AL_B_BOTH_CALLS_LOST, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_B2, member: DETB2}
+    - {case: AL_B_BOTH_CALLS_LOST, kind: alternative_support, group: ALT, need: 1, node_type: mapping_rule, node_id: MAPRULE_AL_B2, member: DETB2}
+    - {case: AL_C_ONE_CALL_OF_TWO_LOST, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_C1, member: DETC}
+    - {case: AL_C_ONE_CALL_OF_TWO_LOST, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_C2, member: DETC}
+    - {case: AL_C_ONE_CALL_OF_TWO_LOST, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_C3, member: DETD}
+    - {case: AL_D_MEMBER_EDITED, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_D1, member: DETD1}
+    - {case: AL_D_MEMBER_EDITED, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_D2, member: DETD2}
+    - {case: AL_F_UNTOUCHED, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_F1, member: DETF1}
+    - {case: AL_F_UNTOUCHED, kind: alternative_support, group: ALT, need: 1, node_type: genotype_evidence, node_id: GEN_AL_F2, member: DETF2}
+change_event:
+  change_id: CHG-I22-ALTERNATIVE
+  type: GENOTYPE_CHANGED
+  old_version: EVIDENCE_V1
+  new_version: EVIDENCE_V2
+  changed_entities:
+    - {node_type: genotype_evidence, node_id: GEN_AL_A1, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_AL_B1, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_AL_B2, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_AL_C1, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_AL_D1, old_version: EVIDENCE_V1, new_version: EVIDENCE_V2}
+    - {node_type: genotype_evidence, node_id: GEN_AL_E1, old_version: EVIDENCE_V1, new_version: null}
+expected:
+  required_case_ids: [AL_A_ONE_OF_TWO_LOST, AL_B_BOTH_CALLS_LOST, AL_C_ONE_CALL_OF_TWO_LOST, AL_D_MEMBER_EDITED, AL_E_SINGLE_SUPPORT]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [AL_F_UNTOUCHED]
+  expected_annotations:      # the impact item's expected_effect; null means no prediction
+    AL_A_ONE_OF_TWO_LOST: alternative_support_holds
+    AL_B_BOTH_CALLS_LOST: support_may_fall
+    AL_C_ONE_CALL_OF_TWO_LOST: alternative_support_holds
+    AL_D_MEMBER_EDITED: null
+    AL_E_SINGLE_SUPPORT: null
