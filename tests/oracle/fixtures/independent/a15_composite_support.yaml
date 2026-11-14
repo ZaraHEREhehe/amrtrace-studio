@@ -1,0 +1,81 @@
+scenario: I22-A15-COMPOSITE
+description: >
+  Genotype rows are re-annotated in cases whose state needs items together (composite support): both halves of a
+  combination drug, or an anchor mutation plus a second QRDR mutation. Every case with a stored edge to a changed row
+  is selected. The support annotations predict, for each selected case, whether its support may fall or still holds.
+  The annotations are checked in their own test, apart from selection.
+authored_by: insharah
+authored_on_base_commit: cef312953fd51cb3e6333c6aae0e8aac0af59937      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns it (D-10: not the selector author). Written
+  from docs/design/graph_design.md (the CASE_RULES_V1 group table and the expected-effect table) and migration 0012
+  before any selector output on this world was seen. The author did not read the A-15 effect code or its tests.
+derivation: >
+  graph_design.md: trimethoprim-sulfamethoxazole needs a trimethoprim group and a sulfonamide group, need 1 each;
+  ciprofloxacin needs a gyrA group (need 1) and a QRDR group (need 2); a group with more distinct members than it
+  needs is recorded as alternative_support, otherwise composite. CO_A loses its only trimethoprim determinant (0 of
+  need 1): support_may_fall. CO_B's QRDR group had exactly two members and loses one (1 of need 2): support_may_fall.
+  CO_C's QRDR group had three members, loses one and keeps two (2 of need 2), and its gyrA group is untouched:
+  alternative_support_holds. CO_D's changed row is edited: no prediction. CO_E's rows did not change: not selected.
+  Member names are placeholders; nothing depends on real mutation names.
+world:
+  cases: [CO_A_COMBINATION_HALF_LOST, CO_B_NEED_TWO_BROKEN, CO_C_NEED_TWO_WITH_SPARE, CO_D_HALF_EDITED, CO_E_UNTOUCHED]
+  case_antibiotics:
+    CO_A_COMBINATION_HALF_LOST: trimethoprim-sulfamethoxazole
+    CO_B_NEED_TWO_BROKEN: ciprofloxacin
+    CO_C_NEED_TWO_WITH_SPARE: ciprofloxacin
+    CO_D_HALF_EDITED: trimethoprim-sulfamethoxazole
+    CO_E_UNTOUCHED: trimethoprim-sulfamethoxazole
+  versions:
+    - {node_type: genotype_evidence, node_id: GEN_CO_A_T, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_CO_B_Q2, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_CO_C_Q3, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_CO_D_S, version: EVIDENCE_V1}
+    - {node_type: genotype_evidence, node_id: GEN_CO_D_S, version: EVIDENCE_V2}
+  edges:
+    - {case: CO_A_COMBINATION_HALF_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_A_T}
+    - {case: CO_A_COMBINATION_HALF_LOST, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_A_S}
+    - {case: CO_B_NEED_TWO_BROKEN, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_B_G}
+    - {case: CO_B_NEED_TWO_BROKEN, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_B_Q1}
+    - {case: CO_B_NEED_TWO_BROKEN, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_B_Q2}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_C_G}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_C_Q1}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_C_Q2}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_C_Q3}
+    - {case: CO_D_HALF_EDITED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_D_T}
+    - {case: CO_D_HALF_EDITED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_D_S}
+    - {case: CO_E_UNTOUCHED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_E_T}
+    - {case: CO_E_UNTOUCHED, dep_type: positive_support, edge_type: derived_from, node_type: genotype_evidence, node_id: GEN_CO_E_S}
+  support:
+    - {case: CO_A_COMBINATION_HALF_LOST, kind: composite, group: TRIMETHOPRIM, need: 1, node_type: genotype_evidence, node_id: GEN_CO_A_T, member: DET_TMP}
+    - {case: CO_A_COMBINATION_HALF_LOST, kind: composite, group: SULFONAMIDE, need: 1, node_type: genotype_evidence, node_id: GEN_CO_A_S, member: DET_SUL}
+    - {case: CO_B_NEED_TWO_BROKEN, kind: composite, group: GYRA, need: 1, node_type: genotype_evidence, node_id: GEN_CO_B_G, member: MUT_G}
+    - {case: CO_B_NEED_TWO_BROKEN, kind: composite, group: QRDR, need: 2, node_type: genotype_evidence, node_id: GEN_CO_B_Q1, member: MUT_Q1}
+    - {case: CO_B_NEED_TWO_BROKEN, kind: composite, group: QRDR, need: 2, node_type: genotype_evidence, node_id: GEN_CO_B_Q2, member: MUT_Q2}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, kind: composite, group: GYRA, need: 1, node_type: genotype_evidence, node_id: GEN_CO_C_G, member: MUT_G}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, kind: alternative_support, group: QRDR, need: 2, node_type: genotype_evidence, node_id: GEN_CO_C_Q1, member: MUT_Q1}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, kind: alternative_support, group: QRDR, need: 2, node_type: genotype_evidence, node_id: GEN_CO_C_Q2, member: MUT_Q2}
+    - {case: CO_C_NEED_TWO_WITH_SPARE, kind: alternative_support, group: QRDR, need: 2, node_type: genotype_evidence, node_id: GEN_CO_C_Q3, member: MUT_Q3}
+    - {case: CO_D_HALF_EDITED, kind: composite, group: TRIMETHOPRIM, need: 1, node_type: genotype_evidence, node_id: GEN_CO_D_T, member: DET_TMP}
+    - {case: CO_D_HALF_EDITED, kind: composite, group: SULFONAMIDE, need: 1, node_type: genotype_evidence, node_id: GEN_CO_D_S, member: DET_SUL}
+    - {case: CO_E_UNTOUCHED, kind: composite, group: TRIMETHOPRIM, need: 1, node_type: genotype_evidence, node_id: GEN_CO_E_T, member: DET_TMP}
+    - {case: CO_E_UNTOUCHED, kind: composite, group: SULFONAMIDE, need: 1, node_type: genotype_evidence, node_id: GEN_CO_E_S, member: DET_SUL}
+change_event:
+  change_id: CHG-I22-COMPOSITE
+  type: GENOTYPE_CHANGED
+  old_version: EVIDENCE_V1
+  new_version: EVIDENCE_V2
+  changed_entities:
+    - {node_type: genotype_evidence, node_id: GEN_CO_A_T, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_CO_B_Q2, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_CO_C_Q3, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: genotype_evidence, node_id: GEN_CO_D_S, old_version: EVIDENCE_V1, new_version: EVIDENCE_V2}
+expected:
+  required_case_ids: [CO_A_COMBINATION_HALF_LOST, CO_B_NEED_TWO_BROKEN, CO_C_NEED_TWO_WITH_SPARE, CO_D_HALF_EDITED]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [CO_E_UNTOUCHED]
+  expected_annotations:
+    CO_A_COMBINATION_HALF_LOST: support_may_fall
+    CO_B_NEED_TWO_BROKEN: support_may_fall
+    CO_C_NEED_TWO_WITH_SPARE: alternative_support_holds
+    CO_D_HALF_EDITED: null

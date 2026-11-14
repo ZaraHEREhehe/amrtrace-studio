@@ -1,0 +1,58 @@
+scenario: I22-A15-CONTRADICTION
+description: >
+  AST results are corrected or withdrawn. Some cases are unresolved because their AST rows disagree (a conflict,
+  stored as contradiction rows). Every case with a stored edge to a changed row is selected. The support annotations
+  predict that a case whose conflict loses or changes one of its rows may resolve. The annotations are checked in
+  their own test, apart from selection.
+authored_by: insharah
+authored_on_base_commit: cef312953fd51cb3e6333c6aae0e8aac0af59937      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns it (D-10: not the selector author). Written
+  from docs/design/graph_design.md (contradiction rows and the expected-effect table) and migration 0012 before any
+  selector output on this world was seen. The author did not read the A-15 effect code or its tests.
+derivation: >
+  graph_design.md: the phenotype stage records the rows of a conflict as contradiction, with the number of categories
+  the conflict holds as `need`; a row of a conflict that is corrected or removed gives conflict_may_resolve. CT_A's
+  susceptible row is corrected: conflict_may_resolve. CT_B's resistant row is withdrawn: conflict_may_resolve. CT_C
+  has one AST row, no conflict and no stored structure; its row is corrected: selected, no prediction. CT_D's
+  conflicting rows did not change: not selected. Members are the categories the rows report.
+world:
+  cases: [CT_A_CONFLICT_ROW_CORRECTED, CT_B_CONFLICT_ROW_REMOVED, CT_C_NO_CONFLICT_CORRECTED, CT_D_CONFLICT_UNTOUCHED]
+  versions:
+    - {node_type: ast_evidence, node_id: AST_CT_A1, version: EVIDENCE_V1}
+    - {node_type: ast_evidence, node_id: AST_CT_A1, version: EVIDENCE_V2}
+    - {node_type: ast_evidence, node_id: AST_CT_B2, version: EVIDENCE_V1}
+    - {node_type: ast_evidence, node_id: AST_CT_C1, version: EVIDENCE_V1}
+    - {node_type: ast_evidence, node_id: AST_CT_C1, version: EVIDENCE_V2}
+  edges:
+    - {case: CT_A_CONFLICT_ROW_CORRECTED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_CT_A1}
+    - {case: CT_A_CONFLICT_ROW_CORRECTED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_CT_A2}
+    - {case: CT_B_CONFLICT_ROW_REMOVED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_CT_B1}
+    - {case: CT_B_CONFLICT_ROW_REMOVED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_CT_B2}
+    - {case: CT_C_NO_CONFLICT_CORRECTED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_CT_C1}
+    - {case: CT_D_CONFLICT_UNTOUCHED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_CT_D1}
+    - {case: CT_D_CONFLICT_UNTOUCHED, dep_type: input_evidence, edge_type: derived_from, node_type: ast_evidence, node_id: AST_CT_D2}
+  support:
+    - {case: CT_A_CONFLICT_ROW_CORRECTED, kind: contradiction, group: CONFLICT, need: 2, node_type: ast_evidence, node_id: AST_CT_A1, member: susceptible}
+    - {case: CT_A_CONFLICT_ROW_CORRECTED, kind: contradiction, group: CONFLICT, need: 2, node_type: ast_evidence, node_id: AST_CT_A2, member: resistant}
+    - {case: CT_B_CONFLICT_ROW_REMOVED, kind: contradiction, group: CONFLICT, need: 2, node_type: ast_evidence, node_id: AST_CT_B1, member: susceptible}
+    - {case: CT_B_CONFLICT_ROW_REMOVED, kind: contradiction, group: CONFLICT, need: 2, node_type: ast_evidence, node_id: AST_CT_B2, member: resistant}
+    - {case: CT_D_CONFLICT_UNTOUCHED, kind: contradiction, group: CONFLICT, need: 2, node_type: ast_evidence, node_id: AST_CT_D1, member: susceptible}
+    - {case: CT_D_CONFLICT_UNTOUCHED, kind: contradiction, group: CONFLICT, need: 2, node_type: ast_evidence, node_id: AST_CT_D2, member: resistant}
+change_event:
+  change_id: CHG-I22-CONTRADICTION
+  type: AST_CORRECTED
+  old_version: EVIDENCE_V1
+  new_version: EVIDENCE_V2
+  changed_entities:
+    - {node_type: ast_evidence, node_id: AST_CT_A1, old_version: EVIDENCE_V1, new_version: EVIDENCE_V2}
+    - {node_type: ast_evidence, node_id: AST_CT_B2, old_version: EVIDENCE_V1, new_version: null}
+    - {node_type: ast_evidence, node_id: AST_CT_C1, old_version: EVIDENCE_V1, new_version: EVIDENCE_V2}
+expected:
+  required_case_ids: [CT_A_CONFLICT_ROW_CORRECTED, CT_B_CONFLICT_ROW_REMOVED, CT_C_NO_CONFLICT_CORRECTED]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [CT_D_CONFLICT_UNTOUCHED]
+  expected_annotations:
+    CT_A_CONFLICT_ROW_CORRECTED: conflict_may_resolve
+    CT_B_CONFLICT_ROW_REMOVED: conflict_may_resolve
+    CT_C_NO_CONFLICT_CORRECTED: null

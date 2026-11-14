@@ -1,0 +1,54 @@
+scenario: I22-A20-SAME-ID-EDIT
+description: >
+  A mapping rule keeps its id but changes the pair it links: in V1 rule E linked DETE to gentamicin, in V2 the same
+  rule id links DETE to meropenem. Two kinds of case are affected. The gentamicin case that relied on rule E (it has a
+  stored edge to E at V1) loses that support. The meropenem case whose applicability record names DETE -> meropenem
+  is newly covered by E, but it has no stored edge to E, because no rule covered that pair before the change. A
+  selector that follows only stored edges for an edited rule misses it. Alternatively the change service may refuse
+  a same-id pair edit with a clear error naming the rule (A-20 allows either).
+authored_by: insharah
+authored_on_base_commit: cef312953fd51cb3e6333c6aae0e8aac0af59937      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns it (D-10: not the selector author). Written
+  from issue #170 (A-20) and plan section 6 (C2 for the stored edge, C7 for a newly linked pair) before any selector
+  output on this world was seen; no A-20 code existed when it was written.
+derivation: >
+  The stored mapping_rule row holds the rule as it is after the change (V2: DETE -> meropenem); the V1 pair is known
+  from the stored edge of the case that used it. ED_A (gentamicin, edge to E at V1) relied on the old content, as in
+  C2. ED_B (applicability DETE -> meropenem, no edge) is newly covered by the new pair, as in C7: this is the newly
+  applicable case. ED_C names DETE for ceftriaxone, which neither version links; ED_D names another determinant for
+  meropenem; ED_E has only a tool-version edge.
+pending:   # added after the first run, in its own commit; the expected sets above are unchanged
+  selection: {until: A-20, reason: "an edited rule is followed only through stored edges, so the case newly covered by its new pair is missed; A-20 (#170) adds the pair lookup or refuses the edit"}
+register_through: apply_change   # the change service, where A-20 may refuse a same-id pair edit
+world:
+  cases: [ED_A_OLD_PAIR_EDGE, ED_B_NEWLY_APPLICABLE, ED_C_SAME_DET_THIRD_DRUG, ED_D_OTHER_DET_NEW_DRUG, ED_E_UNRELATED]
+  case_antibiotics:
+    ED_B_NEWLY_APPLICABLE: meropenem
+    ED_C_SAME_DET_THIRD_DRUG: ceftriaxone
+    ED_D_OTHER_DET_NEW_DRUG: meropenem
+  versions:
+    - {node_type: mapping_rule, node_id: MAPRULE_ED_E, version: MAPPING_SET_ED_V1}
+    - {node_type: mapping_rule, node_id: MAPRULE_ED_E, version: MAPPING_SET_ED_V2}
+  mapping_rules:
+    - {mapping_rule_id: MAPRULE_ED_E, mapping_version: MAPPING_SET_ED_V2, determinant_identity: DETE, candidate_antibiotic: meropenem}
+  edges:
+    - {case: ED_A_OLD_PAIR_EDGE, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_ED_E, node_version: MAPPING_SET_ED_V1}
+    - {case: ED_E_UNRELATED, dep_type: provenance_version, edge_type: derived_from, node_type: tool_version, node_id: TOOL_T, node_version: T1}
+  applicability:
+    - {case: ED_A_OLD_PAIR_EDGE, determinant_identity: DETE, candidate_antibiotic: gentamicin}
+    - {case: ED_B_NEWLY_APPLICABLE, determinant_identity: DETE, candidate_antibiotic: meropenem}
+    - {case: ED_C_SAME_DET_THIRD_DRUG, determinant_identity: DETE, candidate_antibiotic: ceftriaxone}
+    - {case: ED_D_OTHER_DET_NEW_DRUG, determinant_identity: DETF, candidate_antibiotic: meropenem}
+change_event:
+  change_id: CHG-I22-SAME-ID-EDIT
+  type: MAPPING_ADDED      # the new link is what a person registers; the entity is an edit (both versions set)
+  old_version: MAPPING_SET_ED_V1
+  new_version: MAPPING_SET_ED_V2
+  changed_entities:
+    - {node_type: mapping_rule, node_id: MAPRULE_ED_E, old_version: MAPPING_SET_ED_V1, new_version: MAPPING_SET_ED_V2}
+expected:
+  required_case_ids: [ED_A_OLD_PAIR_EDGE, ED_B_NEWLY_APPLICABLE]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [ED_C_SAME_DET_THIRD_DRUG, ED_D_OTHER_DET_NEW_DRUG, ED_E_UNRELATED]
+  refusal_allowed: {must_name: [MAPRULE_ED_E]}

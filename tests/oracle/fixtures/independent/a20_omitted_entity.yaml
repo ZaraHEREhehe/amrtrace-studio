@@ -1,0 +1,56 @@
+scenario: I22-A20-OMITTED
+description: >
+  A mapping change whose declaration leaves out entities that its two versions show. The V2 mapping set adds two rules
+  (P and Q) and no longer has rule K from V1, but the person declared only rule P. Rule 6 (when in doubt, over-select)
+  and the mapping differ's contract (the entities of a mapping change are always the full difference between the two
+  versions) mean every case that the full difference touches must be found: the case newly covered by P (declared),
+  the case newly covered by Q (omitted), and the case that relied on K (omitted). Alternatively the change service
+  may refuse the declaration, naming the omitted rules. Selecting only P's case is wrong.
+authored_by: insharah
+authored_on_base_commit: cef312953fd51cb3e6333c6aae0e8aac0af59937      # filled by stamp_fixtures.py with the commit this file was written on top of
+author_note: >
+  Drafted with LLM assistance (Claude) for Insharah, who reviews and owns it (D-10: not the selector author). Written
+  from issue #170 (A-20), plan rule 6 and the mapping differ's documented contract before any selector output on this
+  world was seen; no A-20 code existed when it was written.
+derivation: >
+  A mapping version is the set of mapping_rule rows stored under that mapping_version (the way the API run source
+  reads it). V1 = {K: DETK -> gentamicin}; V2 = {P: DETP -> gentamicin, Q: DETQ -> gentamicin}. Full difference:
+  P added, Q added, K retired. A case is affected by an added rule when its applicability record names the rule's
+  determinant-drug pair (C7), and by a retired rule when it has a stored edge to it (C2). OM_A (DETP, gentamicin),
+  OM_B (DETQ, gentamicin) and OM_C (edge to K) are affected. OM_D names DETQ for meropenem, a pair no rule covers
+  in either version; OM_E has only a tool-version edge.
+pending:   # added after the first run, in its own commit; the expected sets above are unchanged
+  selection: {until: A-20, reason: "a declared change that leaves out rules its versions show selects only the declared rule; A-20 (#170) checks declared entities against derived ones"}
+register_through: apply_change   # the change service, where A-20 compares declared entities with derived ones
+world:
+  cases: [OM_A_DECLARED_RULE, OM_B_OMITTED_ADDED_RULE, OM_C_OMITTED_RETIRED_RULE, OM_D_SAME_DET_OTHER_DRUG, OM_E_UNRELATED]
+  case_antibiotics: {OM_D_SAME_DET_OTHER_DRUG: meropenem}
+  versions:
+    - {node_type: mapping_rule, node_id: MAPRULE_OM_K, version: MAPPING_SET_OM_V1}
+    - {node_type: mapping_rule, node_id: MAPRULE_OM_P, version: MAPPING_SET_OM_V2}
+    - {node_type: mapping_rule, node_id: MAPRULE_OM_Q, version: MAPPING_SET_OM_V2}
+  mapping_rules:
+    - {mapping_rule_id: MAPRULE_OM_K, mapping_version: MAPPING_SET_OM_V1, determinant_identity: DETK, candidate_antibiotic: gentamicin}
+    - {mapping_rule_id: MAPRULE_OM_P, mapping_version: MAPPING_SET_OM_V2, determinant_identity: DETP, candidate_antibiotic: gentamicin}
+    - {mapping_rule_id: MAPRULE_OM_Q, mapping_version: MAPPING_SET_OM_V2, determinant_identity: DETQ, candidate_antibiotic: gentamicin}
+  edges:
+    - {case: OM_C_OMITTED_RETIRED_RULE, dep_type: positive_support, edge_type: derived_from, node_type: mapping_rule, node_id: MAPRULE_OM_K, node_version: MAPPING_SET_OM_V1}
+    - {case: OM_E_UNRELATED, dep_type: provenance_version, edge_type: derived_from, node_type: tool_version, node_id: TOOL_T, node_version: T1}
+  applicability:
+    - {case: OM_A_DECLARED_RULE, determinant_identity: DETP, candidate_antibiotic: gentamicin}
+    - {case: OM_B_OMITTED_ADDED_RULE, determinant_identity: DETQ, candidate_antibiotic: gentamicin}
+    - {case: OM_C_OMITTED_RETIRED_RULE, determinant_identity: DETK, candidate_antibiotic: gentamicin}
+    - {case: OM_D_SAME_DET_OTHER_DRUG, determinant_identity: DETQ, candidate_antibiotic: meropenem}
+change_event:
+  change_id: CHG-I22-OMITTED
+  type: MAPPING_ADDED
+  old_version: MAPPING_SET_OM_V1
+  new_version: MAPPING_SET_OM_V2
+  changed_entities:        # declared by a person, who named only rule P
+    - {node_type: mapping_rule, node_id: MAPRULE_OM_P, old_version: null, new_version: MAPPING_SET_OM_V2}
+expected:
+  required_case_ids: [OM_A_DECLARED_RULE, OM_B_OMITTED_ADDED_RULE, OM_C_OMITTED_RETIRED_RULE]
+  allowed_extra_case_ids: []
+  must_not_select_case_ids: [OM_D_SAME_DET_OTHER_DRUG, OM_E_UNRELATED]
+  # instead of selecting, the service may refuse the declaration; the refusal must name every omitted rule
+  refusal_allowed: {must_name: [MAPRULE_OM_Q, MAPRULE_OM_K]}

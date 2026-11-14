@@ -4,7 +4,7 @@ import pytest
 
 from .world import fixture_paths, load_fixture
 
-PATHS = fixture_paths()
+PATHS = fixture_paths() + fixture_paths("independent")   # the main oracle and the I-22 independent cases
 SELECTOR_AUTHORS = {"aabia", "aabiaali", "aabia ali"}
 
 
@@ -34,6 +34,9 @@ def test_fixture_is_consistent(path):
     assert {a["case"] for a in fx["world"].get("applicability", [])} <= cases
     assert {r["case"] for r in fx["world"].get("support", [])} <= cases, "support rows name unknown cases"
     assert set(expected.get("expected_effects") or {}) <= required | extra, "an expected effect needs a selected case"
+    assert set(expected.get("expected_annotations") or {}) <= required | extra, "an annotation needs a selected case"
+    if expected.get("refusal_allowed"):
+        assert expected["refusal_allowed"].get("must_name"), "an allowed refusal must say what it names"
     for kind in ("ast_evidence", "genotype_evidence"):
         assert {row["case"] for row in fx["world"].get(kind, [])} <= cases, f"{kind} rows name unknown cases"
     assert set(fx["world"].get("case_isolates") or {}) <= cases

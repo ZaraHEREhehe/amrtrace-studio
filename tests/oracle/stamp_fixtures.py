@@ -17,7 +17,7 @@ STAMPED = re.compile(r"^authored_on_base_commit:\s*[0-9a-f]{40}\b", re.M)
 
 
 def main(argv) -> int:
-    paths = sorted(FIXTURES.glob("*.yaml"))
+    paths = sorted(FIXTURES.rglob("*.yaml"))   # the main oracle folder and its subfolders (independent/, I-22)
     if "--check" in argv:
         unstamped = [p.name for p in paths if not STAMPED.search(p.read_text(encoding="utf-8"))]
         print("unstamped:", ", ".join(unstamped) if unstamped else "none")

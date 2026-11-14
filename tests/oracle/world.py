@@ -24,8 +24,9 @@ def _release_id(name) -> str:
     """None or "R1" is the baseline release; any other name is a later release of the same world."""
     return RELEASE_ID if name in (None, "R1") else f"{RELEASE_ID}_{name}"
 
-def fixture_paths() -> list[pathlib.Path]:
-    return sorted(FIXTURE_DIR.glob("*.yaml"))
+def fixture_paths(folder: str | None = None) -> list[pathlib.Path]:
+    """The main oracle fixtures, or those of one subfolder (independent/ holds the I-22 cases)."""
+    return sorted((FIXTURE_DIR / folder if folder else FIXTURE_DIR).glob("*.yaml"))
 
 
 def load_fixture(path) -> dict:
@@ -113,13 +114,18 @@ def build_world(conn, fx: dict) -> None:
         )
 
 
-def register_fixture_event(conn, fx: dict) -> str:
+def fixture_event(fx: dict) -> ChangeEvent:
+    """The change event a fixture declares, exactly as written (entities a person declared, not derived ones)."""
     spec = fx["change_event"]
-    event = ChangeEvent(
+    return ChangeEvent(
         change_id=spec["change_id"], type=spec["type"], old_version=spec["old_version"], new_version=spec["new_version"],
         changed_entities=tuple(ChangedEntity(e["node_type"], e["node_id"], e.get("old_version"), e.get("new_version"),
                                              e.get("changed_region")) for e in spec["changed_entities"]),
         declared_scope=spec.get("declared_scope") or {}, initiator=spec.get("initiator", "oracle"),
     )
+
+
+def register_fixture_event(conn, fx: dict) -> str:
+    event = fixture_event(fx)
     register_change_event(conn, event)
     return event.change_id
