@@ -63,7 +63,7 @@ test("Exports route connects to the real release selector", () => {
   );
 
   assert.match(app, /await listPublishedReleases\(\)/);
-  assert.match(app, /await loadExports\(\)/);
+  assert.match(app, /await loadExports\(id\)/);
   assert.match(app, /syncExportSelection/);
   assert.match(html, /data-view="exports"/);
   assert.match(html, /id="exports-release"/);
