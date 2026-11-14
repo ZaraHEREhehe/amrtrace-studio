@@ -187,15 +187,16 @@ def _reason(edge: dict) -> str:
     return f"{edge['dep_type']} ({edge['edge_type']}) on {edge['node_type']} {edge['node_id']}"
 
 
-# a rule that did not exist before has no old version to compare edges with
-def _is_introduced_rule(entity: dict) -> bool:
+# a rule that exists after the change, new or edited; an edited rule may keep its id but link another pair (A-20),
+# and no stored edge can point at a case for a pair the rule did not cover before
+def _rule_with_current_pair(entity: dict) -> bool:
     return (
         entity.get("node_type") == NODE_MAPPING_RULE
-        and entity.get("old_version") is None
+        and entity.get("new_version") is not None
     )
 
 
-# the cases whose recorded rule space contains the pair a newly introduced rule speaks about
+# the cases whose recorded rule space contains the pair a new or edited rule speaks about
 def _applicable_cases(
     cursor, release_id: str | None, entity: dict
 ) -> list[tuple[str, str, str]]:
@@ -219,9 +220,10 @@ def _applicable_cases(
             release_id,
         ),
     )
+    state = "new" if entity.get("old_version") is None else "edited"
     reason = (
         f"applicability ({rule['determinant_identity']}, {rule['candidate_antibiotic']}) "
-        f"for new {entity['node_type']} {entity['node_id']}"
+        f"for {state} {entity['node_type']} {entity['node_id']}"
     )
     return [(row["case_id"], row["release_id"], reason) for row in cursor.fetchall()]
 
@@ -319,7 +321,7 @@ def select_impact_detailed(
 
         if use_applicability:
             for entity in changed_entities:
-                if _is_introduced_rule(entity):
+                if _rule_with_current_pair(entity):
                     applicable_hits += _applicable_cases(cursor, named_release, entity)
                 if _is_introduced_evidence(entity):
                     owner_hits += _owner_cases(cursor, entity)
