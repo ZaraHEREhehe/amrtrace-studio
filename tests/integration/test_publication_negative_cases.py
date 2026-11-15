@@ -25,7 +25,6 @@ run_world = api_world.run_world
 client = api_world.client
 COHORT = api_world.COHORT
 
-PENDING_I23 = "pending I-23: the gate must check the persisted report for this release and its runs"
 
 
 # the release is published only if a row says so; a refused request leaves no row, a held one leaves a DRAFT
@@ -113,7 +112,6 @@ def test_failed_comparison_blocks_the_release(run_world):
 
 
 # a passing report that was never stored is missing verification, whatever its pass flag says
-@pytest.mark.xfail(strict=True, reason=PENDING_I23)
 def test_unstored_passing_report_cannot_publish(run_world):
     conn, event = run_world
     selective = draft_release(conn, event.change_id, "R_UNSTORED")
@@ -125,7 +123,6 @@ def test_unstored_passing_report_cannot_publish(run_world):
 
 
 # a passing report that names another change is a mismatched comparison and must not publish this release
-@pytest.mark.xfail(strict=True, reason=PENDING_I23)
 def test_report_for_another_change_cannot_publish(run_world):
     conn, event = run_world
     selective = draft_release(conn, event.change_id, "R_MISMATCH")

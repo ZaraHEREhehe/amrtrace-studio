@@ -8,6 +8,7 @@ from .compare import (
     GateError,
     Mismatch,
     NoSelectiveRun,
+    ReportNotBound,
     compare_with_exhaustive,
     gate_release,
     stored_report,
@@ -36,6 +37,6 @@ __all__ = [
     "CaseDiff", "CaseNotFound", "DependencyRecordView", "FieldChange", "StateSide", "VersionChange", "case_diff",
     "AlreadyCompared", "AlreadyReevaluated", "AxisResult", "ComparisonFailed", "CorrectionNotice",
     "EquivalenceReport", "GateError", "InputsMismatch", "Mismatch", "NoImpactSet", "NoSelectiveRun", "ReevalReport",
-    "ReevaluationError", "ReevaluationFailed", "compare_with_exhaustive", "gate_release", "reevaluate",
-    "stored_report",
+    "ReevaluationError", "ReevaluationFailed", "ReportNotBound", "compare_with_exhaustive", "gate_release",
+    "reevaluate", "stored_report",
 ]

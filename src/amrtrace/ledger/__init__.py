@@ -23,7 +23,7 @@ from .errors import (
     ReleaseNotFound,
     UnknownReference,
 )
-from .publication import check_publication
+from .publication import check_publication, release_binding
 from .releases import (
     ALLOWED_TRANSITIONS,
     block_release,
@@ -62,7 +62,7 @@ __all__ = [
     "ALLOWED_TRANSITIONS", "VERIFICATION_STATUSES",
     "CaseStateRecord", "Release", "BaselineState", "LoadReport", "load_baseline_release", "load_later_release",
     "LedgerError", "ReleaseNotFound", "ReleaseNotDraft", "InvalidReleaseTransition",
-    "EmptyRelease", "DuplicateState", "UnknownReference", "PublicationRefused", "check_publication",
+    "EmptyRelease", "DuplicateState", "UnknownReference", "PublicationRefused", "check_publication", "release_binding",
     "create_release", "get_release", "list_releases", "validate_release", "publish_release",
     "block_release", "fail_release",
     "append_case_state", "get_state", "get_history", "get_state_as_of", "get_current_state",
