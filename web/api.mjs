@@ -287,6 +287,25 @@ export function writeCaseCopilot(
 }
 
 
+// Review Copilot chat (I-24 / I-25): asking is read-only; saving needs a Reviewer or Admin
+export function askCaseCopilot(caseId, question, fetchImpl = globalThis.fetch) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/copilot/chat`,
+    { method: "POST", body: { question } },
+    fetchImpl,
+  );
+}
+
+
+export function saveCaseCopilotAnswer(caseId, question, fetchImpl = globalThis.fetch) {
+  return requestJson(
+    `/cases/${encodeURIComponent(caseId)}/copilot/chat/saved`,
+    { method: "POST", body: { question } },
+    fetchImpl,
+  );
+}
+
+
 export function listPublishedReleases(fetchImpl = globalThis.fetch) {
   return requestJson("/releases", {}, fetchImpl);
 }

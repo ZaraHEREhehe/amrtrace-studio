@@ -63,6 +63,11 @@ the generated label and notes. Asking writes nothing and needs no sign-in, like 
 - **Saving**: `POST /cases/{case_id}/copilot/chat/saved` (signed-in Reviewer or Admin, as for summaries) answers the
   question again on the server and stores that answer in `copilot_chat_answer` (migration 0016, append-only) with who
   saved it. Answer text sent by the browser is never stored.
+- **In the dossier (I-24)**, the Review Copilot card has an "Ask about this case" box under the summary. Each answer
+  sentence is followed by the records it cites, the generated caption is always shown with an answer (it does not
+  depend on anything in the response), and one plain line says how the answer was written (from the stored records,
+  reworded by a model, or no direct answer so the records are listed). "Save answer" is enabled only for a signed-in
+  Reviewer or Admin, after an answer is shown.
 
 ## Why it can never become evidence
 

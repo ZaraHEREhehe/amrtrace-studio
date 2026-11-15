@@ -1652,6 +1652,24 @@ tr.clickable {
   font-size: 0.85em;
   overflow-wrap: anywhere;
 }
+
+/* Review Copilot chat (I-24): a question box under the summary, answers labelled as generated */
+.copilot-chat {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.copilot-chat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.copilot-chat-row input {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
 /* Z-18: identity controls are additive; existing page layout stays intact. */
 .auth-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .auth-topbar #auth-identity { font-size: 0.85rem; opacity: 0.85; }
