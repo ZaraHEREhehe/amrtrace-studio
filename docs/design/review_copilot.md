@@ -42,6 +42,28 @@ Only stored records, all of which the dossier already shows:
 - The dossier shows it in its own card, "Review Copilot (generated)", below Before / after, each sentence followed by
   the records it came from. It loads on its own, so a problem with it never hides the evidence panels.
 
+## Chat: questions about one case (I-25)
+
+`POST /cases/{case_id}/copilot/chat` with `{"question": "..."}` answers one question from the case's stored records
+(`copilot/chat.py`). The response follows the contract agreed for I-24 and I-25:
+`{"answer": [{"text", "source_ids"}], "sources": [{"id", "kind", "label"}], "generated": true, "mode": ...}`, plus
+the generated label and notes. Asking writes nothing and needs no sign-in, like a `GET`.
+
+- **Retrieval** reads only the selected case's records: the before/after comparison, its current dependency subgraph
+  (A-10), the evidence rows that subgraph reads, the change that produced its state, and its review status. Each
+  becomes one or more template sentences that name their records; a source id is `kind:id` (a dependency record is
+  `dependency:<release>:<node type>:<node id>`).
+- **`template`**: the question names a topic (why it changed, evidence, rules, versions, review, which change), and
+  the sentences on that topic are the answer. A configured model may reword them under the I-19 rule: a sentence
+  that loses or adds an identifier or number goes back to its template. The mode is then `local` or `hosted`.
+- **`local` / `hosted`**: no topic matched and a model is configured (same order as D-27: Ollama, then Groq). The
+  model gets the numbered records only and must cite them. A sentence is kept only if it cites records that exist
+  and every identifier and number in it appears in those records; the rest are dropped and the notes say how many.
+- **`records_only`**: no topic matched and no model answered. The answer is the retrieved records themselves.
+- **Saving**: `POST /cases/{case_id}/copilot/chat/saved` (signed-in Reviewer or Admin, as for summaries) answers the
+  question again on the server and stores that answer in `copilot_chat_answer` (migration 0016, append-only) with who
+  saved it. Answer text sent by the browser is never stored.
+
 ## Why it can never become evidence
 
 - No engine package (evaluator, deps, ledger, changes, reeval, ingest, interpretation, policies, triage, monitor)
@@ -49,7 +71,8 @@ Only stored records, all of which the dossier already shows:
   (`tests/unit/test_copilot.py`).
 - The chain test stores summaries full of false claims, hides their table, and runs selection, selective
   re-evaluation, the exhaustive comparison and the release gate: it still passes, so no step read the table
-  (`tests/integration/test_review_copilot.py`).
+  (`tests/integration/test_review_copilot.py`). The chat has the same test for saved answers and their table
+  (`tests/integration/test_copilot_chat.py`).
 - Every sentence's sources are checked to exist in the database, and the templates are checked with the network
   switched off (same file).
 
