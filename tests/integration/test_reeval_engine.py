@@ -1,5 +1,6 @@
 """I-09: selective re-evaluation appends new states for the impact set only, and a failure leaves nothing partial."""
 
+import dataclasses
 import pathlib
 
 import psycopg
@@ -16,6 +17,7 @@ from amrtrace.ledger import (
     get_current_state,
     get_history,
     publish_release,
+    release_binding,
     validate_release,
 )
 from amrtrace.reeval import (
@@ -103,12 +105,19 @@ def run(conn, release_id="REL2", **overrides):
 def publish_after_a_passing_comparison(conn, report):
     """Store a passing comparison for the run's release, then publish it: since I-21 the only way a change release
     is published. The real comparator is tested in test_reeval_compare.py; here the fake evaluator would make it
-    re-evaluate C and D too, so a passing row is written directly."""
+    re-evaluate C and D too, so a passing row is written directly, bound to the release the way the comparator binds
+    it (I-23): a complete exhaustive run and what the release held when it was compared."""
+    exhaustive = "EXH-" + report.run_id
+    conn.execute(
+        "INSERT INTO reeval_run (run_id, change_id, mode, status, selected_count, reevaluated_count, release_id, "
+        "started_at, finished_at) VALUES (%s, 'CHG-1', 'EXHAUSTIVE', 'COMPLETE', 4, 4, %s, now(), now())",
+        (exhaustive, report.release_id))
+    binding = {**release_binding(conn, report.release_id), "versions": dataclasses.asdict(VERSIONS)}
     conn.execute(
         "INSERT INTO equivalence_report (change_id, selective_run_id, exhaustive_run_id, release_id, passed, "
         "total_cases, selected, affected, missed, state_mismatches, uncertainty_mismatches, dependency_mismatches, "
-        "report) VALUES ('CHG-1', %s, %s, %s, true, 4, 2, 1, 0, 0, 0, 0, '{}')",
-        (report.run_id, "EXH-" + report.run_id, report.release_id))
+        "report) VALUES ('CHG-1', %s, %s, %s, true, 4, 2, 1, 0, 0, 0, 0, %s)",
+        (report.run_id, exhaustive, report.release_id, Jsonb({"binding": binding})))
     validate_release(conn, report.release_id)
     publish_release(conn, report.release_id)
 

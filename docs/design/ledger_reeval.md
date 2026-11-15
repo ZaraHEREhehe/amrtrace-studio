@@ -128,6 +128,18 @@ that evaluated every case) are not selective results and are not checked. So `re
 command and `POST /changes/{id}/reevaluate` always leave the release a DRAFT, and asking the engine to publish fails the
 run with nothing written.
 
+**The gate is bound to the stored report (I-23).** The comparator stores a `binding` with each report (inside the
+report's jsonb, so no migration): what the release held when it was compared (its number of states and newest state
+id, its dependency and applicability rows, and the published releases it was compared against) and the versions it
+was evaluated under. Before publishing, `check_publication()` reads the newest stored report for the release and
+refuses it unless its selective run is the COMPLETE selective run of this change that wrote this release, its
+exhaustive run is a COMPLETE exhaustive run of this change for this release, the release still matches the binding,
+and the versions agree with the release's version vector. `gate_release()` also refuses a passing report object that
+is not the row stored for its exhaustive run, or not the newest stored for its release (`ReportNotBound`, a
+`GateError`), so a report built or changed in memory cannot publish. A failing report may still block a release
+without being stored: blocking can only hold a release back. A report stored before I-23 has no binding, so a DRAFT
+release that waits on one must be compared again.
+
 Two comparison rules are deliberate:
 
 - **Carried-forward cases are compared with two things set aside:** the provenance records, and the version label of

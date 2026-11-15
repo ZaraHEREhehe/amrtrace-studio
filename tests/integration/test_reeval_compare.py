@@ -16,7 +16,7 @@ from amrtrace.deps.materialize import materialize
 from amrtrace.deps.selector import ImpactSelection, select_impact_detailed
 from amrtrace.evaluator import constants as c
 from amrtrace.evaluator.types import CaseInputs, DependencyRecord, EvalResult, VersionVector
-from amrtrace.ledger import get_current_state
+from amrtrace.ledger import append_case_state, create_release, get_current_state
 from amrtrace.ledger.load_release import BaselineState, load_baseline_release
 from amrtrace.reeval import (
     AlreadyCompared,
@@ -24,6 +24,7 @@ from amrtrace.reeval import (
     GateError,
     InputsMismatch,
     NoSelectiveRun,
+    ReportNotBound,
     compare_with_exhaustive,
     gate_release,
     reevaluate,
@@ -549,6 +550,78 @@ def test_gating_a_published_release_is_refused(world):
     selective(world, publish=True)
     with pytest.raises(GateError):
         gate_release(world, compare(world, store=False))
+
+
+# ---------- I-23: the gate is bound to the stored report ----------
+
+def release_status(conn, release_id="R2"):
+    return conn.execute("SELECT status FROM release WHERE release_id = %s", (release_id,)).fetchone()[0]
+
+
+def test_a_stored_report_records_what_it_compared(selected):
+    compare(selected)
+    binding = stored_report(selected, "CHG-I")["binding"]
+    assert (binding["states"], binding["dependency_rows"], binding["compared_against"]) == (3, 9, ["R1"])
+    assert binding["versions"]["interpretation_version"] == "T2"
+
+
+def test_a_report_that_was_never_stored_cannot_gate(selected):
+    report = compare(selected, store=False)
+    assert report.passed
+    with pytest.raises(ReportNotBound, match="no stored report"):
+        gate_release(selected, report)
+    assert release_status(selected) == "DRAFT"
+
+
+def test_a_report_for_another_release_is_refused(selected):
+    report = compare(selected)
+    selected.execute("INSERT INTO change_event (change_id, type, initiator) VALUES ('CHG-X', 'X', 'tester')")
+    create_release(selected, "R9", {"interpretation_version": "T2"}, triggered_by_change_id="CHG-X")
+    append_case_state(selected, case_id="C2", release_id="R9", state_code=S, explanation={},
+                      verification_status="EVALUATED")
+    with pytest.raises(ReportNotBound, match="release 'R2' stored, 'R9' given"):
+        gate_release(selected, dataclasses.replace(report, release_id="R9"))
+    assert (release_status(selected, "R9"), release_status(selected)) == ("DRAFT", "DRAFT")
+
+
+def test_a_failing_report_altered_to_pass_is_refused(buggy):
+    report = compare(buggy)
+    assert not report.passed
+    with pytest.raises(ReportNotBound, match="result False stored, True given"):
+        gate_release(buggy, dataclasses.replace(report, passed=True))
+    assert release_status(buggy) == "DRAFT"
+    assert gate_release(buggy, report) == "BLOCKED"                    # the stored result still decides
+
+
+def test_a_report_naming_another_selective_run_is_refused(selected):
+    report = compare(selected)
+    with pytest.raises(ReportNotBound, match="selective run"):
+        gate_release(selected, dataclasses.replace(report, selective_run_id="RUN-OTHER"))
+    assert release_status(selected) == "DRAFT"
+
+
+def test_a_report_is_stale_once_a_newer_one_is_stored_for_the_release(selected):
+    report = compare(selected)
+    insert_report(selected, change_id="CHG-I", release_id="R2", exhaustive_run_id="E-LATER", passed=False,
+                  state_mismatches=1)
+    with pytest.raises(ReportNotBound, match="stale"):
+        gate_release(selected, report)
+    assert release_status(selected) == "DRAFT"
+
+
+def test_a_report_is_stale_once_the_release_changed_after_the_comparison(selected):
+    report = compare(selected)
+    append_case_state(selected, case_id="C2", release_id="R2", state_code=R, explanation={},
+                      verification_status="STATE_CHANGED")          # written after the comparison, never compared
+    with pytest.raises(ReportNotBound, match=r"changed after it was compared \(states, last_state_id\)"):
+        gate_release(selected, report)
+    assert release_status(selected) == "DRAFT"                       # not even VALIDATED: the gate is all or nothing
+
+
+def test_a_correctly_bound_report_publishes(selected):
+    report = compare(selected)
+    assert gate_release(selected, report) == "PUBLISHED"
+    assert release_status(selected) == "PUBLISHED"
 
 
 # ---------- the report table ----------

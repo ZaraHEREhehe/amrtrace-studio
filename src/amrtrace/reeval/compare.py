@@ -25,6 +25,11 @@ where "really affects" means the exhaustive result differs from the case's state
 Generic like the engine (ADR-001): the caller supplies inputs_for and evaluate, and this module never imports the
 ingest package. The comparator writes no states and no dependency rows. It records an EXHAUSTIVE run in reeval_run and
 one row in equivalence_report; gate_release then publishes or blocks the DRAFT release from the result.
+
+The gate trusts the database, not the report object it is handed (I-23): the report must be the one stored for its
+exhaustive run, and the newest stored for its release, and publishing then checks that the stored report is still
+bound to the release (ledger.publication). The stored row carries a "binding": what the release looked like when it
+was compared, and the versions it was compared under.
 """
 
 from __future__ import annotations
@@ -46,6 +51,8 @@ from amrtrace.changes.events import get_change_event
 from amrtrace.changes.service import get_impact_set
 from amrtrace.evaluator import constants as c
 from amrtrace.evaluator.types import CaseInputs, EvalResult, VersionVector
+from amrtrace.ledger.errors import PublicationRefused
+from amrtrace.ledger.publication import release_binding
 from amrtrace.ledger.releases import block_release, get_release, publish_release, validate_release
 
 from .engine import (
@@ -85,7 +92,12 @@ class ComparisonFailed(ReevaluationError):
 
 
 class GateError(ReevaluationError):
-    """The release cannot be gated (it is not a DRAFT)."""
+    """The release cannot be gated (it is not a DRAFT, or the report is not the one stored for it)."""
+
+
+class ReportNotBound(GateError):
+    """The report handed to the gate is not the stored, newest report for its release and runs, or the stored report
+    no longer describes the release (I-23)."""
 
 
 @dataclass(frozen=True)
@@ -344,7 +356,7 @@ def compare_with_exhaustive(
             )
             report = _with_seconds(report, time.monotonic() - started)
             if store:
-                _store_report(conn, report)
+                _store_report(conn, report, versions)
                 _finish_run(conn, run_id, "COMPLETE", reevaluated=len(universe), release_id=release_id, error=None)
     except Exception as exc:
         if store:
@@ -454,8 +466,12 @@ def _compare(
 
 # ---------- storing the report ----------
 
-def _store_report(conn, report: EquivalenceReport) -> None:
+def _store_report(conn, report: EquivalenceReport, versions: VersionVector) -> None:
     by_axis = {a.axis: a.mismatched for a in report.axes}
+    body = report.to_json()
+    if report.release_id is not None:
+        # what was compared, so the gate can tell later whether this report still describes the release (I-23)
+        body["binding"] = {**release_binding(conn, report.release_id), "versions": asdict(versions)}
     conn.execute(
         "INSERT INTO equivalence_report (change_id, selective_run_id, exhaustive_run_id, release_id, passed, "
         "total_cases, selected, affected, missed, state_mismatches, uncertainty_mismatches, dependency_mismatches, "
@@ -464,7 +480,7 @@ def _store_report(conn, report: EquivalenceReport) -> None:
             report.change_id, report.selective_run_id, report.exhaustive_run_id, report.release_id, report.passed,
             report.total_cases, report.selected, report.affected, report.missed,
             by_axis[AXIS_STATE], by_axis[AXIS_UNCERTAINTY], by_axis[AXIS_DEPENDENCY],
-            Jsonb(report.to_json()),
+            Jsonb(body),
         ),
     )
 
@@ -483,7 +499,10 @@ def gate_release(conn, report: EquivalenceReport) -> str:
     """Act on the result: a passing report validates and publishes the DRAFT release, a failing one blocks it.
 
     Returns "PUBLISHED", "BLOCKED", or "NONE" when the change wrote no release (nothing to publish or block; a
-    failing report is then simply a failing report). Refuses a release that is not a DRAFT.
+    failing report is then simply a failing report). Refuses a release that is not a DRAFT. A passing report must be
+    the stored, newest one for its release and runs (I-23, ReportNotBound), and publishing checks the stored report
+    against the release once more (ledger.check_publication); if that refuses, nothing changes and ReportNotBound is
+    raised. A failing report blocks the release whether or not it was stored: blocking can only hold a release back.
     """
     if report.release_id is None:
         return "NONE"
@@ -491,8 +510,42 @@ def gate_release(conn, report: EquivalenceReport) -> str:
     if status != "DRAFT":
         raise GateError(f"release {report.release_id} is {status}; only a DRAFT release can be gated")
     if report.passed:
-        validate_release(conn, report.release_id)
-        publish_release(conn, report.release_id)
-        return "PUBLISHED"
-    block_release(conn, report.release_id)
-    return "BLOCKED"
+        # only publishing needs the stored report; blocking is the safe direction and any failing result may block
+        _require_stored(conn, report)
+    try:
+        with atomic(conn):
+            if report.passed:
+                validate_release(conn, report.release_id)
+                publish_release(conn, report.release_id)
+                return "PUBLISHED"
+            block_release(conn, report.release_id)
+            return "BLOCKED"
+    except PublicationRefused as exc:
+        raise ReportNotBound(str(exc)) from exc
+
+
+def _require_stored(conn, report: EquivalenceReport) -> None:
+    """The report must be the row stored for its exhaustive run, and the newest stored for its release."""
+    row = conn.execute(
+        "SELECT report_id, change_id, selective_run_id, release_id, passed FROM equivalence_report "
+        "WHERE exhaustive_run_id = %s",
+        (report.exhaustive_run_id,),
+    ).fetchone()
+    if row is None:
+        raise ReportNotBound(
+            f"no stored report for exhaustive run {report.exhaustive_run_id}; only a stored comparison can gate "
+            f"release {report.release_id} (compare with store=True, or compare_change --commit)"
+        )
+    report_id, *stored = row
+    held = [report.change_id, report.selective_run_id, report.release_id, report.passed]
+    if stored != held:
+        fields = ("change", "selective run", "release", "result")
+        differing = [f"{name} {s!r} stored, {h!r} given" for name, s, h in zip(fields, stored, held) if s != h]
+        raise ReportNotBound(f"the report does not match stored report {report_id}: {'; '.join(differing)}")
+    newest = conn.execute(
+        "SELECT max(report_id) FROM equivalence_report WHERE release_id = %s", (report.release_id,)
+    ).fetchone()[0]
+    if newest != report_id:
+        raise ReportNotBound(
+            f"report {report_id} is stale: report {newest} was stored for release {report.release_id} after it"
+        )
