@@ -295,6 +295,60 @@ def test_selective_and_exhaustive_run_through_http(
     assert client.get("/runs", params={"change_id": "NO_SUCH_CHANGE"}).json() == []
 
 
+def _release_status(conn, release_id):
+    return conn.execute(
+        "SELECT status FROM release WHERE release_id = %s", (release_id,)
+    ).fetchone()[0]
+
+
+# I-21: the publication rule holds on the API route too
+def test_a_selective_only_run_through_http_leaves_the_release_a_draft(
+    client,
+    run_world,
+):
+    conn, event = run_world
+
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={
+            "release_id": "R3_HELD",
+            "run_exhaustive": False,
+            "gate": False,
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["selective_run"]["status"] == "COMPLETE"
+    assert body["equivalence"] is None
+    assert _release_status(conn, "R3_HELD") == "DRAFT"
+    # nothing became current: the newest published release is still R2
+    assert conn.execute(
+        "SELECT count(*) FROM case_state s JOIN release r USING (release_id) "
+        "WHERE r.status = 'PUBLISHED' AND s.release_id = 'R3_HELD'"
+    ).fetchone()[0] == 0
+
+
+def test_an_exhaustive_run_without_the_gate_stores_the_report_and_holds_the_release(
+    client,
+    run_world,
+):
+    conn, event = run_world
+
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={
+            "release_id": "R3_UNGATED",
+            "run_exhaustive": True,
+            "gate": False,
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["equivalence"]["passed"] is True
+    assert _release_status(conn, "R3_UNGATED") == "DRAFT"
+
+
 def test_unknown_run_is_structured_404(
     client,
 ):

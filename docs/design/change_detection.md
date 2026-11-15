@@ -111,7 +111,7 @@ A draft says which rows changed; re-evaluating it needs the new values. Three co
 
 ```
 python -m amrtrace.ingest.load_evidence_version --old data/raw --old-manifest data/manifest/sha256.txt --new data/snapshots/AMRTRACE_RAW_V2 --commit
-python -m amrtrace.ingest.reevaluate_change --change-id <applied change> --release-id <new release> --hold --commit
+python -m amrtrace.ingest.reevaluate_change --change-id <applied change> --release-id <new release> --commit
 python -m amrtrace.ingest.compare_change --change-id <applied change> --commit --gate
 ```
 

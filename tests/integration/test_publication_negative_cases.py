@@ -25,7 +25,6 @@ run_world = api_world.run_world
 client = api_world.client
 COHORT = api_world.COHORT
 
-PENDING_I21 = "pending I-21: one publication guard for the API, the CLI and the engine default"
 PENDING_I23 = "pending I-23: the gate must check the persisted report for this release and its runs"
 
 
@@ -57,7 +56,6 @@ def handmade_report(selective, *, passed, change_id=None, release_id=None):
 
 
 # both flags are explicit: with only run_exhaustive=false the default gate=true is refused and the bypass is not reached
-@pytest.mark.xfail(strict=True, reason=PENDING_I21)
 def test_api_selective_only_run_does_not_publish(client, run_world):
     conn, event = run_world
     response = client.post(
@@ -82,7 +80,6 @@ def test_api_request_without_explicit_gate_is_refused_before_any_run(client, run
 
 
 # the engine called with its defaults has had no comparison at all, so its release must not be published
-@pytest.mark.xfail(strict=True, reason=PENDING_I21)
 def test_engine_default_does_not_publish_without_a_comparison(run_world):
     conn, event = run_world
     context = run_context(conn, event.change_id)
@@ -95,7 +92,6 @@ def test_engine_default_does_not_publish_without_a_comparison(run_world):
 
 
 # the CLI's function without --hold is the same missing comparison, reached from the command line
-@pytest.mark.xfail(strict=True, reason=PENDING_I21)
 def test_cli_default_does_not_publish_without_a_comparison(run_world):
     conn, event = run_world
     tables = read_frozen_tables(COHORT)

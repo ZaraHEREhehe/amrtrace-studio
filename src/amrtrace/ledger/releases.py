@@ -22,6 +22,7 @@ from .errors import (
     UnknownReference,
 )
 from ._tx import atomic
+from .publication import check_publication
 from .models import Release
 
 # Mirrors guard_release_update() in db/migrations/0004_release_lifecycle_guards.sql
@@ -122,9 +123,13 @@ def publish_release(conn, release_id: str, *, baseline: bool = False) -> Release
     Normal releases must be VALIDATED first, so that a release that failed the equivalence gate can never
     be published by mistake. A baseline release (the first one, loaded from the frozen data and compared
     against nothing) passes baseline=True to publish straight from DRAFT.
+
+    Every route that publishes ends here, so the publication rule is checked here, once (I-21): a release written
+    by a change needs a passing comparison stored for it, whatever the caller asked for (check_publication).
     """
     release = get_release(conn, release_id)
     _require_transition(release, "PUBLISHED")
+    check_publication(conn, release_id)
     if release.status == "DRAFT" and not baseline:
         raise InvalidReleaseTransition(
             f"release {release_id!r} is DRAFT: validate it first (or pass baseline=True for the first release)"

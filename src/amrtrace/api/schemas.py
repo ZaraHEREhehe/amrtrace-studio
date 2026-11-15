@@ -180,6 +180,9 @@ class ChangeApplicationView(BaseModel):
     entities_derived: bool
 
 class ReevaluationRequest(BaseModel):
+    """A run never publishes on its own (I-21): the release stays a DRAFT unless run_exhaustive and gate are both
+    set and the comparison passes. gate without run_exhaustive is refused (422)."""
+
     release_id: str = Field(min_length=1)
     run_exhaustive: bool = True
     gate: bool = True

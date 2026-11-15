@@ -120,6 +120,14 @@ after the selective run, on the three axes. It records the exhaustive run as a r
 report in `equivalence_report` (migration 0008, append-only). `gate_release()` publishes a DRAFT release if the report
 passes and blocks it if not; it refuses to act on a release that is not a DRAFT.
 
+**One publication guard (I-21).** Every route that publishes ends in `publish_release()`, and that function first calls
+`check_publication()` (`ledger/publication.py`). A release that names a triggering change is refused with
+`PublicationRefused` unless the latest stored comparison of that release by that change passed. A comparison stored for
+another release or by another change counts as missing. Releases that no change wrote (a baseline, or a full release
+that evaluated every case) are not selective results and are not checked. So `reevaluate()`, the `reevaluate_change`
+command and `POST /changes/{id}/reevaluate` always leave the release a DRAFT, and asking the engine to publish fails the
+run with nothing written.
+
 Two comparison rules are deliberate:
 
 - **Carried-forward cases are compared with two things set aside:** the provenance records, and the version label of

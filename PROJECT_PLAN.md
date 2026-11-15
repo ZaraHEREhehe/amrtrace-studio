@@ -40,7 +40,7 @@
 2. **Never encode "no determinant detected" as "susceptible."** Absence of a mapping is not absence of all mechanisms.
 3. **Unresolved is a first-class state,** never forced to a binary outcome.
 4. **Evaluator is a pure, deterministic function:** no I/O, no clock, no randomness, no unordered iteration affecting output.
-5. **Selective re-evaluation must equal exhaustive recomputation** across state, dependency explanation, and uncertainty. A mismatch blocks release.
+5. **Selective re-evaluation must equal exhaustive recomputation** across state, dependency explanation, and uncertainty. A mismatch blocks release. A release written by a change is published only after a passing comparison of that release is stored; `publish_release` enforces this for every route (I-21).
 6. **Error asymmetry:** if reachability is uncertain, over-select. Recall is 100% required. Precision is reported, never traded against recall.
 7. **Re-verified is not the same as state changed.** A selected case whose state is unchanged must still get a new ledger entry marked `RE_VERIFIED_UNCHANGED` under the new versions.
 8. **No clinical claims, no causal claims.** Never describe a determinant as the "cause" of a discordance.
@@ -1025,7 +1025,7 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | 63 | G-09 visuals | Zara | TODO | | |
 | 64 | Z-20 | Zara | TODO | | Could |
 | 65 | G-11 | Insharah | TODO | | |
-| R01 | I-21 | Insharah | TODO | Issue #164 | One publication guard for every route (AMR-001/021, T23). Remove the A-19 xfail markers that this fix makes pass. |
+| R01 | I-21 | Insharah | IN-REVIEW | I-21 PR (closes #164) | R01 review follow-up (AMR-001/021, rule 5). One publication guard: `ledger/publication.py` `check_publication`, called by `publish_release`, refuses a release that names a triggering change unless the latest stored comparison of that release by that change passed (`PublicationRefused`). The engine, the `reevaluate_change` command and `POST /changes/{id}/reevaluate` now always leave the release a DRAFT; only the gate after a stored, passing comparison publishes it. `--hold` is accepted but no longer needed. Tests: `tests/integration/test_publication_guard.py` (missing, other release, other change, failed, latest decides, passing), engine refusal in `test_reeval_engine.py`, API selective-only and ungated runs in `test_api_reevaluation.py`; the three A-19 negative cases for the API, CLI and engine default (`tests/integration/test_publication_negative_cases.py`) now pass and their xfail markers are removed; older tests that published directly now gate through a stored comparison |
 | R01 | I-23 | Insharah | TODO | Issue #166 | Gate bound to the persisted comparison report (AMR-012, T25). Remove the A-19 xfail markers that this fix makes pass. |
 | R01 | I-24 | Insharah | TODO | Issue #167 | Review Copilot chat panel (extends I-19). |
 | R01 | I-25 | Insharah | TODO | Issue #168 | Review Copilot chat: retrieval and answers (RAG backend, extends I-19). |

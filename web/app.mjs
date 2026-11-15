@@ -1410,8 +1410,8 @@ async function submitReevaluation(event) {
         make("div", {
           className: "empty-state",
           text:
-            "Selective run completed without an exhaustive " +
-            "equivalence comparison.",
+            "Selective run completed. The new release stays a draft " +
+            "until an exhaustive comparison passes.",
         }),
       );
     }
