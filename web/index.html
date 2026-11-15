@@ -447,6 +447,20 @@
             <p id="dossier-copilot-caption" class="muted"></p>
             <div id="dossier-copilot-status" class="status" aria-live="polite" hidden></div>
             <ol id="dossier-copilot" class="copilot-sentences"></ol>
+
+            <form id="dossier-chat-form" class="copilot-chat" autocomplete="off">
+              <label for="dossier-chat-question">Ask about this case</label>
+              <div class="copilot-chat-row">
+                <input id="dossier-chat-question" name="question" type="text" maxlength="500"
+                       placeholder="For example: why did this case change?">
+                <button id="dossier-chat-ask" class="button button-primary" type="submit">Ask</button>
+                <button id="dossier-chat-save" class="button" type="button" disabled>Save answer</button>
+              </div>
+            </form>
+            <p id="dossier-chat-caption" class="muted"></p>
+            <div id="dossier-chat-status" class="status" aria-live="polite" hidden></div>
+            <p id="dossier-chat-mode" class="muted"></p>
+            <ol id="dossier-chat-answer" class="copilot-sentences"></ol>
           </section>
 
           <section class="card">
