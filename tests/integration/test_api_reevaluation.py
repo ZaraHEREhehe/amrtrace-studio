@@ -295,6 +295,60 @@ def test_selective_and_exhaustive_run_through_http(
     assert client.get("/runs", params={"change_id": "NO_SUCH_CHANGE"}).json() == []
 
 
+def _release_status(conn, release_id):
+    return conn.execute(
+        "SELECT status FROM release WHERE release_id = %s", (release_id,)
+    ).fetchone()[0]
+
+
+# I-21: the publication rule holds on the API route too
+def test_a_selective_only_run_through_http_leaves_the_release_a_draft(
+    client,
+    run_world,
+):
+    conn, event = run_world
+
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={
+            "release_id": "R3_HELD",
+            "run_exhaustive": False,
+            "gate": False,
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["selective_run"]["status"] == "COMPLETE"
+    assert body["equivalence"] is None
+    assert _release_status(conn, "R3_HELD") == "DRAFT"
+    # nothing became current: the newest published release is still R2
+    assert conn.execute(
+        "SELECT count(*) FROM case_state s JOIN release r USING (release_id) "
+        "WHERE r.status = 'PUBLISHED' AND s.release_id = 'R3_HELD'"
+    ).fetchone()[0] == 0
+
+
+def test_an_exhaustive_run_without_the_gate_stores_the_report_and_holds_the_release(
+    client,
+    run_world,
+):
+    conn, event = run_world
+
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={
+            "release_id": "R3_UNGATED",
+            "run_exhaustive": True,
+            "gate": False,
+        },
+    )
+
+    assert response.status_code == 201
+    assert response.json()["equivalence"]["passed"] is True
+    assert _release_status(conn, "R3_UNGATED") == "DRAFT"
+
+
 def test_unknown_run_is_structured_404(
     client,
 ):
@@ -348,3 +402,91 @@ def test_run_without_report_is_explicit_404(
     assert response.json()["error_code"] == (
         "equivalence_not_found"
     )
+
+
+def _publish_z22_identity_release(client, event):
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={"release_id": "R_Z22_ID", "run_exhaustive": True, "gate": True},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["equivalence"]["gate_status"] == "PUBLISHED"
+    return response.json()
+
+
+def _insert_mismatched_identity_report(conn, event, *, release_id, run_id):
+    """Corrupt one report row only in an isolated, auto-dropped test database.
+
+    Real production reports are append-only and must not be edited. The
+    schema intentionally omits FKs on report run references; this probes the
+    read-side guard without changing release or run records.
+    """
+    conn.execute(
+        """
+        INSERT INTO equivalence_report (
+            change_id, selective_run_id, exhaustive_run_id, release_id,
+            passed, total_cases, selected, affected, missed,
+            state_mismatches, uncertainty_mismatches, dependency_mismatches,
+            report
+        )
+        SELECT change_id, selective_run_id, %s, %s,
+               passed, total_cases, selected, affected, missed,
+               state_mismatches, uncertainty_mismatches, dependency_mismatches,
+               jsonb_set(report, '{release_id}', to_jsonb(%s::text))
+        FROM equivalence_report
+        WHERE change_id = %s
+        ORDER BY report_id DESC
+        LIMIT 1
+        """,
+        (run_id, release_id, release_id, event.change_id),
+    )
+
+
+def test_release_identity_real_database_reports_completed_published_run(
+    client, run_world,
+):
+    conn, event = run_world
+    body = _publish_z22_identity_release(client, event)
+    response = client.get("/releases/R_Z22_ID/identity")
+
+    assert response.status_code == 200, response.text
+    identity = response.json()
+    assert identity["release_id"] == "R_Z22_ID"
+    assert identity["change_id"] == event.change_id
+    assert identity["comparison_passed"] is True
+    assert identity["report_id"] > 0
+    assert identity["selective_run_id"] == body["selective_run"]["run_id"]
+    assert identity["exhaustive_run_id"] == body["equivalence"]["exhaustive_run_id"]
+    assert conn.execute("SELECT count(*) FROM equivalence_report").fetchone()[0] == 1
+
+
+def test_release_identity_real_database_rejects_corrupt_comparison(
+    client, run_world,
+):
+    conn, event = run_world
+    _publish_z22_identity_release(client, event)
+    # Store a second, internally inconsistent report for the exact release;
+    # because it is the newest exact match, the endpoint must reject it.
+    _insert_mismatched_identity_report(
+        conn, event, release_id="R_Z22_ID", run_id="RUN-Z22-CORRUPT",
+    )
+    response = client.get("/releases/R_Z22_ID/identity")
+    assert response.status_code == 409
+    assert response.json()["error_code"] == "comparison_identity_mismatch"
+
+
+def test_release_identity_real_database_prefers_exact_release_over_other(
+    client, run_world,
+):
+    conn, event = run_world
+    _publish_z22_identity_release(client, event)
+    # A legacy/imported row for a different release and the same change ID
+    # should not mask the legitimate published release's own report.
+    _insert_mismatched_identity_report(
+        conn, event, release_id="R_OTHER", run_id="RUN-Z22-FOREIGN",
+    )
+    response = client.get("/releases/R_Z22_ID/identity")
+    assert response.status_code == 200, response.text
+    assert response.json()["release_id"] == "R_Z22_ID"
+    assert response.json()["comparison_passed"] is True
+

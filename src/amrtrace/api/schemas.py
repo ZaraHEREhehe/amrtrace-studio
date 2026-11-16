@@ -180,6 +180,9 @@ class ChangeApplicationView(BaseModel):
     entities_derived: bool
 
 class ReevaluationRequest(BaseModel):
+    """A run never publishes on its own (I-21): the release stays a DRAFT unless run_exhaustive and gate are both
+    set and the comparison passes. gate without run_exhaustive is refused (422)."""
+
     release_id: str = Field(min_length=1)
     run_exhaustive: bool = True
     gate: bool = True
@@ -485,6 +488,38 @@ class CopilotSummaryView(BaseModel):
     created_at: Optional[datetime] = None
     sentences: list[CopilotSentenceView]
     notes: list[str] = Field(default_factory=list)
+
+
+class CopilotChatRequest(BaseModel):
+    # I-25 / I-24 agreed contract: {"question": "..."}
+    question: str = Field(min_length=1, max_length=500)
+
+
+class CopilotChatSentenceView(BaseModel):
+    text: str
+    source_ids: list[str]
+
+
+class CopilotChatSourceView(BaseModel):
+    id: str
+    kind: str
+    label: str
+
+
+class CopilotChatView(BaseModel):
+    """The agreed contract (answer, sources, generated, mode) plus the label, notes and what was asked."""
+
+    case_id: str
+    question: str
+    answer: list[CopilotChatSentenceView]
+    sources: list[CopilotChatSourceView]
+    generated: Literal[True] = True
+    mode: Literal["template", "local", "hosted", "records_only"]
+    label: str
+    notes: list[str] = Field(default_factory=list)
+    stored: bool = False
+    answer_id: Optional[int] = None
+    created_at: Optional[datetime] = None
 
 
 class CopilotRequest(BaseModel):

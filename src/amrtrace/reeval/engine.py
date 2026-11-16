@@ -176,15 +176,16 @@ def reevaluate(
     inputs_for: Callable[[list[str]], Iterable[CaseInputs]],
     evaluate: Callable[[CaseInputs, VersionVector], EvalResult],
     materialize: Callable = default_materialize,
-    publish: bool = True,
+    publish: bool = False,
     run_id: str | None = None,
     batch_size: int = 2000,
 ) -> ReevalReport:
     """Re-evaluate the cases in the change's stored impact set and store the result as release `release_id`.
 
     version_vector is the new release's version vector (stored on the release) and versions is the same thing as the
-    evaluator's VersionVector. With publish=False the release stays a DRAFT, so a comparison can run before it is
-    published (task I-10). Raises NoImpactSet or AlreadyReevaluated before touching anything, and ReevaluationFailed
+    evaluator's VersionVector. The release stays a DRAFT (the default since I-21), so the exhaustive comparison can
+    run and gate_release can publish it. publish=True asks to publish at once; the publication rule refuses that
+    (ledger.check_publication: no comparison is stored yet), so the run fails and nothing is published. Raises NoImpactSet or AlreadyReevaluated before touching anything, and ReevaluationFailed
     (after recording the FAILED run) for any failure while working.
     """
     started = time.monotonic()

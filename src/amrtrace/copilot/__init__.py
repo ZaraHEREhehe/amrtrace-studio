@@ -1,4 +1,4 @@
-"""Review Copilot (task I-19, D-27): a plain-language summary of why a case changed.
+"""Review Copilot (tasks I-19 and I-25, D-27): a plain-language summary of why a case changed, and answers to questions.
 
 Built only from stored records (the before/after diff, the dependency records, the evidence rows, the change event and
 the review status); templates first, then an optional language model that may only reword them. Every sentence names
@@ -6,6 +6,7 @@ the stored records it came from. The output is labelled as generated and stored 
 evidence and never an input to state assignment (rule 9).
 """
 
+from .chat import ChatAnswer, SavedAnswer, answer_question, retrieve, save_answer
 from .language_model import HostedRewriter, LocalRewriter, Rewriter, keeps_facts, reword, rewriters_from_env
 from .sources import SourceRef, source_exists
 from .store import StoredSummary, latest_summary, store_summary
@@ -16,7 +17,8 @@ GENERATED_LABEL = (
 )
 
 __all__ = [
-    "GENERATED_LABEL", "TEMPLATE_VERSION", "CopilotSummary", "HostedRewriter", "LocalRewriter", "Rewriter",
+    "GENERATED_LABEL", "TEMPLATE_VERSION", "ChatAnswer", "CopilotSummary", "SavedAnswer", "answer_question",
+    "retrieve", "save_answer", "HostedRewriter", "LocalRewriter", "Rewriter",
     "Sentence", "SourceRef", "StoredSummary", "build_summary", "keeps_facts", "latest_summary", "reword",
     "rewriters_from_env", "source_exists", "store_summary", "summary_from_diff",
 ]

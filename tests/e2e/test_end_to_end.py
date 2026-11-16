@@ -29,7 +29,7 @@ from amrtrace.ingest.store_interpretation_release import store_interpretation_re
 from amrtrace.interpretation.db import list_table_versions, store_table
 from amrtrace.interpretation.loader import load_table
 from amrtrace.ledger import load_baseline_release
-from amrtrace.reeval import compare_with_exhaustive, reevaluate
+from amrtrace.reeval import compare_with_exhaustive, gate_release, reevaluate
 
 pytestmark = pytest.mark.integration
 
@@ -75,7 +75,8 @@ def _event(change_id, old, new, entities) -> ChangeEvent:
                        initiator="e2e")
 
 
-# one change applied, re-evaluated selectively into a new release, then checked against an exhaustive run
+# one change applied, re-evaluated selectively into a held release, checked against an exhaustive run, then gated:
+# since I-21 the next change in the chain can only build on this release once the passing comparison published it
 def _run_change(conn, tables, panel, organism, event, release_id, required):
     applied = apply_change(conn, event)
     selected = {item.case_id for item in applied.items}
@@ -91,6 +92,7 @@ def _run_change(conn, tables, panel, organism, event, release_id, required):
     assert report.recall == 1.0
     assert all(axis.mismatched == 0 for axis in report.axes)
     assert report.total_cases == 660
+    assert gate_release(conn, report) == "PUBLISHED"
     return reevaluation
 
 

@@ -105,10 +105,14 @@ class LocalRewriter:
     def name(self) -> str:
         return f"local:{self.model}"
 
-    def rewrite(self, sentences: Sequence[str]) -> list[str]:
+    def chat(self, messages: list[dict]) -> str:
+        """One JSON answer to the messages (the chat questions of I-25 use this too)."""
         answer = _post_json(f"{self.url.rstrip('/')}/api/chat",
-                            {"model": self.model, "messages": _messages(sentences), "stream": False, "format": "json"})
-        return _sentences_from((answer.get("message") or {}).get("content", ""), len(sentences))
+                            {"model": self.model, "messages": messages, "stream": False, "format": "json"})
+        return (answer.get("message") or {}).get("content", "")
+
+    def rewrite(self, sentences: Sequence[str]) -> list[str]:
+        return _sentences_from(self.chat(_messages(sentences)), len(sentences))
 
 
 @dataclass(frozen=True)
@@ -123,18 +127,21 @@ class HostedRewriter:
     def name(self) -> str:
         return f"hosted:{self.model}"
 
-    def rewrite(self, sentences: Sequence[str]) -> list[str]:
+    def chat(self, messages: list[dict]) -> str:
+        """One JSON answer to the messages (the chat questions of I-25 use this too)."""
         answer = _post_json(
             self.url,
-            {"model": self.model, "messages": _messages(sentences), "temperature": 0,
+            {"model": self.model, "messages": messages, "temperature": 0,
              "response_format": {"type": "json_object"}},
             headers={"Authorization": f"Bearer {self.api_key}"},
         )
         try:
-            content = answer["choices"][0]["message"]["content"]
+            return answer["choices"][0]["message"]["content"]
         except (KeyError, IndexError, TypeError) as exc:
             raise RewriteFailed(f"unexpected answer from {self.url}") from exc
-        return _sentences_from(content, len(sentences))
+
+    def rewrite(self, sentences: Sequence[str]) -> list[str]:
+        return _sentences_from(self.chat(_messages(sentences)), len(sentences))
 
 
 def rewriters_from_env(env: Mapping[str, str] | None = None) -> list[Rewriter]:

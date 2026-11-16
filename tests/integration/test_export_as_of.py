@@ -25,7 +25,7 @@ def S(case_id, code="CONCORDANT_SUSCEPTIBLE"):
 @pytest.fixture
 def r1(conn, seed_cases):
     seed_cases("c1", "c2", "c3")
-    load_baseline_release(conn, "R1", VV1, [S("c1"), S("c2", "UNRESOLVED"), S("c3", "CONCORDANT_RESISTANT")])
+    load_baseline_release(conn, "R1", VV1, [S("c1"), S("c2", "UNRESOLVED"), S("c3", "CONCORDANT_RESISTANT")], publish=True)
 
 
 def test_export_lists_every_case_sorted(conn, r1):

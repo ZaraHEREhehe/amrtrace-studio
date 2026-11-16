@@ -1,5 +1,6 @@
 """I-09: selective re-evaluation appends new states for the impact set only, and a failure leaves nothing partial."""
 
+import dataclasses
 import pathlib
 
 import psycopg
@@ -9,7 +10,16 @@ from psycopg.types.json import Jsonb
 from amrtrace.changes import ChangedEntity, ChangeEvent, register_version
 from amrtrace.changes.service import apply_change
 from amrtrace.evaluator.types import CaseInputs, DependencyRecord, EvalResult, VersionVector
-from amrtrace.ledger import add_review, get_current_correction, get_current_state, get_history
+from amrtrace.ledger import (
+    PublicationRefused,
+    add_review,
+    get_current_correction,
+    get_current_state,
+    get_history,
+    publish_release,
+    release_binding,
+    validate_release,
+)
 from amrtrace.reeval import (
     AlreadyReevaluated,
     InputsMismatch,
@@ -92,6 +102,26 @@ def run(conn, release_id="REL2", **overrides):
     return reevaluate(conn, "CHG-1", release_id, VECTOR, VERSIONS, **arguments)
 
 
+def publish_after_a_passing_comparison(conn, report):
+    """Store a passing comparison for the run's release, then publish it: since I-21 the only way a change release
+    is published. The real comparator is tested in test_reeval_compare.py; here the fake evaluator would make it
+    re-evaluate C and D too, so a passing row is written directly, bound to the release the way the comparator binds
+    it (I-23): a complete exhaustive run and what the release held when it was compared."""
+    exhaustive = "EXH-" + report.run_id
+    conn.execute(
+        "INSERT INTO reeval_run (run_id, change_id, mode, status, selected_count, reevaluated_count, release_id, "
+        "started_at, finished_at) VALUES (%s, 'CHG-1', 'EXHAUSTIVE', 'COMPLETE', 4, 4, %s, now(), now())",
+        (exhaustive, report.release_id))
+    binding = {**release_binding(conn, report.release_id), "versions": dataclasses.asdict(VERSIONS)}
+    conn.execute(
+        "INSERT INTO equivalence_report (change_id, selective_run_id, exhaustive_run_id, release_id, passed, "
+        "total_cases, selected, affected, missed, state_mismatches, uncertainty_mismatches, dependency_mismatches, "
+        "report) VALUES ('CHG-1', %s, %s, %s, true, 4, 2, 1, 0, 0, 0, 0, %s)",
+        (report.run_id, exhaustive, report.release_id, Jsonb({"binding": binding})))
+    validate_release(conn, report.release_id)
+    publish_release(conn, report.release_id)
+
+
 def counts(conn):
     tables = ("release", "case_state", "dependency", "applicability", "review_event", "impact_set", "impact_item")
     return {t: conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0] for t in tables}
@@ -105,18 +135,18 @@ def run_row(conn, run_id):
 
 # ---------- the normal run ----------
 
-def test_only_the_impact_set_is_re_evaluated_and_published(applied):
+def test_only_the_impact_set_is_re_evaluated_and_held_as_a_draft(applied):
     report = run(applied)
     assert (report.status, report.release_id, report.base_release_id) == ("COMPLETE", "REL2", "REL1")
     assert (report.selected, report.reevaluated) == (2, 2)
     assert applied.execute("SELECT status, triggered_by_change_id FROM release WHERE release_id='REL2'").fetchone() \
-        == ("PUBLISHED", "CHG-1")
+        == ("DRAFT", "CHG-1")
     states = dict(applied.execute("SELECT case_id, state_code FROM case_state WHERE release_id='REL2'").fetchall())
     assert states == {"A": "CONCORDANT_RESISTANT", "B": "UNRESOLVED"}
 
 
 def test_cases_outside_the_impact_set_keep_their_earlier_state(applied):
-    run(applied)
+    publish_after_a_passing_comparison(applied, run(applied))
     for case in ("C", "D"):
         assert get_current_state(applied, case).release_id == "REL1"
         assert len(get_history(applied, case)) == 1
@@ -159,6 +189,26 @@ def test_publish_false_leaves_a_draft_release(applied):
     assert applied.execute("SELECT status FROM release WHERE release_id='REL2'").fetchone()[0] == "DRAFT"
     assert run_row(applied, report.run_id)[0] == "COMPLETE"
     assert get_current_state(applied, "A").release_id == "REL1"      # not current until published
+
+
+# ---------- the publication rule (I-21) ----------
+
+def test_asking_the_engine_to_publish_is_refused_and_leaves_nothing(applied):
+    before = counts(applied)
+    with pytest.raises(ReevaluationFailed) as failed:
+        run(applied, publish=True)
+    assert isinstance(failed.value.__cause__, PublicationRefused)
+    assert counts(applied) == before                                 # the savepoint took the draft release with it
+    assert applied.execute("SELECT status, error FROM reeval_run").fetchall()[-1][0] == "FAILED"
+    assert get_current_state(applied, "A").release_id == "REL1"
+
+
+def test_the_held_release_publishes_once_a_passing_comparison_is_stored(applied):
+    report = run(applied)
+    with pytest.raises(PublicationRefused):
+        publish_release(applied, "REL2")
+    publish_after_a_passing_comparison(applied, report)
+    assert get_current_state(applied, "A").release_id == "REL2"
 
 
 def test_an_empty_impact_set_completes_without_writing_a_release(conn):
@@ -288,6 +338,7 @@ def test_a_reviewer_correction_is_never_overwritten_and_is_reported(applied):
     reviews_before = applied.execute("SELECT * FROM review_event ORDER BY review_id").fetchall()
 
     report = run(applied)
+    publish_after_a_passing_comparison(applied, report)
 
     assert [n.case_id for n in report.corrections_to_recheck] == ["A"]
     notice = report.corrections_to_recheck[0]

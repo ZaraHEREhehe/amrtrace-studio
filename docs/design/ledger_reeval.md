@@ -120,11 +120,39 @@ after the selective run, on the three axes. It records the exhaustive run as a r
 report in `equivalence_report` (migration 0008, append-only). `gate_release()` publishes a DRAFT release if the report
 passes and blocks it if not; it refuses to act on a release that is not a DRAFT.
 
+**One publication guard (I-21).** Every route that publishes ends in `publish_release()`, and that function first calls
+`check_publication()` (`ledger/publication.py`). A release that names a triggering change is refused with
+`PublicationRefused` unless the latest stored comparison of that release by that change passed. A comparison stored for
+another release or by another change counts as missing. Releases that no change wrote (a baseline, or a full release
+that evaluated every case) are not selective results and are not checked. So `reevaluate()`, the `reevaluate_change`
+command and `POST /changes/{id}/reevaluate` always leave the release a DRAFT, and asking the engine to publish fails the
+run with nothing written.
+
+**The gate is bound to the stored report (I-23).** The comparator stores a `binding` with each report (inside the
+report's jsonb, so no migration): what the release held when it was compared (its number of states and newest state
+id, its dependency and applicability rows, and the published releases it was compared against) and the versions it
+was evaluated under. Before publishing, `check_publication()` reads the newest stored report for the release and
+refuses it unless its selective run is the COMPLETE selective run of this change that wrote this release, its
+exhaustive run is a COMPLETE exhaustive run of this change for this release, the release still matches the binding,
+and the versions agree with the release's version vector. `gate_release()` also refuses a passing report object that
+is not the row stored for its exhaustive run, or not the newest stored for its release (`ReportNotBound`, a
+`GateError`), so a report built or changed in memory cannot publish. A failing report may still block a release
+without being stored: blocking can only hold a release back. A report stored before I-23 has no binding, so a DRAFT
+release that waits on one must be compared again.
+
 Two comparison rules are deliberate:
 
 - **Carried-forward cases are compared with two things set aside:** the provenance records, and the version label of
-  the kind of node the change touched. Their stored rows were written under the old versions, so those labels are
-  expected to differ. Everything else must match. **Re-evaluated cases are compared exactly.**
+  every kind of node changed since the case's row was written, by this change or by a later published one. Their
+  stored rows were written under the old versions, so those labels are expected to differ. Everything else must match.
+  **Re-evaluated cases are compared exactly.** Only PUBLISHED releases widen the set-aside: a BLOCKED or DRAFT change's
+  versions are never in force, because the next change takes its versions from the release its impact set was made
+  against. This rests on every published change release having passed its own comparison, which the publication guard
+  (I-21, I-23) enforces; a database with change releases published before the guard does not have that guarantee.
+  *Why every changed kind and not only this change's:* on the D-22 database an AST correction made after the two
+  interpretation changes (VET01S Ed7, CLSI Ed33) reported 38,548 dependency mismatches with 0 state and 0 uncertainty
+  mismatches. Every one was a carried case whose rule edges still named CLSI M100 Ed32, which those earlier published
+  changes had already replaced (R5 BLOCKED; re-run as R6 after the fix, 0 mismatches; PR #197).
 - **"Really affected" is judged against the case's state before the change, not against the impact set.** Precision is
   measured against the cases the exhaustive run shows are affected, so the oracle's 154 required cases are the minimum
   and the true count on the real change is higher (250 affected, 246 with a different state).

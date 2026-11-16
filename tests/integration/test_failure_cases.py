@@ -102,7 +102,7 @@ def build_baseline(conn):
     evaluations = [(i, evaluate(i, V1)) for i in (make_inputs(c, "MAP1") for c in CASES)]
     load_baseline_release(conn, "R1", {"mapping_version": "MAP1"}, [
         BaselineState(i.case_id, r.state_code, r.explanation, r.phenotype_state, r.genotype_state, r.uncertainty_reason,
-                      "DB1", "EV1", r.input_hash, r.output_hash) for i, r in evaluations])
+                      "DB1", "EV1", r.input_hash, r.output_hash) for i, r in evaluations], publish=True)
     materialize(conn, "R1", evaluations, V1)
 
 
@@ -119,8 +119,15 @@ def select(conn, **kw):
 
 
 def run(conn, inputs_for=None, publish=True, versions=V2, evaluator=evaluate, release="R2"):
-    return reevaluate(conn, "CHG-M", release, {"mapping_version": versions.mapping_version}, versions,
-                      inputs_for=inputs_for or inputs_factory(), evaluate=evaluator, publish=publish)
+    """The selective run. publish=True then gates the release the only way allowed since I-21: a stored comparison."""
+    inputs_for = inputs_for or inputs_factory()
+    report = reevaluate(conn, "CHG-M", release, {"mapping_version": versions.mapping_version}, versions,
+                        inputs_for=inputs_for, evaluate=evaluator)
+    if publish:
+        comparison = compare_with_exhaustive(conn, "CHG-M", versions=versions, inputs_for=inputs_for,
+                                             evaluate=evaluator)
+        assert gate_release(conn, comparison) == "PUBLISHED"
+    return report
 
 
 def row_counts(conn):
@@ -299,8 +306,8 @@ def test_case3_a_crash_after_one_case_was_evaluated_leaves_no_partial_state(worl
 def test_case3_a_failed_run_can_be_retried_and_then_completes(world):
     select(world)
     with pytest.raises(ReevaluationFailed):
-        run(world, evaluator=crash_on("B"))
-    report = run(world)
+        run(world, evaluator=crash_on("B"), publish=False)
+    report = run(world, publish=False)
     assert (report.status, report.reevaluated, report.release_id) == ("COMPLETE", 2, "R2")
     assert [status for _, status, _ in run_rows(world)] == ["FAILED", "COMPLETE"]
 
