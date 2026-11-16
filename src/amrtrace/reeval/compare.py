@@ -306,7 +306,9 @@ def _changed_node_types(conn, change_id: str) -> frozenset[str]:
 
 def _types_changed_after(conn, boundary: int, current: frozenset[str]) -> dict[str, frozenset[str]]:
     """For each published release before the boundary, the kinds of node changed after it: the current change's own
-    kinds and those of every later published change. A row written in that release may carry an older label for them."""
+    kinds and those of every later published change. A row written in that release may carry an older label for them.
+    Trusts that each published change release passed its own comparison, which the publication guard (I-21, I-23)
+    enforces; change releases published before the guard existed carry no such guarantee."""
     rows = conn.execute(
         "SELECT release_id, triggered_by_change_id FROM release WHERE status = 'PUBLISHED' AND release_seq < %s "
         "ORDER BY release_seq DESC",

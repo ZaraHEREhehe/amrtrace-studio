@@ -143,8 +143,16 @@ release that waits on one must be compared again.
 Two comparison rules are deliberate:
 
 - **Carried-forward cases are compared with two things set aside:** the provenance records, and the version label of
-  the kind of node the change touched. Their stored rows were written under the old versions, so those labels are
-  expected to differ. Everything else must match. **Re-evaluated cases are compared exactly.**
+  every kind of node changed since the case's row was written, by this change or by a later published one. Their
+  stored rows were written under the old versions, so those labels are expected to differ. Everything else must match.
+  **Re-evaluated cases are compared exactly.** Only PUBLISHED releases widen the set-aside: a BLOCKED or DRAFT change's
+  versions are never in force, because the next change takes its versions from the release its impact set was made
+  against. This rests on every published change release having passed its own comparison, which the publication guard
+  (I-21, I-23) enforces; a database with change releases published before the guard does not have that guarantee.
+  *Why every changed kind and not only this change's:* on the D-22 database an AST correction made after the two
+  interpretation changes (VET01S Ed7, CLSI Ed33) reported 38,548 dependency mismatches with 0 state and 0 uncertainty
+  mismatches. Every one was a carried case whose rule edges still named CLSI M100 Ed32, which those earlier published
+  changes had already replaced (R5 BLOCKED; re-run as R6 after the fix, 0 mismatches; PR #197).
 - **"Really affected" is judged against the case's state before the change, not against the impact set.** Precision is
   measured against the cases the exhaustive run shows are affected, so the oracle's 154 required cases are the minimum
   and the true count on the real change is higher (250 affected, 246 with a different state).
