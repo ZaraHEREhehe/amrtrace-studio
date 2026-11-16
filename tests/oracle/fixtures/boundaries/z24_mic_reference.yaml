@@ -1,0 +1,909 @@
+# PROVISIONAL: Verify against authorized original CLSI editions and sign off before claiming independent clinical oracle.
+scenario: Z24-MIC-REFERENCE-BOUNDARIES
+description: Provisional source-traceable expected MIC outcomes for all five panel drugs, derived from the AMRTrace
+  project breakpoint compilation before looking at evaluator output; not yet independently signed off against original
+  CLSI editions.
+provenance:
+  prepared_with: ChatGPT assistance for Zara; not falsely represented as independently hand-transcribed by Zara
+  independent_owner_review: PENDING
+  original_clsi_source_verification: PENDING
+  working_source: AMRTrace Breakpoint Reference.pdf (21 pages; supplied by project owner)
+  source_kind: project_compilation_not_original_clsi_standard
+  documented_basis:
+  - M100 Ed32/Ed33 pages 8-9; Ed33 change and revisions page 11
+  - VET01S species row page 13; grey rows pages 17-18; exclusions pages 3 and 5
+  - 'D-21/D-22 project policy: docs/adr/ADR-002-interpretation-modes.md and docs/design/d22_host_breakpoints.md'
+  authored_on_base_commit: fb197f69921cb8fcff14c52742eef3aa2032eb0d
+  reviewer: Aabia
+  unit: micrograms_per_milliliter
+  organism: Escherichia coli
+  source_citation_not_publication_permission: true
+raw_lookup_cases:
+- id: RAW_001
+  table: clsi_m100_ed32.yaml
+  drug: ceftriaxone
+  mic: 1
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 ceftriaxone: S <= 1; I = 2; R >= 4; exact MIC 1 => susceptible.'
+- id: RAW_002
+  table: clsi_m100_ed32.yaml
+  drug: ceftriaxone
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 ceftriaxone: S <= 1; I = 2; R >= 4; exact MIC 2 => intermediate.'
+- id: RAW_003
+  table: clsi_m100_ed32.yaml
+  drug: ceftriaxone
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 ceftriaxone: S <= 1; I = 2; R >= 4; exact MIC 4 => resistant.'
+- id: RAW_004
+  table: clsi_m100_ed32.yaml
+  drug: ciprofloxacin
+  mic: 0.25
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 9
+  derivation: 'M100 ED32 ciprofloxacin: S <= 0.25; I = 0.5; R >= 1; exact MIC 0.25 => susceptible.'
+- id: RAW_005
+  table: clsi_m100_ed32.yaml
+  drug: ciprofloxacin
+  mic: 0.5
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 9
+  derivation: 'M100 ED32 ciprofloxacin: S <= 0.25; I = 0.5; R >= 1; exact MIC 0.5 => intermediate.'
+- id: RAW_006
+  table: clsi_m100_ed32.yaml
+  drug: ciprofloxacin
+  mic: 1
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 9
+  derivation: 'M100 ED32 ciprofloxacin: S <= 0.25; I = 0.5; R >= 1; exact MIC 1 => resistant.'
+- id: RAW_007
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 2 => susceptible.'
+- id: RAW_008
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 4 => susceptible.'
+- id: RAW_009
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  mic: 8
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 8 => intermediate.'
+- id: RAW_010
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  mic: 16
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 16 => resistant.'
+- id: RAW_011
+  table: clsi_m100_ed32.yaml
+  drug: meropenem
+  mic: 1
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 meropenem: S <= 1; I = 2; R >= 4; exact MIC 1 => susceptible.'
+- id: RAW_012
+  table: clsi_m100_ed32.yaml
+  drug: meropenem
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 meropenem: S <= 1; I = 2; R >= 4; exact MIC 2 => intermediate.'
+- id: RAW_013
+  table: clsi_m100_ed32.yaml
+  drug: meropenem
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 meropenem: S <= 1; I = 2; R >= 4; exact MIC 4 => resistant.'
+- id: RAW_014
+  table: clsi_m100_ed32.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 trimethoprim-sulfamethoxazole: S <= 2/38; no I; R >= 4/76 (compare trimethoprim component only);
+    exact MIC 2 => susceptible.'
+- id: RAW_015
+  table: clsi_m100_ed32.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32 trimethoprim-sulfamethoxazole: S <= 2/38; no I; R >= 4/76 (compare trimethoprim component only);
+    exact MIC 4 => resistant.'
+- id: RAW_016
+  table: clsi_m100_ed33.yaml
+  drug: ceftriaxone
+  mic: 1
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 ceftriaxone: S <= 1; I = 2; R >= 4; exact MIC 1 => susceptible.'
+- id: RAW_017
+  table: clsi_m100_ed33.yaml
+  drug: ceftriaxone
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 ceftriaxone: S <= 1; I = 2; R >= 4; exact MIC 2 => intermediate.'
+- id: RAW_018
+  table: clsi_m100_ed33.yaml
+  drug: ceftriaxone
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 ceftriaxone: S <= 1; I = 2; R >= 4; exact MIC 4 => resistant.'
+- id: RAW_019
+  table: clsi_m100_ed33.yaml
+  drug: ciprofloxacin
+  mic: 0.25
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 9
+  derivation: 'M100 ED33 ciprofloxacin: S <= 0.25; I = 0.5; R >= 1; exact MIC 0.25 => susceptible.'
+- id: RAW_020
+  table: clsi_m100_ed33.yaml
+  drug: ciprofloxacin
+  mic: 0.5
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 9
+  derivation: 'M100 ED33 ciprofloxacin: S <= 0.25; I = 0.5; R >= 1; exact MIC 0.5 => intermediate.'
+- id: RAW_021
+  table: clsi_m100_ed33.yaml
+  drug: ciprofloxacin
+  mic: 1
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 9
+  derivation: 'M100 ED33 ciprofloxacin: S <= 0.25; I = 0.5; R >= 1; exact MIC 1 => resistant.'
+- id: RAW_022
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 2 => susceptible.'
+- id: RAW_023
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 4 => intermediate.'
+- id: RAW_024
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 8
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 8 => resistant.'
+- id: RAW_025
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 16
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 gentamicin: Ed32 S <= 4; I = 8; R >= 16; Ed33 S <= 2; I = 4; R >= 8; exact MIC 16 => resistant.'
+- id: RAW_026
+  table: clsi_m100_ed33.yaml
+  drug: meropenem
+  mic: 1
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 meropenem: S <= 1; I = 2; R >= 4; exact MIC 1 => susceptible.'
+- id: RAW_027
+  table: clsi_m100_ed33.yaml
+  drug: meropenem
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 meropenem: S <= 1; I = 2; R >= 4; exact MIC 2 => intermediate.'
+- id: RAW_028
+  table: clsi_m100_ed33.yaml
+  drug: meropenem
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 meropenem: S <= 1; I = 2; R >= 4; exact MIC 4 => resistant.'
+- id: RAW_029
+  table: clsi_m100_ed33.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 2
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 trimethoprim-sulfamethoxazole: S <= 2/38; no I; R >= 4/76 (compare trimethoprim component only);
+    exact MIC 2 => susceptible.'
+- id: RAW_030
+  table: clsi_m100_ed33.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 4
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33 trimethoprim-sulfamethoxazole: S <= 2/38; no I; R >= 4/76 (compare trimethoprim component only);
+    exact MIC 4 => resistant.'
+- id: RAW_031
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  mic: 4
+  sign: <=
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32: <=4 cannot exceed Ed32 S <=4.'
+- id: RAW_032
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 4
+  sign: <=
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33: <=4 includes S <=2 and I=4.'
+- id: RAW_033
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  mic: 8
+  sign: '>='
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32: >=8 includes Ed32 I=8 and R >=16.'
+- id: RAW_034
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 8
+  sign: '>='
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33: >=8 is entirely Ed33 resistant.'
+- id: RAW_035
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 2
+  sign: <
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33: <2 is entirely Ed33 susceptible.'
+- id: RAW_036
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 4
+  sign: '>'
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33: >4 excludes I=4; observed category can only be R >=8.'
+- id: RAW_037
+  table: clsi_m100_ed32.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 2
+  sign: '>'
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32: >2 excludes S; source table has no intermediate breakpoint, and R starts at 4.'
+- id: RAW_038
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  mic: 3
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched: []
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED33: Diagnostic exact gap: MIC 3 is between Ed33 S<=2 and I=4; not a standard twofold-dilution
+    MIC.'
+- id: RAW_039
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  mic: 6
+  sign: ==
+  rule_scope: general
+  expected_rule_present: true
+  expected_touched: []
+  expected_breakpoint_species: human
+  source_page: 8
+  derivation: 'M100 ED32: Diagnostic exact gap: MIC 6 is between Ed32 S<=4 and I=8; not a standard twofold-dilution
+    MIC.'
+- id: RAW_040
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  mic: 2
+  sign: ==
+  rule_scope: vet_host
+  host_group: dog
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: dog
+  source_page: 13
+  derivation: VET01S Ed7 Table 2A dog gentamicin species row, S <=2, I=4, R>=8; MIC 2 => susceptible.
+- id: RAW_041
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  mic: 4
+  sign: ==
+  rule_scope: vet_host
+  host_group: dog
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: dog
+  source_page: 13
+  derivation: VET01S Ed7 Table 2A dog gentamicin species row, S <=2, I=4, R>=8; MIC 4 => intermediate.
+- id: RAW_042
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  mic: 8
+  sign: ==
+  rule_scope: vet_host
+  host_group: dog
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: dog
+  source_page: 13
+  derivation: VET01S Ed7 Table 2A dog gentamicin species row, S <=2, I=4, R>=8; MIC 8 => resistant.
+- id: RAW_043
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  mic: 2
+  sign: ==
+  rule_scope: vet_host
+  host_group: cat
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 17
+  derivation: VET01S Ed7 Table 2A grey human gentamicin row; cats have no species gentamicin row; MIC 2 => susceptible.
+- id: RAW_044
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  mic: 4
+  sign: ==
+  rule_scope: vet_host
+  host_group: cat
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 17
+  derivation: VET01S Ed7 Table 2A grey human gentamicin row; cats have no species gentamicin row; MIC 4 => intermediate.
+- id: RAW_045
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  mic: 8
+  sign: ==
+  rule_scope: vet_host
+  host_group: cat
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 17
+  derivation: VET01S Ed7 Table 2A grey human gentamicin row; cats have no species gentamicin row; MIC 8 => resistant.
+- id: RAW_046
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  mic: 4
+  sign: ==
+  rule_scope: vet_host
+  host_group: swine
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 17
+  derivation: VET01S Ed7 Table 2A grey human gentamicin row; swine have no species gentamicin row; MIC 4 => intermediate.
+- id: RAW_047
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: meropenem
+  mic: 1
+  sign: ==
+  rule_scope: vet_host
+  host_group: dog
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 17
+  derivation: VET01S Ed7 grey human meropenem row S <=1, I=2, R>=4; MIC 1 => susceptible.
+- id: RAW_048
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: meropenem
+  mic: 2
+  sign: ==
+  rule_scope: vet_host
+  host_group: dog
+  expected_rule_present: true
+  expected_touched:
+  - intermediate
+  expected_breakpoint_species: human
+  source_page: 17
+  derivation: VET01S Ed7 grey human meropenem row S <=1, I=2, R>=4; MIC 2 => intermediate.
+- id: RAW_049
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: meropenem
+  mic: 4
+  sign: ==
+  rule_scope: vet_host
+  host_group: dog
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 17
+  derivation: VET01S Ed7 grey human meropenem row S <=1, I=2, R>=4; MIC 4 => resistant.
+- id: RAW_050
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 2
+  sign: ==
+  rule_scope: vet_host
+  host_group: cat
+  expected_rule_present: true
+  expected_touched:
+  - susceptible
+  expected_breakpoint_species: human
+  source_page: 18
+  derivation: VET01S Ed7 grey human TMP-SMX row S <=2/38, R >=4/76; use trimethoprim component; MIC 2 => susceptible.
+- id: RAW_051
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 4
+  sign: ==
+  rule_scope: vet_host
+  host_group: cat
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 18
+  derivation: VET01S Ed7 grey human TMP-SMX row S <=2/38, R >=4/76; use trimethoprim component; MIC 4 => resistant.
+- id: RAW_052
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: trimethoprim-sulfamethoxazole
+  mic: 4
+  sign: ==
+  rule_scope: vet_host
+  host_group: cattle
+  expected_rule_present: true
+  expected_touched:
+  - resistant
+  expected_breakpoint_species: human
+  source_page: 18
+  derivation: VET01S Ed7 grey human TMP-SMX row S <=2/38, R >=4/76; MIC 4 => resistant.
+- id: RAW_053
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: ceftriaxone
+  mic: 1
+  sign: ==
+  rule_scope: vet_host
+  host_group: dog
+  expected_rule_present: false
+  expected_touched: []
+  source_page: 3
+  derivation: Ceftriaxone absent from VET01S Table 2A, including grey row; no veterinary host rule, regardless of the
+    human M100 fallback.
+- id: RAW_054
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: ciprofloxacin
+  mic: 0.5
+  sign: ==
+  rule_scope: vet_host
+  host_group: cat
+  expected_rule_present: false
+  expected_touched: []
+  source_page: 3
+  derivation: Ciprofloxacin absent under VET01S footnote c (not recommended for veterinary species); no veterinary host
+    rule, regardless of the human M100 fallback.
+label_policy_cases:
+- id: POL_001
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 4
+  sign: ==
+  submitted_label: S
+  expected_final_label: I
+  expected_label_source: derived
+  expected_rule_scope: general
+  policy_derivation: 'D-21: Ed32 S at MIC4; new Ed33 MIC4 is I.'
+- id: POL_002
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 8
+  sign: ==
+  submitted_label: I
+  expected_final_label: R
+  expected_label_source: derived
+  expected_rule_scope: general
+  policy_derivation: 'D-21: Ed32 I at MIC8; new Ed33 MIC8 is R.'
+- id: POL_003
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 4
+  sign: ==
+  submitted_label: I
+  expected_final_label: I
+  expected_label_source: submitted
+  expected_rule_scope: none
+  policy_derivation: 'D-21: Ed32 cannot explain I at MIC4; do not overwrite lab label.'
+- id: POL_004
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 8
+  sign: ==
+  submitted_label: R
+  expected_final_label: R
+  expected_label_source: submitted
+  expected_rule_scope: none
+  policy_derivation: 'D-21: Ed32 I at MIC8, not submitted R; preserve lab label.'
+- id: POL_005
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 4
+  sign: ==
+  submitted_label: NOT_DEFINED
+  expected_final_label: NOT_DEFINED
+  expected_label_source: submitted
+  expected_rule_scope: none
+  policy_derivation: 'D-22: human NOT_DEFINED does not get rule (b), which is animal only.'
+- id: POL_006
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  host: Canis lupus familiaris
+  mic: 4
+  sign: ==
+  submitted_label: S
+  expected_final_label: I
+  expected_label_source: derived
+  expected_rule_scope: host
+  policy_derivation: 'D-21/22: Ed32 explains S at MIC4; dog VET gentamicin MIC4 is I.'
+- id: POL_007
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  host: Felis catus
+  mic: 4
+  sign: ==
+  submitted_label: S
+  expected_final_label: I
+  expected_label_source: derived
+  expected_rule_scope: host
+  policy_derivation: 'D-21/22: Ed32 explains S at MIC4; cat uses VET grey human MIC4 I.'
+- id: POL_008
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  host: Canis lupus familiaris
+  mic: 4
+  sign: ==
+  submitted_label: NOT_DEFINED
+  expected_final_label: I
+  expected_label_source: derived
+  expected_rule_scope: host
+  policy_derivation: 'D-22 rule (b): animal undefined label is eligible for dog host rule; MIC4 I.'
+- id: POL_009
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  host: Canis lupus familiaris
+  mic: 2
+  sign: ==
+  submitted_label: R
+  expected_final_label: R
+  expected_label_source: submitted
+  expected_rule_scope: none
+  policy_derivation: 'D-21: Ed32 MIC2 is S; unexplained submitted R is retained.'
+- id: POL_010
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: ceftriaxone
+  host: Canis lupus familiaris
+  mic: 1
+  sign: ==
+  submitted_label: NOT_DEFINED
+  expected_final_label: NOT_DEFINED
+  expected_label_source: submitted
+  expected_rule_scope: none
+  policy_derivation: D-22 rule (b) requires veterinary host rule; VET has no ceftriaxone row.
+- id: POL_011
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: ciprofloxacin
+  host: Felis catus
+  mic: 0.5
+  sign: ==
+  submitted_label: NOT_DEFINED
+  expected_final_label: NOT_DEFINED
+  expected_label_source: submitted
+  expected_rule_scope: none
+  policy_derivation: D-22 rule (b) requires veterinary host rule; VET excludes ciprofloxacin.
+- id: POL_012
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: ceftriaxone
+  host: Canis lupus familiaris
+  mic: 1
+  sign: ==
+  submitted_label: S
+  expected_final_label: S
+  expected_label_source: derived
+  expected_rule_scope: general
+  policy_derivation: 'D-21: M100 Ed32 explains S at MIC1; animal labelled result can fall back to general M100.'
+- id: POL_013
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: trimethoprim-sulfamethoxazole
+  host: Sus scrofa domesticus
+  mic: 4
+  sign: ==
+  submitted_label: NOT_DEFINED
+  expected_final_label: R
+  expected_label_source: derived
+  expected_rule_scope: host
+  policy_derivation: D-22 animal undefined; grey human TMP-SMX MIC trimethoprim4 R.
+- id: POL_014
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: meropenem
+  host: Canis lupus familiaris
+  mic: 2
+  sign: ==
+  submitted_label: NOT_DEFINED
+  expected_final_label: I
+  expected_label_source: derived
+  expected_rule_scope: host
+  policy_derivation: D-22 animal undefined; grey human meropenem MIC2 I.
+- id: POL_015
+  table: clsi_m100_ed32.yaml
+  drug: meropenem
+  host: Homo sapiens
+  mic: 2
+  sign: ==
+  submitted_label: I
+  expected_final_label: I
+  expected_label_source: derived
+  expected_rule_scope: general
+  policy_derivation: 'D-21: Ed32 M100 explains I at MIC2; raw remains I.'
+- id: POL_016
+  table: clsi_m100_ed32.yaml
+  drug: trimethoprim-sulfamethoxazole
+  host: Homo sapiens
+  mic: 2
+  sign: ==
+  submitted_label: S
+  expected_final_label: S
+  expected_label_source: derived
+  expected_rule_scope: general
+  policy_derivation: 'D-21: Ed32 M100 explains S at TMP component MIC2.'
+- id: POL_017
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 4
+  sign: <=
+  submitted_label: S
+  expected_final_label: CENSORED
+  expected_label_source: derived
+  expected_rule_scope: general
+  policy_derivation: 'D-21: Ed32 <=4 is S; Ed33 <=4 reaches both S and I, so unresolved (ADR-002).'
+- id: POL_018
+  table: clsi_m100_ed33.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 8
+  sign: '>='
+  submitted_label: I
+  expected_final_label: I
+  expected_label_source: submitted
+  expected_rule_scope: none
+  policy_derivation: 'D-21: Ed32 >=8 touches I and R; cannot explain a single submitted I.'
+- id: POL_019
+  table: clsi_m100_ed32_vet01s_ed7.yaml
+  drug: gentamicin
+  host: Bos taurus
+  mic: 8
+  sign: ==
+  submitted_label: NOT_DEFINED
+  expected_final_label: R
+  expected_label_source: derived
+  expected_rule_scope: host
+  policy_derivation: D-22 animal undefined; cattle VET grey human gentamicin MIC8 R.
+- id: POL_020
+  table: clsi_m100_ed32.yaml
+  drug: gentamicin
+  host: Homo sapiens
+  mic: 2
+  sign: ==
+  submitted_label: S
+  expected_final_label: S
+  expected_label_source: derived
+  expected_rule_scope: general
+  policy_derivation: Ed32 S<=4 matches the submitted label, no category change.
