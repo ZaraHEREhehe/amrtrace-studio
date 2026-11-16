@@ -13,8 +13,9 @@ What is compared, per case, on three axes (plan step 30):
 state it already had (carried forward, which is what the ledger shows for it). For a carried case the stored rows were
 written under the OLD versions, so two things are expected to differ without meaning anything and are set aside:
 the provenance_version records (they name the version values themselves) and the node_version label of edges to a
-kind of node the change touched (the label moved with the change). Everything else must match exactly. Re-evaluated
-cases are compared exactly, with nothing set aside.
+kind of node changed since that row was written (the label moved with this change or with an earlier published one,
+each of which passed its own comparison). Everything else must match exactly. Re-evaluated cases are compared
+exactly, with nothing set aside.
 
 Alongside the pass/fail result the report gives the numbers the plan asks for:
     recall            of the cases the change really affects, the share the selector chose
@@ -280,7 +281,10 @@ JOIN unnest(%s::text[], %s::text[]) AS t(case_id, release_id) ON d.case_id = t.c
 """
 
 
-def _stored_views(conn, state_rows, *, relaxed: bool, changed_types: frozenset[str]) -> dict[str, _View]:
+def _stored_views(
+    conn, state_rows, *, relaxed: bool, changed_types: frozenset[str],
+    types_by_release: dict[str, frozenset[str]] | None = None,
+) -> dict[str, _View]:
     by_case: dict[str, list] = {}
     if state_rows:
         deps = conn.execute(
@@ -290,14 +294,31 @@ def _stored_views(conn, state_rows, *, relaxed: bool, changed_types: frozenset[s
             by_case.setdefault(case_id, []).append(tuple(rest))
     return {
         case_id: _view(code, phenotype, genotype, uncertainty, explanation, by_case.get(case_id, ()),
-                       relaxed=relaxed, changed_types=changed_types)
-        for case_id, _release, code, phenotype, genotype, uncertainty, explanation in state_rows
+                       relaxed=relaxed, changed_types=(types_by_release or {}).get(release, changed_types))
+        for case_id, release, code, phenotype, genotype, uncertainty, explanation in state_rows
     }
 
 
 def _changed_node_types(conn, change_id: str) -> frozenset[str]:
     event = get_change_event(conn, change_id).event
     return frozenset(e.node_type for e in event.changed_entities)
+
+
+def _types_changed_after(conn, boundary: int, current: frozenset[str]) -> dict[str, frozenset[str]]:
+    """For each published release before the boundary, the kinds of node changed after it: the current change's own
+    kinds and those of every later published change. A row written in that release may carry an older label for them."""
+    rows = conn.execute(
+        "SELECT release_id, triggered_by_change_id FROM release WHERE status = 'PUBLISHED' AND release_seq < %s "
+        "ORDER BY release_seq DESC",
+        (boundary,),
+    ).fetchall()
+    later = set(current)
+    result = {}
+    for release_id, change_id in rows:
+        result[release_id] = frozenset(later)
+        if change_id:
+            later |= _changed_node_types(conn, change_id)
+    return result
 
 
 def _chunks(items: Iterator, size: int) -> Iterator[list]:
@@ -382,6 +403,7 @@ def _compare(
     seen: set[str] = set()
     affected = state_changed = selected_and_affected = missed = 0
 
+    types_after = _types_changed_after(conn, boundary, changed_types)
     stream = iter(inputs_for(list(universe)))
     for chunk in _chunks(stream, batch_size):
         ids = [inputs.case_id for inputs in chunk]
@@ -394,7 +416,9 @@ def _compare(
         seen.update(ids)
 
         before_rows = conn.execute(_STATES_BEFORE, (boundary, ids)).fetchall()
-        before = _stored_views(conn, before_rows, relaxed=True, changed_types=changed_types)
+        before = _stored_views(conn, before_rows, relaxed=True, changed_types=changed_types,
+                               types_by_release=types_after)
+        written_in = {row[0]: row[1] for row in before_rows}
         if release_id is None:
             in_release_rows = []
         else:
@@ -405,7 +429,8 @@ def _compare(
             case_id = inputs.case_id
             result = evaluate(inputs, versions)
             carried = case_id not in in_release
-            exhaustive_relaxed = _exhaustive_view(result, relaxed=True, changed_types=changed_types)
+            set_aside = types_after.get(written_in.get(case_id), changed_types)
+            exhaustive_relaxed = _exhaustive_view(result, relaxed=True, changed_types=set_aside)
             if carried:
                 selective = before.get(case_id)
                 exhaustive = exhaustive_relaxed
