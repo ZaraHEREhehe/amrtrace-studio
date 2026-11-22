@@ -183,6 +183,9 @@ def test_the_changed_region_narrows_the_selection_and_both_sizes_are_reported(
         "CASE_OUT": {"mic": 1.0, "sign": "=="},
         "CASE_CENSORED_IN": {"mic": 4.0, "sign": "<="},
         "CASE_CENSORED_OUT": {"mic": 2.0, "sign": "<="},
+        # printed outside the region but reaching into it, so only the censored range selects them (A-29, mutant M3)
+        "CASE_CENSORED_ABOVE": {"mic": 16.0, "sign": "<="},
+        "CASE_CENSORED_BELOW": {"mic": 1.0, "sign": ">="},
         "CASE_UNPLACED": None,
     }
     seed_cases(*measurements)
@@ -215,12 +218,14 @@ def test_the_changed_region_narrows_the_selection_and_both_sizes_are_reported(
     selection = select_impact_detailed(conn, "CHG_1")
 
     assert [item.case_id for item in selection.items] == [
+        "CASE_CENSORED_ABOVE",
+        "CASE_CENSORED_BELOW",
         "CASE_CENSORED_IN",
         "CASE_IN",
         "CASE_UNPLACED",
     ]
-    assert selection.level1_size == 5
-    assert selection.level2_size == 3
+    assert selection.level1_size == 7
+    assert selection.level2_size == 5
 
 
 def test_the_latest_published_release_is_used_unless_one_is_named(conn, seed_cases):
