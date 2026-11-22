@@ -4,6 +4,12 @@ export_as_of(conn, "R1") lists, for every case, its latest state in a PUBLISHED 
 Published releases are immutable and states are append-only, so the export of an old release never changes, even
 after later releases exist. snapshot_hash is the sha256 of the canonical JSON, so two exports can be compared by hash.
 Reviews are not part of the export: they are recorded after a state exists and would make an old export change.
+
+I-27: a state from a release published at a recorded verification level carries it ("verification_level": SELECTIVE
+or EXHAUSTIVE), so a selectively verified state can never be mistaken for a fully checked one in an export. The level
+is fixed when the release is published, so the export stays reproducible. States from releases with no level (the
+baseline, full loads, change releases published before I-27) carry no such key, so their exports are byte for byte
+what they were before.
 """
 
 from __future__ import annotations
@@ -21,7 +27,8 @@ _SQL = """
 SELECT DISTINCT ON (cs.case_id)
        cs.case_id, cs.state_id, cs.release_id, cs.state_code, cs.phenotype_state, cs.genotype_state,
        cs.uncertainty_reason, cs.verification_status, cs.refgene_db_version, cs.evaluator_version,
-       cs.input_hash, cs.output_hash, cs.explanation, cs.supersedes_state_id, cs.created_at
+       cs.input_hash, cs.output_hash, cs.explanation, cs.supersedes_state_id, cs.created_at,
+       r.verification_level
 FROM case_state cs
 JOIN release r ON r.release_id = cs.release_id
 WHERE r.status = 'PUBLISHED' AND r.release_seq <= %s
@@ -40,6 +47,8 @@ def export_as_of(conn, release_id: str) -> list[dict[str, Any]]:
     for row in rows:
         row["created_at"] = row["created_at"].isoformat()
         row["explanation"] = dict(row["explanation"])
+        if row["verification_level"] is None:
+            del row["verification_level"]
     return rows
 
 

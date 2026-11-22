@@ -12,6 +12,7 @@ import {
   getCaseReviews,
   getCaseReviewStatus,
   listReviewQueue,
+  auditRelease,
   getChange,
   getImpact,
   getRun,
@@ -84,6 +85,7 @@ import {
   REVIEW_PAGE_SIZE,
   ReviewFormError,
   buildReviewPayload,
+  failedAuditRows,
   reviewPageInfo,
   reviewQueueFilters,
   reviewQueuePath,
@@ -100,10 +102,17 @@ import {
   mismatchValue,
   orderedAxes,
   assertRunReportIdentity,
+  releaseOutcomeText,
   runRefusalReason,
 } from "./run_view.mjs";
 
-import { assertDossierIdentity, assertReleaseIdentity } from "./release_identity.mjs";
+import {
+  assertDossierIdentity,
+  assertReleaseIdentity,
+  canAudit,
+  comparisonText,
+  verificationText,
+} from "./release_identity.mjs";
 
 import {
   interpretationRows,
@@ -1367,6 +1376,8 @@ async function submitReevaluation(event) {
 
   const exhaustive = byId("run-exhaustive").checked;
   const gate = byId("run-gate").checked;
+  // I-27: a selective run alone may publish; the exhaustive path publishes only through the gate
+  const publish = !exhaustive && byId("run-publish").checked;
 
   const status = byId("run-status");
   const submit = byId("run-submit");
@@ -1397,6 +1408,7 @@ async function submitReevaluation(event) {
       changeId,
       {
         release_id: releaseId,
+        publish,
         run_exhaustive: exhaustive,
         gate,
       },
@@ -1415,9 +1427,7 @@ async function submitReevaluation(event) {
       byId("equivalence-detail").append(
         make("div", {
           className: "empty-state",
-          text:
-            "Selective run completed. The new release stays a draft " +
-            "until an exhaustive comparison passes.",
+          text: "Selective run completed. No exhaustive comparison was run.",
         }),
       );
     }
@@ -1425,7 +1435,7 @@ async function submitReevaluation(event) {
     setStatus(
       status,
       "success",
-      `Run ${result.selective_run.run_id} completed.`,
+      `Run ${result.selective_run.run_id} completed. ${releaseOutcomeText(result)}`,
     );
   } catch (error) {
     setStatus(status, "error", runRefusalReason(error) ?? errorText(error));
@@ -1538,24 +1548,28 @@ async function loadRunPickers() {
 }
 
 
+// I-27: anyone who may run a re-evaluation may publish it selectively; the exhaustive comparison and its gate are
+// Admin-only, and with the exhaustive comparison the release is published only through the gate
 function syncGateControl() {
+  const publish = byId("run-publish");
   const exhaustive = byId("run-exhaustive");
   const gate = byId("run-gate");
 
   if (!can("release_gate")) {
-    exhaustive.checked = true;
-    exhaustive.disabled = !can("run_evaluation") || !can("release_gate");
-    gate.checked = false;
-    gate.disabled = true;
-    return;
+    exhaustive.checked = false;
+    exhaustive.disabled = true;
+  } else {
+    exhaustive.disabled = false;
   }
 
-  exhaustive.disabled = false;
-  if (!exhaustive.checked) {
+  if (exhaustive.checked) {
+    publish.checked = false;
+    publish.disabled = true;
+    gate.disabled = false;
+  } else {
+    publish.disabled = !can("run_evaluation");
     gate.checked = false;
     gate.disabled = true;
-  } else {
-    gate.disabled = false;
   }
 }
 
@@ -2560,7 +2574,10 @@ function syncExportSelection() {
   byId("exports-release-status").textContent =
     releaseId ? "Published" : "Not loaded";
   byId("exports-hash").textContent = "Not loaded";
+  byId("exports-verification").textContent = "Not loaded";
   byId("exports-comparison").textContent = "Not loaded";
+  byId("exports-audit").hidden = true;
+  byId("exports-audit").disabled = true;
 
   hideStatus(byId("exports-hash-status"));
 
@@ -2592,9 +2609,11 @@ async function loadExportHash() {
     }
 
     byId("exports-hash").textContent = digest;
-    byId("exports-comparison").textContent = identity.report_id === null
-      ? "No stored comparison (baseline or legacy release)"
-      : `PASS · report #${identity.report_id} · run ${identity.selective_run_id}`;
+    byId("exports-verification").textContent = verificationText(identity);
+    byId("exports-comparison").textContent = comparisonText(identity);
+    const auditable = can("release_gate") && canAudit(identity);
+    byId("exports-audit").hidden = !auditable;
+    byId("exports-audit").disabled = !auditable;
     byId("exports-copy-hash").disabled = false;
     byId("exports-download-hash").disabled = false;
     byId("exports-download-json").disabled = false;
@@ -2605,6 +2624,32 @@ async function loadExportHash() {
     }
 
     setStatus(status, "error", errorText(error));
+  }
+}
+
+
+// I-27: Admin only; the audit is stored against the release and never changes it
+async function runExportAudit() {
+  const releaseId = byId("exports-release").value;
+  const status = byId("exports-hash-status");
+  const button = byId("exports-audit");
+  if (!releaseId) return;
+  button.disabled = true;
+  setStatus(status, "loading", `Auditing ${releaseId} with an exhaustive run…`);
+  try {
+    const report = await auditRelease(releaseId);
+    setStatus(
+      status,
+      report.passed ? "success" : "error",
+      report.passed
+        ? `Audit passed: ${report.total_cases} cases agree. ${releaseId} stays selectively verified.`
+        : `Audit failed: ${report.mismatched_cases} cases differ. Recorded against ${releaseId} and raised in the review queue.`,
+    );
+    syncExportSelection();
+    await loadExportHash();
+  } catch (error) {
+    setStatus(status, "error", errorText(error));
+    button.disabled = false;
   }
 }
 
@@ -3382,6 +3427,33 @@ async function fillReviewQueueDrugs() {
   }
 }
 
+// I-27: a failed Admin audit is raised above the queue with the cases that differ; the release is not rewritten
+function renderFailedAudits(page) {
+  const box = byId("review-queue-failed-audits");
+  clear(box);
+  for (const audit of failedAuditRows(page)) {
+    const banner = make("div", { className: "decision decision-blocked" });
+    banner.append(
+      make("span", { className: "decision-label", text: "AUDIT FAILED" }),
+      make("span", {
+        className: "decision-detail",
+        text: `Release ${audit.release_id} (change ${audit.change_id}), report #${audit.report_id}: ` +
+          `${audit.mismatched_cases} cases differ from the exhaustive run.`,
+      }),
+    );
+    const cases = make("p", { className: "muted" });
+    audit.case_ids.slice(0, 20).forEach((caseId, index) => {
+      if (index) cases.append(document.createTextNode(", "));
+      cases.append(caseLink(caseId));
+    });
+    if (audit.mismatched_cases > Math.min(20, audit.case_ids.length)) {
+      cases.append(document.createTextNode(` and ${audit.mismatched_cases - Math.min(20, audit.case_ids.length)} more`));
+    }
+    box.append(banner, cases);
+  }
+}
+
+
 async function loadReviewQueue(filters, offset = 0) {
   const token = ++reviewQueueRequestToken;
   currentReviewQueueFilters = { ...filters };
@@ -3412,6 +3484,7 @@ async function loadReviewQueue(filters, offset = 0) {
     }
     clear(results);
     clear(pager);
+    renderFailedAudits(raw);
 
     results.append(renderDataTable(
       [
@@ -3684,6 +3757,7 @@ function boot() {
     "click",
     () => void copyExportHash(),
   );
+  byId("exports-audit").addEventListener("click", () => void runExportAudit());
 
   syncGateControl();
   syncReviewCorrection();

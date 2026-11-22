@@ -245,6 +245,7 @@
               <button id="review-queue-refresh" class="button" type="button">Refresh</button>
             </form>
             <div id="review-queue-status" class="status" aria-live="polite" hidden></div>
+            <div id="review-queue-failed-audits"></div>
             <div id="review-queue-results"></div>
             <div id="review-queue-pager" class="pager"></div>
           </section>
@@ -641,8 +642,8 @@
             <div>
               <h2>Runs &amp; Equivalence</h2>
               <p class="muted">
-                Re-evaluate a change's stored impact set, compare it with an exhaustive run, and see the release
-                gate decision.
+                Re-evaluate a change's stored impact set and publish it as selectively verified, or (Admin only)
+                compare it with an exhaustive run first and see the release gate decision.
               </p>
             </div>
           </header>
@@ -676,13 +677,18 @@
 
                 <div class="check-stack">
                   <label class="check-row">
-                    <input id="run-exhaustive" type="checkbox" checked>
-                    <span>Run the exhaustive comparator after the selective run</span>
+                    <input id="run-publish" type="checkbox" checked>
+                    <span>Publish when the selective run completes (marked selectively verified)</span>
                   </label>
 
                   <label class="check-row">
-                    <input id="run-gate" type="checkbox" checked>
-                    <span>Apply the PASS/BLOCKED release gate</span>
+                    <input id="run-exhaustive" type="checkbox">
+                    <span>Admin: run the optional exhaustive comparator after the selective run</span>
+                  </label>
+
+                  <label class="check-row">
+                    <input id="run-gate" type="checkbox">
+                    <span>Admin: apply the PASS/BLOCKED release gate (publishes as exhaustively verified)</span>
                   </label>
                 </div>
 
@@ -795,6 +801,8 @@
 
                 <dt>SHA-256</dt>
                 <dd><code id="exports-hash">Not loaded</code></dd>
+                <dt>Verification</dt>
+                <dd id="exports-verification">Not loaded</dd>
                 <dt>Comparison report</dt>
                 <dd id="exports-comparison">Not loaded</dd>
               </dl>
@@ -803,6 +811,10 @@
                 <button id="exports-copy-hash" class="button"
                         type="button" disabled>
                   Copy hash
+                </button>
+                <button id="exports-audit" class="button"
+                        type="button" hidden disabled>
+                  Run Admin audit
                 </button>
               </div>
 

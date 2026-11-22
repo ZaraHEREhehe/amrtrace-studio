@@ -31,6 +31,11 @@ The gate trusts the database, not the report object it is handed (I-23): the rep
 exhaustive run, and the newest stored for its release, and publishing then checks that the stored report is still
 bound to the release (ledger.publication). The stored row carries a "binding": what the release looked like when it
 was compared, and the versions it was compared under.
+
+Since I-27 (supervisor decision 17 Nov 2026) the comparison is optional and Admin-only. A selective run alone may
+publish its release as SELECTIVE; an Admin may then compare it later (audit_release). An audit is the same comparison,
+stored the same way and marked "audit"; it never changes the published release. A failed audit stays on record
+against the release and is raised in the review queue (ledger.failed_audits).
 """
 
 from __future__ import annotations
@@ -53,7 +58,7 @@ from amrtrace.changes.service import get_impact_set
 from amrtrace.evaluator import constants as c
 from amrtrace.evaluator.types import CaseInputs, EvalResult, VersionVector
 from amrtrace.ledger.errors import PublicationRefused
-from amrtrace.ledger.publication import release_binding
+from amrtrace.ledger.publication import LEVEL_EXHAUSTIVE, LEVEL_SELECTIVE, release_binding
 from amrtrace.ledger.releases import block_release, get_release, publish_release, validate_release
 
 from .engine import (
@@ -73,6 +78,8 @@ AXIS_DEPENDENCY = "dependency"
 AXES = (AXIS_STATE, AXIS_UNCERTAINTY, AXIS_DEPENDENCY)
 
 _NO_LIMIT = 2**62
+# how many mismatched case ids a stored report keeps (all are counted); enough to raise a failed audit for review
+STORED_CASE_IDS = 1000
 
 
 class NoSelectiveRun(ReevaluationError):
@@ -94,6 +101,10 @@ class ComparisonFailed(ReevaluationError):
 
 class GateError(ReevaluationError):
     """The release cannot be gated (it is not a DRAFT, or the report is not the one stored for it)."""
+
+
+class AuditNotAllowed(ReevaluationError):
+    """Only a published SELECTIVE release written by a change can be audited (I-27)."""
 
 
 class ReportNotBound(GateError):
@@ -138,6 +149,11 @@ class EquivalenceReport:
     axes: tuple[AxisResult, ...]
     passed: bool
     seconds: float
+    # I-27: True when the release was already published when it was compared (an Admin audit, not a gate)
+    audit: bool = False
+    # cases that differ on any axis, and the first STORED_CASE_IDS of them, so a failed audit can be reviewed
+    mismatched_cases: int = 0
+    mismatched_case_ids: tuple[str, ...] = ()
 
     def axis(self, name: str) -> AxisResult:
         return next(a for a in self.axes if a.axis == name)
@@ -304,21 +320,36 @@ def _changed_node_types(conn, change_id: str) -> frozenset[str]:
     return frozenset(e.node_type for e in event.changed_entities)
 
 
+# a published change release "passed its own checks" when it was published at a recorded level (I-27: migration 0017
+# then guarantees its COMPLETE selective run, and for EXHAUSTIVE a passing comparison), or, for a release published
+# before the level was recorded, when a passing comparison by its own change is stored for it
+_CHECKED_RELEASES = """
+SELECT r.release_id, r.triggered_by_change_id,
+       r.triggered_by_change_id IS NOT NULL AND (
+           r.verification_level IS NOT NULL
+           OR EXISTS (SELECT 1 FROM equivalence_report er
+                      WHERE er.release_id = r.release_id AND er.change_id = r.triggered_by_change_id AND er.passed)
+       ) AS checked
+FROM release r
+WHERE r.status = 'PUBLISHED' AND r.release_seq < %s
+ORDER BY r.release_seq DESC
+"""
+
+
 def _types_changed_after(conn, boundary: int, current: frozenset[str]) -> dict[str, frozenset[str]]:
     """For each published release before the boundary, the kinds of node changed after it: the current change's own
-    kinds and those of every later published change. A row written in that release may carry an older label for them.
-    Trusts that each published change release passed its own comparison, which the publication guard (I-21, I-23)
-    enforces; change releases published before the guard existed carry no such guarantee."""
-    rows = conn.execute(
-        "SELECT release_id, triggered_by_change_id FROM release WHERE status = 'PUBLISHED' AND release_seq < %s "
-        "ORDER BY release_seq DESC",
-        (boundary,),
-    ).fetchall()
+    kinds and those of every later published change that passed its own checks. A row written in that release may
+    carry an older label for them.
+
+    Fails closed (PR #197 review item 3): a published change release with no recorded verification level and no
+    passing comparison of its own (one published before the guard existed) does not widen the set-aside, so a stale
+    label it would explain is reported as a mismatch instead of being trusted."""
+    rows = conn.execute(_CHECKED_RELEASES, (boundary,)).fetchall()
     later = set(current)
     result = {}
-    for release_id, change_id in rows:
+    for release_id, change_id, checked in rows:
         result[release_id] = frozenset(later)
-        if change_id:
+        if checked:
             later |= _changed_node_types(conn, change_id)
     return result
 
@@ -363,6 +394,8 @@ def compare_with_exhaustive(
         boundary = conn.execute("SELECT release_seq FROM release WHERE release_id = %s", (release_id,)).fetchone()[0]
     universe = _universe(conn, release_id, boundary)
     expected = set(universe)
+    # I-27: a release that is already published is being audited, not gated
+    audit = release_id is not None and get_release(conn, release_id).status == "PUBLISHED"
 
     run_id = run_id or "RUN-" + uuid.uuid4().hex[:12]
     if store:
@@ -377,7 +410,7 @@ def compare_with_exhaustive(
                 conn, change_id, selective_run_id, run_id, release_id, boundary, universe, expected,
                 selected_ids, changed_types, versions, inputs_for, evaluate, batch_size, max_examples,
             )
-            report = _with_seconds(report, time.monotonic() - started)
+            report = _with_seconds(report, time.monotonic() - started, audit=audit)
             if store:
                 _store_report(conn, report, versions)
                 _finish_run(conn, run_id, "COMPLETE", reevaluated=len(universe), release_id=release_id, error=None)
@@ -391,8 +424,9 @@ def compare_with_exhaustive(
     return report
 
 
-def _with_seconds(report: EquivalenceReport, seconds: float) -> EquivalenceReport:
-    return EquivalenceReport(**{**{f: getattr(report, f) for f in report.__dataclass_fields__}, "seconds": seconds})
+def _with_seconds(report: EquivalenceReport, seconds: float, *, audit: bool = False) -> EquivalenceReport:
+    fields = {f: getattr(report, f) for f in report.__dataclass_fields__}
+    return EquivalenceReport(**{**fields, "seconds": seconds, "audit": audit})
 
 
 def _compare(
@@ -404,6 +438,7 @@ def _compare(
     examples: dict[str, list[Mismatch]] = {axis: [] for axis in AXES}
     seen: set[str] = set()
     affected = state_changed = selected_and_affected = missed = 0
+    mismatched_ids: list[str] = []
 
     types_after = _types_changed_after(conn, boundary, changed_types)
     stream = iter(inputs_for(list(universe)))
@@ -440,7 +475,10 @@ def _compare(
                 selective = in_release[case_id]
                 exhaustive = _exhaustive_view(result, relaxed=False, changed_types=changed_types)
 
-            for axis, differs in _differs(selective, exhaustive).items():
+            differences = _differs(selective, exhaustive)
+            if any(differences.values()):
+                mismatched_ids.append(case_id)
+            for axis, differs in differences.items():
                 compared[axis] += 1
                 if differs:
                     mismatched[axis] += 1
@@ -488,6 +526,8 @@ def _compare(
         axes=axes,
         passed=not any(mismatched.values()),
         seconds=0.0,
+        mismatched_cases=len(mismatched_ids),
+        mismatched_case_ids=tuple(sorted(mismatched_ids)[:STORED_CASE_IDS]),
     )
 
 
@@ -543,7 +583,7 @@ def gate_release(conn, report: EquivalenceReport) -> str:
         with atomic(conn):
             if report.passed:
                 validate_release(conn, report.release_id)
-                publish_release(conn, report.release_id)
+                publish_release(conn, report.release_id, verification_level=LEVEL_EXHAUSTIVE)
                 return "PUBLISHED"
             block_release(conn, report.release_id)
             return "BLOCKED"
@@ -576,3 +616,49 @@ def _require_stored(conn, report: EquivalenceReport) -> None:
         raise ReportNotBound(
             f"report {report_id} is stale: report {newest} was stored for release {report.release_id} after it"
         )
+
+
+# ---------- the Admin audit (I-27) ----------
+
+def audit_release(
+    conn,
+    release_id: str,
+    *,
+    versions: VersionVector,
+    inputs_for: Callable[[list[str]], Iterable[CaseInputs]],
+    evaluate: Callable[[CaseInputs, VersionVector], EvalResult],
+    run_id: str | None = None,
+    batch_size: int = 2000,
+    max_examples: int = 20,
+) -> EquivalenceReport:
+    """Compare a published SELECTIVE release with an exhaustive run, after the fact, and store the result.
+
+    The comparison is exactly the gate's (compare_with_exhaustive, stored), marked as an audit. It never changes the
+    release: a passing audit is shown with it, a failing one stays on record against it and is raised in the review
+    queue (ledger.failed_audits). Who may ask is decided by the caller (the API allows Admin only). Raises
+    AuditNotAllowed for a release that is not a published SELECTIVE change release, AlreadyCompared when the change
+    already has a live exhaustive run (one audit per change), and ComparisonFailed as compare_with_exhaustive does.
+    """
+    release = get_release(conn, release_id)   # ReleaseNotFound for an unknown id
+    if release.triggered_by_change_id is None:
+        raise AuditNotAllowed(f"release {release_id} was written by no change, so there is no selection to audit")
+    if release.status != "PUBLISHED":
+        raise AuditNotAllowed(
+            f"release {release_id} is {release.status}; an audit checks a published release (compare and gate a "
+            "DRAFT instead)"
+        )
+    if release.verification_level != LEVEL_SELECTIVE:
+        raise AuditNotAllowed(
+            f"release {release_id} is {release.verification_level or 'not recorded'}, not SELECTIVE; only a "
+            "selectively verified release is audited"
+        )
+    report = compare_with_exhaustive(
+        conn, release.triggered_by_change_id, versions=versions, inputs_for=inputs_for, evaluate=evaluate,
+        run_id=run_id, batch_size=batch_size, max_examples=max_examples, store=True,
+    )
+    if report.release_id != release_id:
+        # cannot happen while the selective run that wrote the release is the change's COMPLETE one; fail loudly
+        raise AuditNotAllowed(
+            f"the selective run of change {release.triggered_by_change_id} wrote {report.release_id}, not {release_id}"
+        )
+    return report

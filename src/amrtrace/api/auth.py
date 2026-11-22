@@ -163,13 +163,17 @@ def require_run_user(request: Request, session: AuthSession = Depends(current_se
     return _authorize(request, session, "run_evaluation")
 
 
-def assert_run_authority(actor: Actor, *, run_exhaustive: bool, gate: bool) -> None:
-    """Selective-only and gated runs are reserved for Admin (Z-18).
+def require_release_gate(request: Request, session: AuthSession = Depends(current_session)) -> Actor:
+    return _authorize(request, session, "release_gate")
 
-    Analysts may run exhaustive checks with gate=False. Since I-21 a selective-only
-    run no longer publishes (its release stays a DRAFT); the role rule is unchanged.
+
+def assert_run_authority(actor: Actor, *, run_exhaustive: bool, gate: bool) -> None:
+    """The exhaustive comparison is optional and Admin-only (I-27, supervisor decision 17 Nov 2026; Z-18 roles).
+
+    Any run user (Analyst or Admin) may run the selective re-evaluation and publish its release as SELECTIVE, or hold
+    it as a DRAFT. An exhaustive comparison, gated or not, needs release_gate (Admin), as does a later audit.
     """
-    if gate or not run_exhaustive:
+    if gate or run_exhaustive:
         if not may(actor.role, "release_gate"):
             raise _forbidden()
 

@@ -193,12 +193,29 @@ def test_publish_false_leaves_a_draft_release(applied):
 
 # ---------- the publication rule (I-21) ----------
 
-def test_asking_the_engine_to_publish_is_refused_and_leaves_nothing(applied):
+def test_asking_the_engine_to_publish_publishes_it_as_selective(applied):
+    # I-27 (supervisor decision 17 Nov 2026): a selective run alone may publish, and the release says so
+    report = run(applied, publish=True)
+    assert applied.execute(
+        "SELECT status, verification_level FROM release WHERE release_id = 'REL2'"
+    ).fetchone() == ("PUBLISHED", "SELECTIVE")
+    assert run_row(applied, report.run_id)[0] == "COMPLETE"
+    assert get_current_state(applied, "A").release_id == "REL2"
+
+
+def test_a_refused_selective_publication_leaves_nothing(applied, monkeypatch):
+    # the publication rule is checked after the run is complete, in the same savepoint: a refusal takes it all back
+    import amrtrace.reeval.engine as engine
+
+    def refuse(conn, release_id, **kwargs):
+        raise PublicationRefused("refused for the test")
+
+    monkeypatch.setattr(engine, "publish_release", refuse)
     before = counts(applied)
     with pytest.raises(ReevaluationFailed) as failed:
         run(applied, publish=True)
     assert isinstance(failed.value.__cause__, PublicationRefused)
-    assert counts(applied) == before                                 # the savepoint took the draft release with it
+    assert counts(applied) == before                                 # the savepoint took the release with it
     assert applied.execute("SELECT status, error FROM reeval_run").fetchall()[-1][0] == "FAILED"
     assert get_current_state(applied, "A").release_id == "REL1"
 
@@ -206,9 +223,12 @@ def test_asking_the_engine_to_publish_is_refused_and_leaves_nothing(applied):
 def test_the_held_release_publishes_once_a_passing_comparison_is_stored(applied):
     report = run(applied)
     with pytest.raises(PublicationRefused):
-        publish_release(applied, "REL2")
+        publish_release(applied, "REL2")                             # EXHAUSTIVE, the strict level, by default
     publish_after_a_passing_comparison(applied, report)
     assert get_current_state(applied, "A").release_id == "REL2"
+    assert applied.execute("SELECT verification_level FROM release WHERE release_id = 'REL2'").fetchone()[0] == (
+        "EXHAUSTIVE"
+    )
 
 
 def test_an_empty_impact_set_completes_without_writing_a_release(conn):
