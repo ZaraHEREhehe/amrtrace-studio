@@ -2,6 +2,7 @@
 
 from .compare import (
     AlreadyCompared,
+    AuditNotAllowed,
     AxisResult,
     ComparisonFailed,
     EquivalenceReport,
@@ -9,6 +10,7 @@ from .compare import (
     Mismatch,
     NoSelectiveRun,
     ReportNotBound,
+    audit_release,
     compare_with_exhaustive,
     gate_release,
     stored_report,
@@ -38,5 +40,6 @@ __all__ = [
     "AlreadyCompared", "AlreadyReevaluated", "AxisResult", "ComparisonFailed", "CorrectionNotice",
     "EquivalenceReport", "GateError", "InputsMismatch", "Mismatch", "NoImpactSet", "NoSelectiveRun", "ReevalReport",
     "ReevaluationError", "ReevaluationFailed", "ReportNotBound", "compare_with_exhaustive", "gate_release",
+    "AuditNotAllowed", "audit_release",
     "reevaluate", "stored_report",
 ]

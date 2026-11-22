@@ -314,6 +314,15 @@ export function getReleaseIdentity(releaseId, fetchImpl = globalThis.fetch) {
   return requestJson(`/releases/${encodeURIComponent(releaseId)}/identity`, {}, fetchImpl);
 }
 
+// I-27: Admin only; compares a published, selectively verified release with an exhaustive run and stores the result
+export function auditRelease(releaseId, fetchImpl = globalThis.fetch) {
+  return requestJson(
+    `/releases/${encodeURIComponent(releaseId)}/audit`,
+    { method: "POST", body: {} },
+    fetchImpl,
+  );
+}
+
 export async function getVerifiedExportJson(
   releaseId,
   expectedDigest,

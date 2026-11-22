@@ -15,6 +15,9 @@ class Release:
     version_vector: Mapping[str, Any]
     created_at: datetime
     triggered_by_change_id: Optional[str]
+    # how a change-written release was verified when it was published (I-27): SELECTIVE or EXHAUSTIVE; None for a
+    # release no change wrote, one not published yet, and one published before the level was recorded
+    verification_level: Optional[str] = None
 
 
 @dataclass(frozen=True)

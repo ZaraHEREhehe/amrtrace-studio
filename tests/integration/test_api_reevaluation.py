@@ -301,8 +301,8 @@ def _release_status(conn, release_id):
     ).fetchone()[0]
 
 
-# I-21: the publication rule holds on the API route too
-def test_a_selective_only_run_through_http_leaves_the_release_a_draft(
+# I-27 (supervisor decision 17 Nov 2026): a selective run alone publishes, marked SELECTIVE
+def test_a_selective_only_run_through_http_publishes_it_as_selectively_verified(
     client,
     run_world,
 ):
@@ -311,22 +311,117 @@ def test_a_selective_only_run_through_http_leaves_the_release_a_draft(
     response = client.post(
         f"/changes/{event.change_id}/reevaluate",
         json={
-            "release_id": "R3_HELD",
+            "release_id": "R3_SELECTIVE",
             "run_exhaustive": False,
             "gate": False,
         },
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 201, response.text
     body = response.json()
     assert body["selective_run"]["status"] == "COMPLETE"
     assert body["equivalence"] is None
+    assert (body["release_status"], body["verification_level"]) == ("PUBLISHED", "SELECTIVE")
+    assert _release_status(conn, "R3_SELECTIVE") == "PUBLISHED"
+
+    # the level is shown wherever the release is: the release list and its identity, never as fully checked
+    listed = {r["release_id"]: r for r in client.get("/releases").json()}
+    assert listed["R3_SELECTIVE"]["verification_level"] == "SELECTIVE"
+    assert listed["R3_SELECTIVE"]["verification_label"] == "selectively verified"
+    assert listed["R1"]["verification_level"] is None
+    identity = client.get("/releases/R3_SELECTIVE/identity").json()
+    assert identity["verification_level"] == "SELECTIVE"
+    assert identity["report_id"] is None and identity["comparison_kind"] is None
+
+    # and in the export: every state the release wrote carries the level, older states carry no such key
+    exported = client.get("/export", params={"as_of_release": "R3_SELECTIVE"}).json()["cases"]
+    written = [c for c in exported if c["release_id"] == "R3_SELECTIVE"]
+    assert written and all(c["verification_level"] == "SELECTIVE" for c in written)
+    assert all("verification_level" not in c for c in exported if c["release_id"] != "R3_SELECTIVE")
+
+
+def test_a_selective_run_with_publish_false_leaves_the_release_a_draft(
+    client,
+    run_world,
+):
+    conn, event = run_world
+
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={"release_id": "R3_HELD", "publish": False},
+    )
+
+    assert response.status_code == 201, response.text
+    assert response.json()["release_status"] == "DRAFT"
+    assert response.json()["verification_level"] is None
     assert _release_status(conn, "R3_HELD") == "DRAFT"
     # nothing became current: the newest published release is still R2
     assert conn.execute(
         "SELECT count(*) FROM case_state s JOIN release r USING (release_id) "
         "WHERE r.status = 'PUBLISHED' AND s.release_id = 'R3_HELD'"
     ).fetchone()[0] == 0
+
+
+def test_publish_with_an_exhaustive_run_is_refused_before_any_run(client, run_world):
+    conn, event = run_world
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={"release_id": "R3_BOTH", "publish": True, "run_exhaustive": True, "gate": False},
+    )
+    assert response.status_code == 422
+    assert response.json()["error_code"] == "invalid_run_request"
+    assert conn.execute("SELECT count(*) FROM reeval_run").fetchone()[0] == 0
+
+
+def test_a_gated_release_is_exhaustively_verified(client, run_world):
+    conn, event = run_world
+    response = client.post(
+        f"/changes/{event.change_id}/reevaluate",
+        json={"release_id": "R3_GATED", "run_exhaustive": True, "gate": True},
+    )
+    assert response.status_code == 201, response.text
+    assert (response.json()["release_status"], response.json()["verification_level"]) == ("PUBLISHED", "EXHAUSTIVE")
+    identity = client.get("/releases/R3_GATED/identity").json()
+    assert (identity["verification_level"], identity["comparison_kind"]) == ("EXHAUSTIVE", "GATE")
+    # an exhaustively verified release has nothing left to audit
+    audit = client.post("/releases/R3_GATED/audit")
+    assert audit.status_code == 409 and audit.json()["error_code"] == "audit_not_allowed"
+
+
+def test_an_admin_audit_of_a_selective_release_is_stored_and_shown_with_it(client, run_world):
+    conn, event = run_world
+    assert client.post(
+        f"/changes/{event.change_id}/reevaluate", json={"release_id": "R3_AUDITED"}
+    ).status_code == 201
+
+    response = client.post("/releases/R3_AUDITED/audit")
+
+    assert response.status_code == 201, response.text
+    report = response.json()
+    assert report["audit"] is True and report["passed"] is True
+    assert report["release_id"] == "R3_AUDITED" and report["gate_status"] == "PUBLISHED"
+    assert report["mismatched_cases"] == 0 and report["mismatched_case_ids"] == []
+    # the release is not rewritten: still SELECTIVE, with the audit beside it
+    assert conn.execute(
+        "SELECT status, verification_level FROM release WHERE release_id = 'R3_AUDITED'"
+    ).fetchone() == ("PUBLISHED", "SELECTIVE")
+    identity = client.get("/releases/R3_AUDITED/identity").json()
+    assert identity["verification_level"] == "SELECTIVE"
+    assert (identity["comparison_kind"], identity["comparison_passed"]) == ("AUDIT", True)
+    assert (identity["audit_report_id"], identity["audit_passed"]) == (identity["report_id"], True)
+    assert client.get("/review-queue").json()["failed_audits"] == []
+    # one audit per change
+    again = client.post("/releases/R3_AUDITED/audit")
+    assert again.status_code == 409 and again.json()["error_code"] == "audit_exists"
+
+
+def test_audit_of_an_unknown_or_draft_release_is_refused(client, run_world):
+    conn, event = run_world
+    assert client.post("/releases/NO_SUCH_RELEASE/audit").status_code == 404
+    client.post(f"/changes/{event.change_id}/reevaluate", json={"release_id": "R3_DRAFT", "publish": False})
+    response = client.post("/releases/R3_DRAFT/audit")
+    assert response.status_code == 409 and response.json()["error_code"] == "audit_not_allowed"
+    assert client.post("/releases/R1/audit").json()["error_code"] == "audit_not_allowed"
 
 
 def test_an_exhaustive_run_without_the_gate_stores_the_report_and_holds_the_release(

@@ -32,6 +32,8 @@ from amrtrace.changes.service import get_impact_set
 from amrtrace.deps.materialize import materialize as default_materialize
 from amrtrace.evaluator.types import CaseInputs, EvalResult, VersionVector
 from amrtrace.ledger.load_release import BaselineState, load_later_release
+from amrtrace.ledger.publication import LEVEL_SELECTIVE
+from amrtrace.ledger.releases import publish_release, validate_release
 
 MODE_SELECTIVE = "SELECTIVE"
 MODE_EXHAUSTIVE = "EXHAUSTIVE"
@@ -183,10 +185,11 @@ def reevaluate(
     """Re-evaluate the cases in the change's stored impact set and store the result as release `release_id`.
 
     version_vector is the new release's version vector (stored on the release) and versions is the same thing as the
-    evaluator's VersionVector. The release stays a DRAFT (the default since I-21), so the exhaustive comparison can
-    run and gate_release can publish it. publish=True asks to publish at once; the publication rule refuses that
-    (ledger.check_publication: no comparison is stored yet), so the run fails and nothing is published. Raises NoImpactSet or AlreadyReevaluated before touching anything, and ReevaluationFailed
-    (after recording the FAILED run) for any failure while working.
+    evaluator's VersionVector. By default the release stays a DRAFT, so the optional exhaustive comparison can run and
+    gate_release can publish it as EXHAUSTIVE. publish=True publishes it at once as SELECTIVE (I-27, supervisor
+    decision 17 Nov 2026): after the run is COMPLETE and its graph is stored, in the same savepoint, so a refusal by
+    the publication rule rolls everything back and fails the run. Raises NoImpactSet or AlreadyReevaluated before
+    touching anything, and ReevaluationFailed (after recording the FAILED run) for any failure while working.
     """
     started = time.monotonic()
     impact = get_impact_set(conn, change_id)
@@ -229,7 +232,7 @@ def reevaluate(
                 triggered_by_change_id=change_id,
                 expected_count=len(case_ids),
                 batch_size=batch_size,
-                publish=publish,
+                publish=False,
                 require_same_cases=False,
             )
             summary = materialize(conn, release_id, evaluations, versions)
@@ -244,6 +247,10 @@ def reevaluate(
                 for case_id, (previous, corrected, reviewer) in sorted(corrections.items())
             )
             _finish_run(conn, run_id, "COMPLETE", reevaluated=report.loaded, release_id=release_id, error=None)
+            if publish:
+                # the publication rule (and migration 0017) needs the COMPLETE run that wrote the release
+                validate_release(conn, release_id)
+                publish_release(conn, release_id, verification_level=LEVEL_SELECTIVE)
     except Exception as exc:
         # the savepoint has been rolled back; only the run row records that this happened
         _finish_run(

@@ -1,8 +1,9 @@
 # A-19: independent negative cases for the publication rule (AMR-001/021, T23, SRF01), written from the requirement
-# and not from the I-21 fix. The rule (D-08, D-09): a re-evaluated release is published only after an exhaustive
-# comparison that is stored for that release has passed. Missing, failed or mismatched verification never publishes.
-# Cases that current main gets wrong are strict xfail with the task that must fix them, so they turn red the day the
-# fix lands and the marker has to be removed in that PR.
+# and not from the I-21 fix. The rule was changed by the supervisor decision of 17 Nov 2026 (I-27): a selective run
+# alone may publish, and the release is then marked SELECTIVE ("selectively verified") and can never appear as fully
+# checked; it is EXHAUSTIVE only when a stored exhaustive comparison of that release passed before publishing, and the
+# exhaustive run is optional and Admin-only. Missing, failed or mismatched exhaustive verification never publishes a
+# release as EXHAUSTIVE, and a failed comparison stops publication at any level.
 
 from dataclasses import replace
 
@@ -54,31 +55,47 @@ def handmade_report(selective, *, passed, change_id=None, release_id=None):
     )
 
 
-# both flags are explicit: with only run_exhaustive=false the default gate=true is refused and the bypass is not reached
-def test_api_selective_only_run_does_not_publish(client, run_world):
+def verification_level(conn, release_id):
+    row = conn.execute("SELECT verification_level FROM release WHERE release_id = %s", (release_id,)).fetchone()
+    return None if row is None else row[0]
+
+
+# I-27: the selective-only request may publish, but only as SELECTIVE and with no comparison claimed
+def test_api_selective_only_run_publishes_only_as_selective(client, run_world):
     conn, event = run_world
     response = client.post(
         f"/changes/{event.change_id}/reevaluate",
         json={"release_id": "negative-case", "run_exhaustive": False, "gate": False},
     )
-    # a refusal (4xx) or an unpublished draft both meet the rule; a published release does not
-    assert response.status_code in (201, 409, 422)
-    assert release_status(conn, "negative-case") != "PUBLISHED"
+    assert response.status_code == 201, response.text
+    assert response.json()["equivalence"] is None
+    assert release_status(conn, "negative-case") == "PUBLISHED"
+    assert verification_level(conn, "negative-case") == "SELECTIVE"
+    assert conn.execute("SELECT count(*) FROM equivalence_report").fetchone()[0] == 0
 
 
-# a request with only run_exhaustive=false is the 422 the review warned about, so it must not be used as the bypass test
-def test_api_request_without_explicit_gate_is_refused_before_any_run(client, run_world):
+# a selectively verified release stays SELECTIVE even after a passing audit: it never appears as fully checked
+def test_a_passing_audit_does_not_relabel_a_selective_release(client, run_world):
+    conn, event = run_world
+    client.post(f"/changes/{event.change_id}/reevaluate", json={"release_id": "negative-audit"})
+    assert client.post("/releases/negative-audit/audit").json()["passed"] is True
+    assert verification_level(conn, "negative-audit") == "SELECTIVE"
+    assert client.get("/releases/negative-audit/identity").json()["verification_level"] == "SELECTIVE"
+
+
+# a gate request without the exhaustive run it would gate on is refused before any run
+def test_api_gate_without_an_exhaustive_run_is_refused_before_any_run(client, run_world):
     conn, event = run_world
     response = client.post(
         f"/changes/{event.change_id}/reevaluate",
-        json={"release_id": "negative-case", "run_exhaustive": False},
+        json={"release_id": "negative-case", "run_exhaustive": False, "gate": True},
     )
     assert response.status_code == 422
     assert response.json()["error_code"] == "invalid_run_request"
     assert release_status(conn, "negative-case") is None
 
 
-# the engine called with its defaults has had no comparison at all, so its release must not be published
+# the engine called with its defaults holds the release: publishing selectively is asked for, never assumed
 def test_engine_default_does_not_publish_without_a_comparison(run_world):
     conn, event = run_world
     context = run_context(conn, event.change_id)
@@ -90,7 +107,7 @@ def test_engine_default_does_not_publish_without_a_comparison(run_world):
     assert release_status(conn, "R_ENGINE_DEFAULT") != "PUBLISHED"
 
 
-# the CLI's function without --hold is the same missing comparison, reached from the command line
+# the CLI's function without --publish holds the release the same way
 def test_cli_default_does_not_publish_without_a_comparison(run_world):
     conn, event = run_world
     tables = read_frozen_tables(COHORT)
@@ -132,3 +149,28 @@ def test_report_for_another_change_cannot_publish(run_world):
     except GateError:
         pass
     assert release_status(conn, "R_MISMATCH") != "PUBLISHED"
+
+
+# a failed comparison stops publication at every level: a failing DRAFT cannot be published selectively instead
+def test_a_failed_comparison_also_refuses_selective_publication(run_world):
+    from amrtrace.ledger import PublicationRefused, publish_release, validate_release
+
+    conn, event = run_world
+    selective = draft_release(conn, event.change_id, "R_FAILED_SELECTIVE")
+    report = handmade_report(selective, passed=False)
+    # store a failing row the way the comparator would, so the database sees a failed comparison of this release
+    conn.execute(
+        "INSERT INTO reeval_run (run_id, change_id, mode, status, selected_count, reevaluated_count, release_id, "
+        "started_at, finished_at) VALUES ('RUN-FAILING', %s, 'EXHAUSTIVE', 'COMPLETE', 1, 1, %s, now(), now())",
+        (event.change_id, "R_FAILED_SELECTIVE"),
+    )
+    conn.execute(
+        "INSERT INTO equivalence_report (change_id, selective_run_id, exhaustive_run_id, release_id, passed, "
+        "total_cases, selected, affected, missed, state_mismatches, uncertainty_mismatches, dependency_mismatches, "
+        "report) VALUES (%s, %s, 'RUN-FAILING', %s, false, 1, 1, 1, 1, 1, 0, 0, '{}')",
+        (event.change_id, report.selective_run_id, "R_FAILED_SELECTIVE"),
+    )
+    validate_release(conn, "R_FAILED_SELECTIVE")
+    with pytest.raises(PublicationRefused):
+        publish_release(conn, "R_FAILED_SELECTIVE", verification_level="SELECTIVE")
+    assert release_status(conn, "R_FAILED_SELECTIVE") != "PUBLISHED"

@@ -113,6 +113,15 @@ export function reviewPageInfo(page) {
   };
 }
 
+// I-27: published releases whose Admin audit failed, listed above the queue; a malformed entry is dropped
+export function failedAuditRows(page) {
+  const audits = Array.isArray(page?.failed_audits) ? page.failed_audits : [];
+  return audits.filter((audit) =>
+    audit && typeof audit.release_id === "string" && Number.isSafeInteger(audit.report_id) &&
+    Number.isSafeInteger(audit.mismatched_cases) && Array.isArray(audit.case_ids));
+}
+
+
 export class ReviewFormError extends Error {
   constructor(field, message) {
     super(message);

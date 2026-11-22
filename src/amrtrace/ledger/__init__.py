@@ -5,8 +5,8 @@ Typical use, inside a transaction the caller controls:
     create_release(conn, "R2", {...version vector...}, triggered_by_change_id="CHG-0001")
     append_case_state(conn, case_id=..., release_id="R2", state_code=..., explanation={...},
                       verification_status="STATE_CHANGED", ...)
-    validate_release(conn, "R2")          # after the equivalence check passes
-    publish_release(conn, "R2")
+    validate_release(conn, "R2")
+    publish_release(conn, "R2", verification_level="SELECTIVE")   # or EXHAUSTIVE after a passing comparison (I-27)
     load_later_release(conn, "R2", {...}, states)   # a whole later release, each state superseding the last
     get_state_as_of(conn, case_id, "R1")  # reconstruct what was believed at R1
 
@@ -23,7 +23,18 @@ from .errors import (
     ReleaseNotFound,
     UnknownReference,
 )
-from .publication import check_publication, release_binding
+from .publication import (
+    LEVEL_EXHAUSTIVE,
+    LEVEL_SELECTIVE,
+    VERIFICATION_LEVELS,
+    FailedAudit,
+    ReleaseVerification,
+    check_publication,
+    failed_audits,
+    release_binding,
+    release_verification,
+    verification_label,
+)
 from .releases import (
     ALLOWED_TRANSITIONS,
     block_release,
@@ -63,6 +74,8 @@ __all__ = [
     "CaseStateRecord", "Release", "BaselineState", "LoadReport", "load_baseline_release", "load_later_release",
     "LedgerError", "ReleaseNotFound", "ReleaseNotDraft", "InvalidReleaseTransition",
     "EmptyRelease", "DuplicateState", "UnknownReference", "PublicationRefused", "check_publication", "release_binding",
+    "LEVEL_SELECTIVE", "LEVEL_EXHAUSTIVE", "VERIFICATION_LEVELS", "ReleaseVerification", "FailedAudit",
+    "release_verification", "failed_audits", "verification_label",
     "create_release", "get_release", "list_releases", "validate_release", "publish_release",
     "block_release", "fail_release",
     "append_case_state", "get_state", "get_history", "get_state_as_of", "get_current_state",
