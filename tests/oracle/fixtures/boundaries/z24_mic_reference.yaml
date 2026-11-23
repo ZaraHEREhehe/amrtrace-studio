@@ -765,7 +765,7 @@ label_policy_cases:
   expected_final_label: I
   expected_label_source: derived
   expected_rule_scope: host
-  policy_derivation: "HISTORICAL D-21/D-22: Feline gentamicin MIC 4 = I using the old grey human source; Ed7 footnote d instead directs dog source, same category."
+  policy_derivation: "D-21/D-22 HISTORICAL: Feline gentamicin MIC 4 = I using the old grey human source; Ed7 footnote d instead directs dog source, same category."
 - id: POL_008
   table: clsi_m100_ed32_vet01s_ed7.yaml
   drug: gentamicin
