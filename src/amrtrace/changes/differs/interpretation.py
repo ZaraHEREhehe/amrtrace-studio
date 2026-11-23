@@ -26,8 +26,10 @@ class InterpretationTableDiffer:
                 entities.append(ChangedEntity(RULE_NODE_TYPE, key, None, new.interpretation_version, None))
             elif after is None:
                 entities.append(ChangedEntity(RULE_NODE_TYPE, key, old.interpretation_version, None, None))
-            elif before.categories != after.categories:
-                regions = differing_regions(before, after)
+            elif before.content() != after.content():
+                # a change to how a rule is used, not to its numbers, can reach any measurement, so the whole rule counts
+                same_use = (before.report_only, before.report_only_policy) == (after.report_only, after.report_only_policy)
+                regions = differing_regions(before, after) if same_use else None
                 region = None if regions is None else {"field": "mic", "intervals": regions}
                 entities.append(ChangedEntity(RULE_NODE_TYPE, key, old.interpretation_version, new.interpretation_version, region))
         return entities

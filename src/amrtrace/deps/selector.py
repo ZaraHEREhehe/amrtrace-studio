@@ -123,11 +123,12 @@ def _same_rule_content(conn, cache: dict, node_type: str, node_id: str, version:
     key = (node_id, version, old_version)
     if key not in cache:
         rows = conn.execute(
-            "SELECT interpretation_version, categories FROM interpretation_rule "
+            "SELECT interpretation_version, categories, report_only, report_only_policy FROM interpretation_rule "
             "WHERE rule_key = %s AND interpretation_version = ANY(%s)",
             (node_id, [version, old_version]),
         ).fetchall()
-        found = dict(rows)
+        # equal numbers are not enough: a rule that is now report-only reads the same measurement differently
+        found = {row[0]: (row[1], bool(row[2]), row[3]) for row in rows}
         # both versions must be stored and equal; anything less is left to the plain version check
         cache[key] = version in found and old_version in found and found[version] == found[old_version]
     return cache[key]

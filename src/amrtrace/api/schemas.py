@@ -87,6 +87,8 @@ class InterpretationFlagView(BaseModel):
     derived_label: str | None = None
     label_changed: bool | None = None
     host_group: str | None = None
+    # set when the table marks this pair as report-only (A-28)
+    report_only_policy: str | None = None
     rule_key: str | None = None
     table_version: str | None = None
     source: str | None = None

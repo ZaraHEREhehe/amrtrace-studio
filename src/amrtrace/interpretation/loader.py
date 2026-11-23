@@ -2,6 +2,7 @@
 
     interpretation_version: <VERSION_ID>
     standard: <standard name>
+    report_only_policy: <optional not_defined | keep_submitted, applied to every report_only rule>
     rules:
       - organism: <organism>
         antibiotic: <drug>
@@ -9,6 +10,7 @@
         host: <optional host group, e.g. dog>
         source: <optional document and row the numbers came from>
         breakpoint_species: <optional species the breakpoint was set for>
+        report_only: <optional true when the source gives no category for this pair>
         categories:
           - {label: susceptible, op: "<=", value: 2}
 """
@@ -21,7 +23,7 @@ from typing import Any
 import yaml
 
 from .intervals import categories_overlap
-from .models import LABELS, OPS, Category, InterpretationRule, InterpretationTable, make_rule_key
+from .models import LABELS, OPS, REPORT_ONLY_POLICIES, Category, InterpretationRule, InterpretationTable, make_rule_key
 
 
 OPTIONAL_FIELDS = ("host", "source", "breakpoint_species")
@@ -49,6 +51,11 @@ def parse_table(data: Any) -> InterpretationTable:
     if not isinstance(raw_rules, list) or not raw_rules:
         problems.append("rules must be a non-empty list")
         raise InvalidTable(problems)
+    # one setting for the whole table, so every report-only rule in a version is handled the same way
+    policy = data.get("report_only_policy")
+    if policy is not None and policy not in REPORT_ONLY_POLICIES:
+        problems.append(f"report_only_policy must be one of {', '.join(REPORT_ONLY_POLICIES)} when given")
+        policy = None
 
     rules, seen = [], set()
     for i, raw in enumerate(raw_rules):
@@ -63,6 +70,12 @@ def parse_table(data: Any) -> InterpretationTable:
         for field in OPTIONAL_FIELDS:
             if field in raw and _blank(raw.get(field)):
                 problems.append(f"{label}: {field} must be a non-empty string when given")
+        if "report_only" in raw and not isinstance(raw.get("report_only"), bool):
+            problems.append(f"{label}: report_only must be true or false when given")
+        # the policy is a choice about the whole table, so a single rule may not carry its own
+        if "report_only_policy" in raw:
+            problems.append(f"{label}: report_only_policy is set once for the table, not on a rule")
+        report_only = True if raw.get("report_only") is True else None
         raw_categories = raw.get("categories")
         if not isinstance(raw_categories, list) or not raw_categories:
             problems.append(f"{label}: categories must be a non-empty list")
@@ -92,12 +105,32 @@ def parse_table(data: Any) -> InterpretationTable:
                 seen.add(key)
                 if not _blank(version):
                     rules.append(InterpretationRule(version, standard, raw["organism"], raw["antibiotic"], raw["method"],
-                                                    tuple(categories), **{f: raw.get(f) for f in OPTIONAL_FIELDS}))
+                                                    tuple(categories), **{f: raw.get(f) for f in OPTIONAL_FIELDS},
+                                                    report_only=report_only,
+                                                    report_only_policy=policy if report_only else None))
     if problems:
         raise InvalidTable(problems)
     return InterpretationTable(version, standard, tuple(rules))
 
 
+# plain YAML keeps the last of two equal keys without a word, which once hid a second interpretation_version (A-28)
+class _UniqueKeyLoader(yaml.SafeLoader):
+    pass
+
+
+def _mapping_without_repeats(loader, node, deep=False):
+    seen = set()
+    for key_node, _ in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        if key in seen:
+            raise InvalidTable([f"key {key!r} appears twice in one mapping (line {key_node.start_mark.line + 1})"])
+        seen.add(key)
+    return loader.construct_mapping(node, deep=deep)
+
+
+_UniqueKeyLoader.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _mapping_without_repeats)
+
+
 def load_table(path: str) -> InterpretationTable:
     with open(path, encoding="utf-8") as handle:
-        return parse_table(yaml.safe_load(handle))
+        return parse_table(yaml.load(handle, Loader=_UniqueKeyLoader))
