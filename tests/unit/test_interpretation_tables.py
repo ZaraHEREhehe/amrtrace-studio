@@ -248,3 +248,83 @@ def test_find_rules_picks_the_host_rule_only_when_the_host_is_named():
     general = find_rules(rules, standard="FANTASY_STD", organism="Imaginary bacillus", antibiotic="mythicin")
     hosted = find_rules(rules, standard="FANTASY_STD", organism="Imaginary bacillus", antibiotic="mythicin", host="unicorn")
     assert [r.host for r in general] == [None] and [r.host for r in hosted] == ["unicorn"]
+
+
+# A-28: the report-only marker is set per rule and the policy once per table
+def test_the_policy_reaches_only_the_rules_marked_report_only():
+    data = table()
+    data["report_only_policy"] = "not_defined"
+    data["rules"].append(dict(data["rules"][0], antibiotic="otheromycin", report_only=True))
+    plain, marked = sorted(parse_table(data).rules, key=lambda r: r.antibiotic)
+    assert (plain.report_only, plain.report_only_policy) == (None, None)
+    assert (marked.report_only, marked.report_only_policy) == (True, "not_defined")
+    assert rules_as_dicts([marked])[0]["report_only_policy"] == "not_defined"
+    assert "report_only" not in rules_as_dicts([plain])[0]
+
+
+def test_a_rule_marked_false_keeps_the_old_shape():
+    data = table()
+    data["rules"][0]["report_only"] = False
+    (rule,) = parse_table(data).rules
+    assert rule.report_only is None and rules_as_dicts([rule])[0] == rules_as_dicts(parse_table(table()).rules)[0]
+
+
+@pytest.mark.parametrize("mutate,expected", [
+    (lambda d: d.update(report_only_policy="guess"), "report_only_policy must be one of"),
+    (lambda d: d["rules"][0].update(report_only="yes"), "report_only must be true or false"),
+    (lambda d: d["rules"][0].update(report_only=True, report_only_policy="not_defined"), "set once for the table"),
+])
+def test_bad_report_only_settings_are_rejected(mutate, expected):
+    data = table()
+    mutate(data)
+    with pytest.raises(InvalidTable) as info:
+        parse_table(data)
+    assert expected in str(info.value)
+
+
+def test_the_a28_table_differs_from_ed36_only_in_the_cat_and_swine_gentamicin_rows():
+    current = load_table(str(DATA / "clsi_m100_ed36_vet01s_ed7.yaml")).by_key()
+    corrected_table = load_table(str(DATA / "clsi_m100_ed36_vet01s_ed7_r1.yaml"))
+    assert corrected_table.interpretation_version == "CLSI_M100_ED36_VET01S_ED7_R1"
+    corrected = corrected_table.by_key()
+    assert set(current) == set(corrected)
+    changed = sorted(key for key in current if current[key].to_dict() | {"interpretation_version": ""}
+                     != corrected[key].to_dict() | {"interpretation_version": ""})
+    assert changed == ["clsi|escherichia coli|gentamicin|mic|cat", "clsi|escherichia coli|gentamicin|mic|swine"]
+    assert all(current[key].categories == corrected[key].categories for key in current)
+    assert corrected["clsi|escherichia coli|gentamicin|mic|cat"].breakpoint_species == "dog"
+    assert corrected["clsi|escherichia coli|gentamicin|mic|swine"].report_only is True
+    # D-31: option a, and only the marked rule carries it
+    assert [key for key, rule in corrected.items() if rule.report_only_policy] == ["clsi|escherichia coli|gentamicin|mic|swine"]
+    assert corrected["clsi|escherichia coli|gentamicin|mic|swine"].report_only_policy == "not_defined"
+
+
+# D-31 end to end through the evaluator: swine gentamicin reads NOT_DEFINED, the cat row and other swine drugs do not move
+@pytest.mark.parametrize("key, mic, reported, expected", [
+    ("clsi|escherichia coli|gentamicin|mic|swine", 1.0, "S", ("NOT_DEFINED",)),
+    ("clsi|escherichia coli|gentamicin|mic|swine", 32.0, "R", ("NOT_DEFINED",)),
+    ("clsi|escherichia coli|meropenem|mic|swine", 8.0, "R", ("R",)),
+    ("clsi|escherichia coli|gentamicin|mic|cat", 8.0, "R", ("R",)),
+])
+def test_the_a28_table_reads_only_swine_gentamicin_as_not_defined(key, mic, reported, expected):
+    from dataclasses import replace
+
+    from amrtrace.evaluator import CaseInputs, VersionVector, evaluate_phenotype
+
+    table = load_table(str(DATA / "clsi_m100_ed36_vet01s_ed7_r1.yaml"))
+    inputs = CaseInputs(case_id="CASE_X", target_acc="PDT_X", antibiotic=key.split("|")[2], organism="Escherichia coli",
+                        refgene_db_version="2000-01-01.1", genotype_analysis_valid=True, ast_rows=(), genotype_rows=(), mapping_rules=(),
+                        interpretation_rules=rules_as_dicts(table.rules))
+    row = {"ast_evidence_id": "AST_X", "phenotype": reported, "mic": mic, "sign": "==", "rule_keys": [key]}
+    versions = VersionVector(source_snapshot_id="S", curation_rule_version="C", amrfinderplus_version="A",
+                             mapping_version="M", interpretation_version=table.interpretation_version,
+                             case_rule_version="R", panel_id="P", evaluator_version="E")
+    result = evaluate_phenotype(replace(inputs, ast_rows=(row,)), versions)
+    assert result.phenotype_values == expected
+
+
+def test_a_table_file_with_a_repeated_key_is_refused(tmp_path):
+    path = tmp_path / "twice.yaml"
+    path.write_text("interpretation_version: V1\nstandard: S\ninterpretation_version: V2\nrules: []\n", encoding="utf-8")
+    with pytest.raises(InvalidTable, match="appears twice"):
+        load_table(str(path))
