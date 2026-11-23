@@ -229,6 +229,9 @@ as follows (`changes/service.py`):
 
 ## Limits (stated honestly)
 
+What each change type can do end to end (register, derive, draft, select, re-evaluate) and how the others are
+refused is in `docs/design/operational_scope.md` (A-25).
+
 - **One snapshot step at a time.** Evidence is loaded and re-evaluated from the snapshot the release in force was
   built from (V1 to V2). Comparing V2 with a later V3 would name V2 ids for rows the release still reads under their
   V1 ids, so the loader refuses it; writing the evidence in force out as a snapshot to compare from is future work
