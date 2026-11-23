@@ -1,0 +1,119 @@
+# Z-28: isolated, locally tagged final-evaluation demo.
+# Run only via deploy/demo/start.ps1 or with explicit -p amrtrace-z28-demo.
+# Never use the main docker-compose.yml or its shared DB volume for this fixture.
+name: amrtrace-z28-demo
+
+services:
+  db:
+    image: postgres:16.10-alpine3.22
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${Z28_DB_PASSWORD:?Set Z28_DB_PASSWORD using start.ps1}
+      POSTGRES_DB: amrtrace_z28
+    # No host DB port: the project-local network is the only way in.
+    volumes:
+      - z28_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d amrtrace_z28"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  migrate:
+    image: postgres:16.10-alpine3.22
+    restart: "no"
+    environment:
+      PGHOST: db
+      PGUSER: postgres
+      PGPASSWORD: ${Z28_DB_PASSWORD:?Set Z28_DB_PASSWORD using start.ps1}
+      PGDATABASE: amrtrace_z28
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - ../../db/migrations:/migrations:ro
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        set -eu
+        digest=$$(sha256sum /migrations/[0-9]*.sql | sha256sum | awk '{print $$1}')
+        stamped=$$(psql -Atq -c "SELECT to_regclass('public.z28_demo_schema_stamp') IS NOT NULL")
+        if [ "$$stamped" = "t" ]; then
+          saved=$$(psql -Atq -c "SELECT digest FROM z28_demo_schema_stamp")
+          if [ "$$digest" != "$$saved" ]; then
+            echo 'Z28_SCHEMA_MISMATCH: migration files changed; reset only the Z-28 demo after backing up any demo work.' >&2
+            exit 4
+          fi
+          echo 'Z28_SCHEMA_REUSED: migration fingerprint matches'
+          exit 0
+        fi
+        old=$$(psql -Atq -c "SELECT to_regclass('public.release') IS NOT NULL OR to_regclass('public.\"case\"') IS NOT NULL")
+        if [ "$$old" != "f" ]; then
+          echo 'Z28_REFUSED: database has existing tables but no completed schema stamp; never migrate or overwrite it automatically.' >&2
+          exit 5
+        fi
+        for sql in /migrations/[0-9]*.sql; do
+          echo "Applying $$sql"
+          psql -v ON_ERROR_STOP=1 -1 -f "$$sql" >/dev/null
+        done
+        psql -v ON_ERROR_STOP=1 -c 'CREATE TABLE z28_demo_schema_stamp (digest text NOT NULL PRIMARY KEY, created_at timestamptz NOT NULL DEFAULT now())' >/dev/null
+        psql -v ON_ERROR_STOP=1 -c "INSERT INTO z28_demo_schema_stamp (digest) VALUES ('$$digest')" >/dev/null
+        echo 'Z28_SCHEMA_APPLIED: complete schema recorded'
+
+  seed:
+    image: amrtrace-z28-demo-api:${Z28_IMAGE_TAG:?Use start.ps1 to set the image tag}
+    restart: "no"
+    entrypoint: ["python", "scripts/z28_demo_seed.py"]
+    environment: &api_env
+      PYTHONPATH: /app/src
+      AMRTRACE_PG_HOST: db
+      AMRTRACE_PG_PORT: "5432"
+      AMRTRACE_PG_USER: postgres
+      AMRTRACE_PG_PASSWORD: ${Z28_DB_PASSWORD:?Set Z28_DB_PASSWORD using start.ps1}
+      AMRTRACE_PG_DBNAME: amrtrace_z28
+      AMRTRACE_COPILOT_LOCAL_MODEL: ""
+      AMRTRACE_COPILOT_LOCAL_URL: ""
+      GROQ_API_KEY: ""
+      AMRTRACE_COPILOT_HOSTED_MODEL: ""
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  api:
+    image: amrtrace-z28-demo-api:${Z28_IMAGE_TAG:?Use start.ps1 to set the image tag}
+    restart: unless-stopped
+    environment:
+      <<: *api_env
+      PORT: "8000"
+    ports:
+      - "127.0.0.1:${Z28_API_PORT:-18000}:8000"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3).read()"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+  web:
+    image: amrtrace-z28-demo-web:${Z28_IMAGE_TAG:?Use start.ps1 to set the image tag}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${Z28_WEB_PORT:-18080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 3s
+      retries: 15
+      start_period: 5s
+
+volumes:
+  z28_pgdata:
+    # Compose project name scopes the volume, unlike the normal dev pgdata.
