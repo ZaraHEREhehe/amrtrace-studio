@@ -1685,3 +1685,45 @@ tr.clickable {
 [hidden] {
   display: none !important;
 }
+
+/* G-09: an additive chart using the same white cards and existing state palette. */
+.sankey-dashboard-card { margin-bottom: 16px; }
+#dashboard-transitions { min-width: 0; }
+.sankey-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
+.sankey-field { display: grid; gap: 4px; min-width: 125px; font-size: 11px; color: var(--text-2); }
+.sankey-field select { min-width: 120px; max-width: 250px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); padding: 6px 8px; }
+.sankey-checkbox { display: inline-flex; gap: 7px; align-items: center; font-size: 11px; color: var(--text-2); padding-bottom: 6px; cursor: pointer; }
+.sankey-checkbox input { accent-color: var(--teal); }
+.sankey-summary { margin: 7px 0; font-size: 12px; color: var(--navy); font-weight: 500; }
+.sankey-status, .sankey-hint { margin: 6px 0; font-size: 11px; color: var(--text-2); }
+.sankey-warning { padding: 7px 10px; border-left: 3px solid var(--amber); background: #fff7ed; color: #92400e; font-size: 11px; }
+.sankey-empty { padding: 20px 12px; background: var(--bg); color: var(--text-2); border: 1px solid var(--border); text-align: center; }
+.sankey-scroll { overflow-x: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 4px; background: var(--card); }
+.sankey-scroll svg { min-width: 780px; width: 100%; height: auto; display: block; }
+.sankey-ribbon { cursor: pointer; outline: none; transition: fill-opacity .12s ease; }
+.sankey-ribbon:hover, .sankey-ribbon:focus { fill-opacity: .82; stroke: var(--teal); stroke-width: 1.2px; }
+.sankey-axis-label { font-size: 13px; font-weight: 600; fill: var(--navy); }
+.sankey-node-label { font-size: 12px; fill: var(--text); }
+.sankey-label-guide { stroke: var(--border); stroke-width: 1px; }
+.sankey-details { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 8px; }
+.sankey-details:empty { display: none; }
+.sankey-case-list { list-style: none; padding: 0; margin: 6px 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px 12px; }
+.sankey-case-list li { min-width: 0; overflow-wrap: anywhere; }
+.sankey-case-list a { color: var(--teal); }
+.sankey-pager { display: flex; gap: 12px; align-items: center; justify-content: end; flex-wrap: wrap; }
+.sankey-pager button { border: 1px solid var(--border); border-radius: 4px; background: var(--card); padding: 5px 9px; }
+.sankey-pager button:hover:not(:disabled) { background: var(--row-hover); }
+.sankey-pager button:disabled { opacity: .5; cursor: not-allowed; }
+.sankey-table-details { margin-top: 8px; font-size: 11px; }
+.sankey-table-details summary { cursor: pointer; color: var(--teal); }
+.sankey-count-table { margin-top: 8px; width: 100%; border-collapse: collapse; }
+.sankey-count-table th, .sankey-count-table td { border-bottom: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+.sankey-count-button { border: 0; background: none; padding: 2px; color: var(--teal); text-decoration: underline; cursor: pointer; }
+@media (max-width: 760px) {
+  .sankey-field { flex: 1 1 130px; }
+  .sankey-field select { max-width: 100%; }
+  .sankey-case-list { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sankey-ribbon { transition: none; }
+}
