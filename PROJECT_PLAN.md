@@ -576,8 +576,14 @@ The two precisions differ when a selected case changes its explanation but not i
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
 | CHG-VET01S-ED7 (R3, read as of R2) | 41,858 | 5,556 | 5,556 | 5,556 | 2,679 | 100% | 100% | 100% | 13.27% |
 | CHG-CLSI-ED33 (R4, read as of R3) | 41,858 | 116 | 112 | 116 | 112 | 100% | 100% | 96.6% (112 / 116) | 0.28% |
+| CHG-NCBI-V2-AST-2 (R6) | 41,858 | 659 | no oracle | 659 | 630 | 100% | 100% | no oracle | 1.57% |
+| CHG-NCBI-V2-GENOTYPE (R7) | 41,858 | 24 | no oracle | 24 | 0 | 100% | 100% | no oracle | 0.06% |
+| CHG_A28_GROUP_D (R8, read as of R7) | 41,858 | 158 | no oracle | 158 | 71 | 100% | 100% | no oracle | 0.38% |
 
-The original results are kept as they were recorded; only their names are made exact. The mid-evaluation figures
+R6 to R8 have no oracle fixture: their affected set and recall come from the exhaustive comparison only (the gate
+for R6 and R7, an Admin audit for R8; A-27, read from the D-22 database on 2026-11-23). In R7 every selected case
+changed its dependency explanation and none changed state, which is why F is 24 and C is 0. The original results are
+kept as they were recorded; only their names are made exact. The mid-evaluation figures
 (254 selected, 98.43%) belong to the D-21 build and the old 154-case oracle and are not compared with these.
 
 ### 7.2 Reading the reprocessing target per scenario
@@ -591,19 +597,50 @@ fixed share cannot apply to every change, because the share a correct selector m
   oracle needs 5,556 of 41,858 (13.27%). No correct selector can go below that, so a below-5% target cannot apply. The
   measure here is that the selection equals the required set (precision 100%).
 
+- **Changes to evidence or to how one rule is used** (R6, R7, R8) also stay inside existing rules and the cases already
+  on them: 1.57% for the NCBI V2 AST corrections, 0.06% for the genotype changes and 0.38% for the group D correction.
+  All three meet the below-5% target; with no oracle fixture, they are judged by recall and precision against the
+  exhaustive comparison (100% each).
+
 Recorded by Aabia (A-22, 2026-11-14): the reprocessing ratio is reported per scenario next to the oracle's required
 share, and judged by precision against the oracle; a fixed percentage applies only to changes inside existing rules.
-This replaces a single target for every change and is to be confirmed in the next supervision record (SRF05).
+This replaces a single target for every change and is to be confirmed in the next supervision record (SRF05). So far
+the target holds for every change inside existing rules (four of five real changes); the one change that adds rules
+for a whole group needs 13.27%, as its oracle requires (A-27, 2026-11-23).
 
-### 7.3 What the case-count reduction does and does not mean
+### 7.3 What the selective-only workflow costs
 
-Selecting 116 cases where re-running everything takes 41,858 is about 361 times fewer **cases**. It is not a measured
-speedup: with the exhaustive check on every release, the gated workflow costs slightly more than a full recompute
-(43.9 s against 41.8 s for CHG-CLSI-ED33; `docs/design/selector_performance.md`, A-24). Selective re-evaluation alone
-took 1.8 s for that change. Because its cost follows the size of the change and an exhaustive run follows the size
-of the cohort, it is expected to pull further ahead on a larger cohort; that is reasoning, not a measurement. Per
-case it is not cheaper (about 15 ms for R4 and 4.8 ms for R3, against about 1 ms in the exhaustive run), so it pays
-only when a change touches a small share of the cohort.
+Selecting 116 cases where re-running everything takes 41,858 is about 361 times fewer **cases**. What that saves in
+time depends on the publication rule:
+
+- **Until 17 Nov 2026** every release was gated by an exhaustive check, so the gated workflow cost slightly more than a
+  full recompute (43.9 s against 41.8 s for CHG-CLSI-ED33; A-24, `docs/design/selector_performance.md`). The case
+  count fell, the time did not.
+- **Since 17 Nov 2026** (supervisor decision, implemented by I-27) a selective run alone may publish and the exhaustive
+  run is an optional Admin audit. The published path is selection, selective re-evaluation and publication. Measured
+  on the D-22 database (`scripts/workflow_cost.py --repeats 3`, Aabia's laptop; selection and publication median of 3,
+  the re-evaluation runs one recorded run each):
+
+| Change | Selected | Selective-only total | Exhaustive run (full recompute and comparison) | Times less |
+|---|---:|---:|---:|---:|
+| CHG-CLSI-ED33 (R4) | 116 | 2.15 s | 41.77 s | about 19 |
+| CHG-NCBI-V2-GENOTYPE (R7) | 24 | 1.59 s | 28.30 s | about 18 |
+| CHG_A28_GROUP_D (R8) | 158 | 4.36 s | 52.79 s | about 12 |
+| CHG-NCBI-V2-AST-2 (R6) | 659 | 4.28 s | 29.32 s | about 7 |
+| CHG-VET01S-ED7 (R3) | 5,556 | 26.81 s | 44.65 s | about 1.7 |
+
+What this does not show:
+
+- **The gain shrinks as the selected share grows.** At 13.3% selected (VET01S) the selective-only path is only about 1.7
+  times faster; a change that selects most of the cohort would gain nothing.
+- **Per case, selective re-evaluation is slower**, about 15 ms for R4, 26 ms for R8 and 4.8 ms for R3, against about
+  1 ms in the exhaustive run; it pays only because it touches few cases.
+- **An audit costs a full recompute.** When the Admin runs one (recommended in `docs/design/selection_sufficiency.md`,
+  section 5), that run's cost is added; R8's audit took 52.8 s.
+- **The exhaustive spans include the comparison**, which is not stored separately, so a full recompute alone is
+  somewhat faster than the last column. Each recorded run is a single run (18 Oct, 16 Nov and 23 Nov 2026), on one
+  laptop. A larger cohort is expected to widen the gap, because the selective cost follows the size of the change;
+  that is reasoning, not a measurement.
 
 ---
 
@@ -1044,7 +1081,7 @@ Iteration 2 runs as **three parallel tracks** (D-24). Each member works through 
 | R01 | A-23 | Aabia | DONE | PR #191 (Closes #173), merged 2026-11-14 | CLSI source and validation guide, phases A and B. `scripts/clsi_import.py` builds a draft interpretation table from a pinned local snapshot of the AMR R package's `clinical_breakpoints` data and compares it rule by rule with the active table: species row first, then the Enterobacterales group row; urinary-only rows left out; conflicting, missing, dose-dependent or wider-than-one-dilution rows refused; I derived from the dilution between S and R; the VET01S grey-row fallback applied per ADR-005; deterministic output; never writes to `data/interpretation/`. Source record `data/sources/amr_clinical_breakpoints.yaml` (commit 49a0f37, SHA-256, licence, reuse status, and the year-to-edition mapping, supported for human rows by three dated revisions); five specs in `data/sources/clsi_import/` hold no breakpoints. On the pinned snapshot all 100 rules of the five active tables match. No AMR-derived value is committed. 11 tests on synthetic data, including a corrupted-threshold canary. Note: `docs/design/clsi_import.md`. |
 | R02 | A-25 | Aabia | TODO | Issue #199 | R02 follow-up (AMR-009/023, T24, SRF21). Operational scope of each change type (registered, selected, run through API or CLI, refused) and requirement status split into module, API and deployed. |
 | R02 | A-26 | Aabia | TODO | Issue #205 | R02 follow-up (AMR-005/025, T19, T39, SRF24). Source trail and verification for M100 Ed32, Ed33, Ed36 and VET01S Ed7; CLSI licensing document updated and sent to the supervisor; written source-use conditions pending. |
-| R02 | A-27 | Aabia | TODO | Issue #206 | R02 follow-up (AMR-010/018, T29, T30, SRF20, SRF25). Metrics with named case sets, cost claims for the agreed selective-only workflow, below-5% target qualified, own workbook rows and disclosure. |
+| R02 | A-27 | Aabia | IN-REVIEW | A-27 PR (closes #206) | R02 follow-up (AMR-010/018, T29, T30, SRF20, SRF25). Section 7.1 adds R6, R7 and R8 with named sets (no oracle fixture: affected set from the exhaustive comparison). Section 7.2 reads the below-5% target for evidence and rule-use changes (1.57%, 0.06%, 0.38%; met for every change inside existing rules). Section 7.3 states the cost of the agreed selective-only workflow (2.15 s against 41.77 s for CHG-CLSI-ED33; about 1.7 to 19 times less), with its limits. `selector_performance.md`, `research_contribution.md`, `ablation.md` and `selection_sufficiency.md` updated to match. |
 | R02 | A-28 | Aabia | TODO | Issue #200 | VET01S Ed7 Group D correction (swine gentamicin; 158 cases on the D-22 database, 88 changed in R3). Both options behind one setting, cat and horse relabels, ADR-005 amendment; run after the supervisor's choice. |
 | R02 | A-29 | Aabia | IN-REVIEW | A-29 PR (closes #201) | Supervisor decision 17 Nov 2026 (selective run alone may publish). Evidence that selection is sufficient: written argument, selector mutation testing, replay of the four real changes, selective-only timing, bounded conclusion. Done 23 Nov 2026: `docs/design/selection_sufficiency.md` (argument, assumptions, when to audit); `scripts/selector_mutants.py`, 10 of 10 mutants killed with and without unit tests (M3 gap closed in `tests/integration/test_selector.py`); stored comparisons for R3 to R7; selective-only workflow 1.6 to 26.8 s against 28.3 to 44.7 s exhaustive. |
 | R02 | I-26 | Insharah | IN-REVIEW | I-26 PR (Closes #207) | R02 follow-up (SRF10, SRF22). Plan records: I-21 (#193), I-23 (#194), I-24 (#196) and I-25 (#195) set to DONE here and in `docs/milestones.md`; the section 14 header now points to 16.4 as the live status. Workbook cells (P23 publication modes, 1C T5R6 and 4A T20R3 V2 evidence boundary, E57 copilot test counts, own Section 4 entries for 10 to 16 Nov) are edited in the shared workbook, not in the repository. |
