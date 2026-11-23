@@ -111,3 +111,27 @@ def test_host_fields_round_trip_through_the_database(conn):
     assert load_table_from_db(conn, "V_HOST") == table
     keys = [r[0] for r in conn.execute("SELECT rule_key FROM interpretation_rule ORDER BY 1").fetchall()]
     assert keys == ["s|o|a|mic", "s|o|a|mic|unicorn"]
+
+
+# A-28: the report-only marker and the table's policy survive the database, and the differ sees them as a change
+def test_the_a28_table_round_trips_and_differs_from_ed36_in_two_rules(conn):
+    from amrtrace.changes.differs.interpretation import InterpretationTableDiffer
+
+    ed36 = load_table(str(DATA / "clsi_m100_ed36_vet01s_ed7.yaml"))
+    r1 = load_table(str(DATA / "clsi_m100_ed36_vet01s_ed7_r1.yaml"))
+    store_table(conn, ed36)
+    store_table(conn, r1)
+    # the database returns rules sorted by key, so they are compared by key
+    assert load_table_from_db(conn, "CLSI_M100_ED36_VET01S_ED7_R1").by_key() == r1.by_key()
+    changed = InterpretationTableDiffer().diff(load_table_from_db(conn, ed36.interpretation_version),
+                                               load_table_from_db(conn, r1.interpretation_version))
+    # the cat row changed only its source, which reads no measurement differently, so only swine gentamicin counts
+    assert [(e.node_id, e.changed_region) for e in changed] == [("clsi|escherichia coli|gentamicin|mic|swine", None)]
+
+
+def test_the_database_refuses_a_policy_on_a_rule_that_is_not_report_only(conn):
+    with pytest.raises(psycopg.errors.CheckViolation):
+        conn.execute(
+            "INSERT INTO interpretation_rule (rule_key, interpretation_version, standard, organism, antibiotic, method, "
+            "categories, report_only_policy) VALUES ('k', 'V', 's', 'o', 'a', 'MIC', '[]'::jsonb, 'not_defined')"
+        )

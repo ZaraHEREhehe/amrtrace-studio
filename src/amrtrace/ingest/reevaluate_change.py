@@ -162,8 +162,8 @@ def reevaluate_stored_change(
     organism: str,
     publish: bool = False,
 ) -> ReevalReport:
-    """The new release stays a DRAFT, so the exhaustive comparison can gate it (compare_change --gate). publish=True
-    is refused by the publication rule (I-21): nothing is published without a passing comparison."""
+    """By default the new release stays a DRAFT, so the optional exhaustive comparison can gate it (compare_change
+    --gate). publish=True publishes it as SELECTIVE once the run is complete (I-27, supervisor decision 17 Nov 2026)."""
     context = change_context(conn, tables, change_id, panel, organism)
     return reevaluate(
         conn,
@@ -196,7 +196,7 @@ def reevaluate_interpretation_change(
 
 
 def render_report(report: ReevalReport, stored: bool, held: bool = True) -> str:
-    # held is kept for older callers: since I-21 every release written here is held as a DRAFT
+    # held=False means the release was published as SELECTIVE (--publish, I-27)
     lines = [
         f"change {report.change_id}: {report.selected:,} cases selected against release {report.base_release_id}",
         f"run {report.run_id}: {report.status}",
@@ -219,7 +219,15 @@ def render_report(report: ReevalReport, stored: bool, held: bool = True) -> str:
             f"{notice.corrected_state_code}; now {notice.new_state_code} ({verdict})"
         )
     if report.release_id is not None:
-        lines.append(f"release {report.release_id} is a DRAFT: run compare_change --gate to publish or block it")
+        if held:
+            lines.append(
+                f"release {report.release_id} is a DRAFT: run compare_change --gate (Admin) to publish or block it"
+            )
+        else:
+            lines.append(
+                f"release {report.release_id} is PUBLISHED as SELECTIVE (selectively verified); "
+                "an Admin can audit it later with compare_change --audit"
+            )
     lines.append("STORED" if stored else "DRY RUN: everything above was rolled back, nothing is stored (use --commit to keep it)")
     return "\n".join(lines)
 
@@ -233,10 +241,18 @@ def main() -> int:
     parser.add_argument("--data-dir", default="data/raw")
     parser.add_argument("--manifest", default="data/manifest/sha256.txt")
     parser.add_argument("--commit", action="store_true", help="keep the result; without it everything is rolled back")
+    parser.add_argument("--publish", action="store_true",
+                        help="publish the new release as SELECTIVE once the run completes (I-27; needs --commit); "
+                             "without it the release stays a DRAFT for compare_change --gate")
     parser.add_argument("--hold", action="store_true",
-                        help="accepted for older scripts: the new release always stays a DRAFT until "
-                             "compare_change --gate has checked it (I-21)")
+                        help="accepted for older scripts: the release stays a DRAFT, which is the default")
     arguments = parser.parse_args()
+    if arguments.publish and arguments.hold:
+        print("STOP: --publish and --hold contradict each other")
+        return 1
+    if arguments.publish and not arguments.commit:
+        print("STOP: --publish changes a release, so it needs --commit")
+        return 1
 
     try:
         verify_hashes(Path(arguments.data_dir), Path(arguments.manifest))
@@ -245,6 +261,7 @@ def main() -> int:
             try:
                 report = reevaluate_stored_change(
                     conn, tables, arguments.change_id, arguments.release_id, _panel(conn), _organism(conn),
+                    publish=arguments.publish,
                 )
             except ReevaluationFailed as problem:
                 # the failed run row is the only thing written; keep it only when asked to store results
@@ -256,7 +273,7 @@ def main() -> int:
         print(f"STOP: {type(problem).__name__}: {problem}")
         return 1
 
-    print(render_report(report, stored=arguments.commit))
+    print(render_report(report, stored=arguments.commit, held=not arguments.publish))
     return 0
 
 

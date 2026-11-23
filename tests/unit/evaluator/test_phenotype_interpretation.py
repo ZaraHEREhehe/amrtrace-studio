@@ -314,3 +314,65 @@ def test_the_explanation_carries_the_flags_only_in_interpretation_mode(make_inpu
     assert interpreted.explanation["label_flags"][0]["derived_label"] == "I"
     plain = evaluate(inputs, versions)
     assert "label_flags" not in plain.explanation and "labels_changed" not in plain.explanation
+
+
+# A-28: a rule the source marks as report-only is handled by the table's policy, and with no policy it reads as before
+def report_only(policy):
+    marked = dict(HOST_RULE, report_only=True)
+    if policy is not None:
+        marked["report_only_policy"] = policy
+    return marked
+
+
+def test_without_a_policy_a_report_only_rule_is_applied_as_before(interpret):
+    plain = interpret([keyed_row(4, [HOST_KEY, RULE_KEY])], "TABLE_V2", rules=(NEW, HOST_RULE))
+    marked = interpret([keyed_row(4, [HOST_KEY, RULE_KEY])], "TABLE_V2", rules=(NEW, report_only(None)))
+    assert marked == plain
+
+
+def test_option_a_gives_no_category_whatever_the_measurement(interpret):
+    for mic in (1, 4, 64):
+        result = interpret([keyed_row(mic, [HOST_KEY, RULE_KEY], reported="R")], "TABLE_V2",
+                           rules=(NEW, report_only(c.REPORT_ONLY_NOT_DEFINED)))
+        assert result.phenotype_values == (c.CATEGORY_NOT_DEFINED,)
+        assert result.phenotype_state == c.PHENOTYPE_UNRESOLVED_NONBINARY
+
+
+def test_option_a_matches_a_lab_that_already_reported_no_category(interpret):
+    result = interpret([keyed_row(4, [HOST_KEY], reported="NOT_DEFINED")], "TABLE_V2",
+                       rules=(NEW, report_only(c.REPORT_ONLY_NOT_DEFINED)))
+    (flag,) = result.label_flags
+    assert result.phenotype_values == ("NOT_DEFINED",)
+    assert flag["label_source"] == c.LABEL_SOURCE_DERIVED and flag["label_changed"] is False
+
+
+def test_option_b_keeps_the_lab_label(interpret):
+    result = interpret([keyed_row(4, [HOST_KEY, RULE_KEY], reported="R")], "TABLE_V2",
+                       rules=(NEW, report_only(c.REPORT_ONLY_KEEP_SUBMITTED)))
+    assert result.phenotype_values == ("R",) and result.phenotype_state == c.PHENOTYPE_R
+
+
+def test_both_options_keep_the_measurement_on_the_rule_edge_so_a_later_edition_finds_the_case(interpret):
+    for policy in (c.REPORT_ONLY_NOT_DEFINED, c.REPORT_ONLY_KEEP_SUBMITTED):
+        result = interpret([keyed_row(4, [HOST_KEY, RULE_KEY])], "TABLE_V2", rules=(NEW, report_only(policy)))
+        (edge,) = [r for r in result.dependency_records if r.node_type == c.NODE_INTERPRETATION_RULE]
+        assert (edge.dep_type, edge.node_id, edge.node_context) == (c.DEP_INPUT_EVIDENCE, HOST_KEY, {"mic": 4, "sign": "=="})
+
+
+def test_the_flag_names_the_policy_and_the_rule(interpret):
+    (kept,) = interpret([keyed_row(4, [HOST_KEY], reported="R")], "TABLE_V2",
+                        rules=(NEW, report_only(c.REPORT_ONLY_KEEP_SUBMITTED))).label_flags
+    assert kept == {"ast_evidence_id": "AST_0", "submitted_label": "R", "host_group": "unicorn",
+                    "report_only_policy": c.REPORT_ONLY_KEEP_SUBMITTED, "label_source": c.LABEL_SOURCE_SUBMITTED,
+                    "rule_key": HOST_KEY}
+    (derived,) = interpret([keyed_row(4, [HOST_KEY], reported="R")], "TABLE_V2",
+                           rules=(NEW, report_only(c.REPORT_ONLY_NOT_DEFINED))).label_flags
+    assert derived["report_only_policy"] == c.REPORT_ONLY_NOT_DEFINED
+    assert derived["derived_label"] == c.CATEGORY_NOT_DEFINED and derived["label_changed"] is True
+
+
+def test_a_report_only_rule_without_a_measurement_leaves_the_label_as_before(interpret):
+    result = interpret([keyed_row(None, [HOST_KEY, RULE_KEY], reported="S")], "TABLE_V2",
+                       rules=(NEW, report_only(c.REPORT_ONLY_NOT_DEFINED)))
+    assert result.phenotype_values == ("S",)
+    assert rule_edges(result) == [(c.DEP_APPLICABILITY, HOST_KEY)]

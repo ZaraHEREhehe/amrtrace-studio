@@ -6,7 +6,9 @@ POST /cases/{case_id}/review, which appends a review_event and never edits a sta
     GET /cases/{case_id}/review-status     the review status of the case's current published state
     GET /review-queue?drug=&state=&limit=&offset=&sort=
                                            every UNVERIFIED case, ordered by case id or, with sort=triage, in the
-                                           A-14 review order; every item carries its triage tier and reason
+                                           A-14 review order; every item carries its triage tier and reason.
+                                           failed_audits lists every published release whose latest Admin audit
+                                           failed (I-27), with the cases that differ, so they are raised for review
 """
 
 from __future__ import annotations
@@ -17,12 +19,12 @@ from typing import Literal
 import psycopg
 from fastapi import APIRouter, Depends, Query
 
-from amrtrace.ledger import get_review_status, list_review_queue
+from amrtrace.ledger import failed_audits, get_review_status, list_review_queue
 from amrtrace.triage import rank_review_queue, triage_states
 
 from .db import get_connection
 from .errors import ApiError
-from .schemas import ReviewQueueItemView, ReviewQueueView, ReviewStatusView
+from .schemas import FailedAuditView, ReviewQueueItemView, ReviewQueueView, ReviewStatusView
 
 router = APIRouter(tags=["review"])
 
@@ -66,5 +68,8 @@ def review_queue(
                 **asdict(item), triage_tier=t.tier, triage_rank=t.rank, triage_reason=t.reason
             )
             for item, t in pairs
+        ],
+        failed_audits=[
+            FailedAuditView(**{**asdict(audit), "case_ids": list(audit.case_ids)}) for audit in failed_audits(conn)
         ],
     )

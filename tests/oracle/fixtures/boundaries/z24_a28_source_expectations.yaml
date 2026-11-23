@@ -1,0 +1,145 @@
+# Fixed A-28 VET01S source expectations, no licensed table reproduction.
+# Prepared after inspecting runtime: D-10 independent authorship NOT claimed.
+scenario: Z24-A28-VET01S-CORRECTED-POLICY
+provenance:
+  prepared_by: "ChatGPT assisting Zara; implementation inspected during drafting, NOT D-10 independent"
+  owner_signed_off: false
+  independent_reviewer_signed_off: false
+  source_kind: user_supplied_original_vet01s_instructions_and_table_extracts
+  original_veterinary_documents:
+    - "CLSI VET01S Ed7 Table 1: swine gentamicin Group D"
+    - "Instructions for Use I.C/I.D: no Group D S/I/R breakpoint, MIC-only"
+    - "Table 1 footnote d: use canine breakpoint for cat when available"
+    - "Table 2A: dog gentamicin MIC S <=2; I 4; R >=8"
+  implementation_policy: "D-31 option a not_defined; supervisor confirmation requested"
+  historical_exception: "Legacy Ed32/Ed33 tables remain frozen as historical behavior"
+  corrected_table: clsi_m100_ed36_vet01s_ed7_r1.yaml
+  correction_issue: "A-28 #200"
+  source_verification_issue: "A-26 #205, signed source owner review pending"
+source_rule_cases:
+  - id: A28_SRC_001
+    host_group: dog
+    drug: gentamicin
+    mic: 4
+    expected_touched: [intermediate]
+    expected_breakpoint_species: dog
+    expected_report_only: false
+    derivation: "VET01S Ed7 Table 1 footnote d and Table 2A: canine gentamicin species attribution and boundary."
+  - id: A28_SRC_002
+    host_group: cat
+    drug: gentamicin
+    mic: 2
+    expected_touched: [susceptible]
+    expected_breakpoint_species: dog
+    expected_report_only: false
+    derivation: "VET01S Ed7 Table 1 footnote d and Table 2A: canine gentamicin species attribution and boundary."
+  - id: A28_SRC_003
+    host_group: cat
+    drug: gentamicin
+    mic: 4
+    expected_touched: [intermediate]
+    expected_breakpoint_species: dog
+    expected_report_only: false
+    derivation: "VET01S Ed7 Table 1 footnote d and Table 2A: canine gentamicin species attribution and boundary."
+  - id: A28_SRC_004
+    host_group: cat
+    drug: gentamicin
+    mic: 8
+    expected_touched: [resistant]
+    expected_breakpoint_species: dog
+    expected_report_only: false
+    derivation: "VET01S Ed7 Table 1 footnote d and Table 2A: canine gentamicin species attribution and boundary."
+  - id: A28_SRC_005
+    host_group: swine
+    drug: gentamicin
+    mic: 4
+    expected_touched: []
+    expected_report_only: true
+    expected_report_only_policy: not_defined
+    derivation: "VET01S Ed7 Table 1 Group D and Instructions I.C/I.D: no approved category; D-31 requires NOT_DEFINED."
+  - id: A28_SRC_006
+    host_group: swine
+    drug: meropenem
+    mic: 4
+    expected_touched: [resistant]
+    expected_breakpoint_species: human
+    expected_report_only: false
+    derivation: "VET01S Ed7 Table 2A grey human meropenem row, unchanged regression comparator."
+label_policy_cases:
+  - id: A28_POL_001
+    drug: gentamicin
+    host: Felis catus
+    mic: 4
+    sign: "=="
+    submitted_label: S
+    expected_final_label: I
+    expected_label_source: derived
+    expected_rule_scope: host
+    expected_report_only_policy: null
+    derivation: "VET01S footnote d dog row for cat; D-21 retained category I."
+  - id: A28_POL_002
+    drug: gentamicin
+    host: Sus scrofa domesticus
+    mic: 2
+    sign: "=="
+    submitted_label: S
+    expected_final_label: NOT_DEFINED
+    expected_label_source: derived
+    expected_rule_scope: host
+    expected_report_only_policy: not_defined
+    derivation: "VET01S Group D swine gentamicin; D-31 option a is NOT_DEFINED."
+  - id: A28_POL_003
+    drug: gentamicin
+    host: Sus scrofa domesticus
+    mic: 4
+    sign: "=="
+    submitted_label: S
+    expected_final_label: NOT_DEFINED
+    expected_label_source: derived
+    expected_rule_scope: host
+    expected_report_only_policy: not_defined
+    derivation: "VET01S Group D swine gentamicin; D-31 option a is NOT_DEFINED."
+  - id: A28_POL_004
+    drug: gentamicin
+    host: Sus scrofa domesticus
+    mic: 8
+    sign: "=="
+    submitted_label: I
+    expected_final_label: NOT_DEFINED
+    expected_label_source: derived
+    expected_rule_scope: host
+    expected_report_only_policy: not_defined
+    derivation: "VET01S Group D swine gentamicin; D-31 option a is NOT_DEFINED."
+  - id: A28_POL_005
+    drug: gentamicin
+    host: Sus scrofa domesticus
+    mic: 16
+    sign: "=="
+    submitted_label: R
+    expected_final_label: NOT_DEFINED
+    expected_label_source: derived
+    expected_rule_scope: host
+    expected_report_only_policy: not_defined
+    derivation: "VET01S Group D swine gentamicin; D-31 option a is NOT_DEFINED."
+  - id: A28_POL_006
+    drug: gentamicin
+    host: Sus scrofa domesticus
+    mic: 4
+    sign: "=="
+    submitted_label: NOT_DEFINED
+    expected_final_label: NOT_DEFINED
+    expected_label_source: derived
+    expected_rule_scope: host
+    expected_report_only_policy: not_defined
+    derivation: "VET01S Group D swine gentamicin; D-31 option a is NOT_DEFINED."
+  - id: A28_POL_007
+    drug: meropenem
+    host: Sus scrofa domesticus
+    mic: 4
+    sign: "=="
+    submitted_label: R
+    expected_final_label: R
+    expected_label_source: derived
+    expected_rule_scope: host
+    expected_report_only_policy: null
+    derivation: "Unaffected swine meropenem control."

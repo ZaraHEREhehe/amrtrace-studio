@@ -21,7 +21,25 @@ export function formatPercent(value) {
 
 
 export function decisionLabel(report) {
+  if (report.audit) {
+    return report.passed ? "AUDIT PASSED" : "AUDIT FAILED";
+  }
   return report.passed ? "PASS" : "BLOCKED";
+}
+
+
+// I-27: what the release became once the run finished, in words
+export function releaseOutcomeText(result) {
+  const release = result?.selective_run?.release_id ?? null;
+  if (!release) return "Nothing was selected, so no release was written.";
+  if (result.release_status === "PUBLISHED" && result.verification_level === "SELECTIVE") {
+    return `Release ${release} is published as selectively verified. An Admin can audit it later from Exports.`;
+  }
+  if (result.release_status === "PUBLISHED" && result.verification_level === "EXHAUSTIVE") {
+    return `Release ${release} is published as exhaustively verified.`;
+  }
+  if (result.release_status === "BLOCKED") return `Release ${release} is BLOCKED by the comparison.`;
+  return `Release ${release} stays a draft.`;
 }
 
 

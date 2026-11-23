@@ -65,7 +65,9 @@ WRITES = [
     ("/cases/NO_SUCH_CASE/review", {"reviewer":"spoof","action":"CONFIRM","reason":"canary"}),
     ("/drafts/NO_SUCH_DRAFT/apply", {"decided_by":"spoof"}),
     ("/drafts/NO_SUCH_DRAFT/dismiss", {"decided_by":"spoof","note":"canary"}),
-    ("/changes/NO_SUCH_CHANGE/reevaluate", {"release_id":"R_Z18","run_exhaustive":True,"gate":False}),
+    # I-27: a selective run (which may publish as SELECTIVE) is open to run users; an audit is Admin-only
+    ("/changes/NO_SUCH_CHANGE/reevaluate", {"release_id":"R_Z18","run_exhaustive":False,"gate":False}),
+    ("/releases/NO_SUCH_RELEASE/audit", {}),
 ]
 
 
@@ -86,9 +88,9 @@ def test_anonymous_cannot_write_or_list_admin(harness):
 
 
 @pytest.mark.parametrize("role,allowed", [
-    (Role.ANALYST, [True,False,True,True,True]),
-    (Role.REVIEWER, [False,True,False,False,False]),
-    (Role.ADMIN, [True,True,True,True,True]),
+    (Role.ANALYST, [True,False,True,True,True,False]),
+    (Role.REVIEWER, [False,True,False,False,False,False]),
+    (Role.ADMIN, [True,True,True,True,True,True]),
 ])
 def test_each_role_is_enforced_on_actual_api(harness, role, allowed):
     client, dburl = harness
@@ -113,15 +115,19 @@ def test_bad_csrf_and_cross_origin_leave_ledger_unchanged(harness):
     assert counts(dburl) == before
 
 
-def test_analyst_cannot_publish_through_run_flags(harness):
+def test_analyst_cannot_run_the_exhaustive_check_through_run_flags(harness):
+    # I-27: the exhaustive comparison (gated or not) is Admin-only; a selective run is open to an Analyst
     client, dburl = harness
     provision(dburl, "analystcanary", Role.ANALYST)
     auth = signin(client, "analystcanary", Role.ANALYST)
     before = counts(dburl)
-    for exhaustive, gate in ((True,True),(False,False),(False,True)):
+    for exhaustive, gate in ((True,True),(True,False),(False,True)):
         response = auth.post("/changes/NO_SUCH_CHANGE/reevaluate",json={
             "release_id":"R_Z18","run_exhaustive":exhaustive,"gate":gate})
         assert response.status_code in ({422,403} if gate and not exhaustive else {403}), response.text
+    # a selective-only request passes the role check and stops at the unknown change
+    response = auth.post("/changes/NO_SUCH_CHANGE/reevaluate",json={"release_id":"R_Z18","run_exhaustive":False,"gate":False})
+    assert response.status_code == 404, response.text
     assert counts(dburl) == before
 
 

@@ -33,9 +33,12 @@ def test_only_published_releases_are_returned(monkeypatch):
             response = client.get("/releases")
 
         assert response.status_code == 200
+        # I-27: each release also says how it was verified; these fakes name no change, so they have no level
         assert response.json() == [
-            {"release_id": "R1", "release_seq": 1},
-            {"release_id": "R4", "release_seq": 4},
+            {"release_id": "R1", "release_seq": 1, "verification_level": None,
+             "verification_label": "not a change release"},
+            {"release_id": "R4", "release_seq": 4, "verification_level": None,
+             "verification_label": "not a change release"},
         ]
     finally:
         app.dependency_overrides.pop(get_connection, None)

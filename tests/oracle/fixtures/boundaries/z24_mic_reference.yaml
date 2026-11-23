@@ -15,6 +15,8 @@ provenance:
   - 'D-21/D-22 project policy: docs/adr/ADR-002-interpretation-modes.md and docs/design/d22_host_breakpoints.md'
   authored_on_base_commit: fb197f69921cb8fcff14c52742eef3aa2032eb0d
   reviewer: Aabia
+  historical_source_exceptions: [RAW_043, RAW_044, RAW_045, RAW_046, POL_007]
+  historical_exception_note: 'Old host source attribution is retained as historical regression only, not approved current CLSI guidance.'
   unit: micrograms_per_milliliter
   organism: Escherichia coli
   source_citation_not_publication_permission: true
@@ -544,7 +546,7 @@ raw_lookup_cases:
   - susceptible
   expected_breakpoint_species: human
   source_page: 17
-  derivation: VET01S Ed7 Table 2A grey human gentamicin row; cats have no species gentamicin row; MIC 2 => susceptible.
+  derivation: "HISTORICAL AS-BUILT ONLY: Old feline gentamicin used the human grey row, MIC 2 = S. VET01S Ed7 footnote d directs the dog row; corrected species is dog and the category is unchanged."
 - id: RAW_044
   table: clsi_m100_ed32_vet01s_ed7.yaml
   drug: gentamicin
@@ -557,7 +559,7 @@ raw_lookup_cases:
   - intermediate
   expected_breakpoint_species: human
   source_page: 17
-  derivation: VET01S Ed7 Table 2A grey human gentamicin row; cats have no species gentamicin row; MIC 4 => intermediate.
+  derivation: "HISTORICAL AS-BUILT ONLY: Old feline gentamicin used the human grey row, MIC 4 = I. VET01S Ed7 footnote d directs the dog row; corrected species is dog and the category is unchanged."
 - id: RAW_045
   table: clsi_m100_ed32_vet01s_ed7.yaml
   drug: gentamicin
@@ -570,7 +572,7 @@ raw_lookup_cases:
   - resistant
   expected_breakpoint_species: human
   source_page: 17
-  derivation: VET01S Ed7 Table 2A grey human gentamicin row; cats have no species gentamicin row; MIC 8 => resistant.
+  derivation: "HISTORICAL AS-BUILT ONLY: Old feline gentamicin used the human grey row, MIC 8 = R. VET01S Ed7 footnote d directs the dog row; corrected species is dog and the category is unchanged."
 - id: RAW_046
   table: clsi_m100_ed32_vet01s_ed7.yaml
   drug: gentamicin
@@ -583,7 +585,7 @@ raw_lookup_cases:
   - intermediate
   expected_breakpoint_species: human
   source_page: 17
-  derivation: VET01S Ed7 Table 2A grey human gentamicin row; swine have no species gentamicin row; MIC 4 => intermediate.
+  derivation: "HISTORICAL AS-BUILT ONLY: Old swine gentamicin used the grey human MIC 4 = I. VET01S Ed7 Table 1 Group D and Instructions I.C/I.D do not approve a category; D-31 corrected report-only outcome is NOT_DEFINED."
 - id: RAW_047
   table: clsi_m100_ed32_vet01s_ed7.yaml
   drug: meropenem
@@ -763,7 +765,7 @@ label_policy_cases:
   expected_final_label: I
   expected_label_source: derived
   expected_rule_scope: host
-  policy_derivation: 'D-21/22: Ed32 explains S at MIC4; cat uses VET grey human MIC4 I.'
+  policy_derivation: "HISTORICAL D-21/D-22: Feline gentamicin MIC 4 = I using the old grey human source; Ed7 footnote d instead directs dog source, same category."
 - id: POL_008
   table: clsi_m100_ed32_vet01s_ed7.yaml
   drug: gentamicin

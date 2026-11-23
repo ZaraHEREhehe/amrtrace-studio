@@ -6,6 +6,7 @@ from pydantic import BaseModel
 import psycopg
 
 from amrtrace.ledger.errors import ReleaseNotFound
+from amrtrace.ledger.publication import verification_label
 from amrtrace.ledger.releases import get_release, list_releases
 from amrtrace.triage import rank_release
 
@@ -23,6 +24,9 @@ router = APIRouter(tags=["releases"])
 class PublishedRelease(BaseModel):
     release_id: str
     release_seq: int
+    # I-27: SELECTIVE or EXHAUSTIVE for a change release published at a recorded level, else None
+    verification_level: str | None = None
+    verification_label: str = ""
 
 
 @router.get("/releases", response_model=list[PublishedRelease])
@@ -33,6 +37,11 @@ def published_releases(
         PublishedRelease(
             release_id=release.release_id,
             release_seq=release.release_seq,
+            verification_level=getattr(release, "verification_level", None),
+            verification_label=verification_label(
+                getattr(release, "triggered_by_change_id", None), release.status,
+                getattr(release, "verification_level", None),
+            ),
         )
         for release in list_releases(conn)
         if release.status == "PUBLISHED"
@@ -83,6 +92,12 @@ class ReleaseIdentityView(BaseModel):
     selective_run_id: str | None = None
     exhaustive_run_id: str | None = None
     comparison_passed: bool | None = None
+    # I-27: how the release was verified when it was published, and its latest Admin audit
+    verification_level: str | None = None
+    verification_label: str = ""
+    comparison_kind: str | None = None          # GATE (compared before publishing) or AUDIT (after), None if none
+    audit_report_id: int | None = None
+    audit_passed: bool | None = None
 
 
 @router.get("/releases/{release_id}/identity", response_model=ReleaseIdentityView)
@@ -152,11 +167,21 @@ def published_release_identity(
             "Stored comparison does not match this release and its completed runs",
             {"release_id": release_id},
         ) from exc
+    # I-27: the newest stored comparison of a published release is its audit when it was made after publishing
+    level = getattr(release, "verification_level", None)
+    kind = None
+    if identity:
+        kind = "AUDIT" if (stored.get("report") or {}).get("audit") is True else "GATE"
     return ReleaseIdentityView(
         release_id=release.release_id,
         release_seq=release.release_seq,
         status=release.status,
         change_id=release.triggered_by_change_id,
+        verification_level=level,
+        verification_label=verification_label(release.triggered_by_change_id, release.status, level),
+        comparison_kind=kind,
+        audit_report_id=identity["report_id"] if kind == "AUDIT" else None,
+        audit_passed=identity["comparison_passed"] if kind == "AUDIT" else None,
         **(identity or {}),
     )
 

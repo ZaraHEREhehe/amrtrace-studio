@@ -183,6 +183,9 @@ def test_the_changed_region_narrows_the_selection_and_both_sizes_are_reported(
         "CASE_OUT": {"mic": 1.0, "sign": "=="},
         "CASE_CENSORED_IN": {"mic": 4.0, "sign": "<="},
         "CASE_CENSORED_OUT": {"mic": 2.0, "sign": "<="},
+        # printed outside the region but reaching into it, so only the censored range selects them (A-29, mutant M3)
+        "CASE_CENSORED_ABOVE": {"mic": 16.0, "sign": "<="},
+        "CASE_CENSORED_BELOW": {"mic": 1.0, "sign": ">="},
         "CASE_UNPLACED": None,
     }
     seed_cases(*measurements)
@@ -215,12 +218,14 @@ def test_the_changed_region_narrows_the_selection_and_both_sizes_are_reported(
     selection = select_impact_detailed(conn, "CHG_1")
 
     assert [item.case_id for item in selection.items] == [
+        "CASE_CENSORED_ABOVE",
+        "CASE_CENSORED_BELOW",
         "CASE_CENSORED_IN",
         "CASE_IN",
         "CASE_UNPLACED",
     ]
-    assert selection.level1_size == 5
-    assert selection.level2_size == 3
+    assert selection.level1_size == 7
+    assert selection.level2_size == 5
 
 
 def test_the_latest_published_release_is_used_unless_one_is_named(conn, seed_cases):
@@ -325,11 +330,11 @@ def test_edges_of_a_release_that_is_not_published_do_not_count(conn, seed_cases)
 RULE_KEY = "std|testus organismus|drugzol|mic"
 
 
-def add_rule(conn, version, susceptible_up_to):
+def add_rule(conn, version, susceptible_up_to, report_only=None, policy=None):
     conn.execute(
-        "INSERT INTO interpretation_rule (rule_key, interpretation_version, standard, organism, antibiotic, method, categories) "
-        "VALUES (%s, %s, 'std', 'Testus organismus', 'drugzol', 'MIC', %s)",
-        (RULE_KEY, version, Jsonb([{"label": "susceptible", "op": "<=", "value": susceptible_up_to}])),
+        "INSERT INTO interpretation_rule (rule_key, interpretation_version, standard, organism, antibiotic, method, categories, "
+        "report_only, report_only_policy) VALUES (%s, %s, 'std', 'Testus organismus', 'drugzol', 'MIC', %s, %s, %s)",
+        (RULE_KEY, version, Jsonb([{"label": "susceptible", "op": "<=", "value": susceptible_up_to}]), report_only, policy),
     )
 
 
@@ -369,3 +374,49 @@ def test_an_edge_from_an_edition_with_other_breakpoints_is_not_matched_by_conten
 def test_an_edition_that_was_never_stored_is_not_matched_by_content(carried):
     add_rule(carried, "TABLE_V1", 4)
     assert change_from(carried, "TABLE_V2") == []
+
+
+# A-28: equal numbers are not equal content when one edition marks the rule report-only
+def test_an_edge_from_an_edition_with_the_same_numbers_but_another_use_is_not_matched_by_content(carried):
+    add_rule(carried, "TABLE_V1", 4)
+    add_rule(carried, "TABLE_V2", 4, report_only=True, policy="not_defined")
+    assert change_from(carried, "TABLE_V2") == []
+
+
+def test_an_edge_from_an_edition_with_the_same_numbers_and_the_same_use_is_still_selected(carried):
+    add_rule(carried, "TABLE_V1", 4, report_only=True, policy="keep_submitted")
+    add_rule(carried, "TABLE_V2", 4, report_only=True, policy="keep_submitted")
+    assert change_from(carried, "TABLE_V2") == ["CASE_A"]
+
+
+# A-28: an edition that moves a breakpoint and marks the rule report-only in one step changes every measurement,
+# so the differ must not narrow the change to the moved region (end-to-end check for mutant M12)
+def test_a_breakpoint_move_together_with_a_report_only_marker_selects_results_outside_the_moved_region(conn, seed_cases):
+    from amrtrace.changes.differs.interpretation import InterpretationTableDiffer
+    from amrtrace.interpretation.loader import parse_table
+
+    def table(version, susceptible_up_to, **extra):
+        rule = {"organism": "Testus organismus", "antibiotic": "drugzol", "method": "MIC", **extra,
+                "categories": [{"label": "susceptible", "op": "<=", "value": susceptible_up_to}]}
+        data = {"interpretation_version": version, "standard": "std", "rules": [rule]}
+        if extra:
+            data["report_only_policy"] = "not_defined"
+        return parse_table(data)
+
+    old, new = table("TABLE_V1", 4), table("TABLE_V2", 2, report_only=True)
+    seed_cases("CASE_A")
+    add_release(conn)
+    (old_rule,) = [rule.to_dict() for rule in old.rules]
+    # a MIC of 64 is far from the moved boundary, yet option a now reads it as NOT_DEFINED
+    inputs = replace(
+        make_inputs("CASE_A", ()),
+        ast_rows=({"ast_evidence_id": "AST_CASE_A", "phenotype": "R", "mic": 64.0, "sign": "==", "rule_keys": [RULE_KEY]},),
+        interpretation_rules=(old_rule,),
+    )
+    versions = replace(VERSIONS, interpretation_version="TABLE_V1")
+    materialize(conn, RELEASE, [(inputs, evaluate(inputs, versions))], versions)
+
+    (changed,) = InterpretationTableDiffer().diff(old, new)
+    add_change(conn, "CHG_MARK", entity(changed.node_type, changed.node_id, old_version=changed.old_version,
+                                        new_version=changed.new_version, changed_region=changed.changed_region))
+    assert selected(conn, "CHG_MARK") == ["CASE_A"]

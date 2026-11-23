@@ -64,7 +64,7 @@ def test_the_queue_lists_unverified_cases_with_a_total(client):
     filtered = client.get("/review-queue", params={"state": "CONCORDANT_RESISTANT"}).json()
     assert [item["case_id"] for item in filtered["items"]] == ["CASE_U2"] and filtered["total"] == 1
     assert client.get("/review-queue", params={"drug": "meropenem"}).json() == {
-        "total": 0, "limit": 100, "offset": 0, "items": []}
+        "total": 0, "limit": 100, "offset": 0, "items": [], "failed_audits": []}
 
 
 def test_bad_paging_is_a_validation_error(client):

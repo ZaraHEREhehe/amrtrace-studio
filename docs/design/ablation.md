@@ -100,8 +100,9 @@ What the real results show:
 
 - **On a real edition change, the fine graph re-runs 116 cases where B3 re-runs 41,858.** That is about 361 times
   fewer cases. All 112 required cases are still selected; the 4 extra cases are re-verified, not missed. This is a
-  reduction in cases, not in time: with the exhaustive check on every release the gated workflow costs about as
-  much as a full recompute (`docs/design/selector_performance.md`, A-24).
+  reduction in cases; in time it depends on the publication rule. With the exhaustive check on every release the
+  gated workflow cost about as much as a full recompute (A-24); since the selective-only decision of 17 Nov 2026 the
+  published path took 2.15 s against 41.77 s (`PROJECT_PLAN.md` section 7.3, A-27).
 - **The region does most of the work for CLSI.** Ed33 changed breakpoints inside rules that many cases already use.
   Without the region, every case on a changed rule is selected (5,705, precision 2.0%). With the region, only cases
   whose MIC falls where a category moved are selected (116).

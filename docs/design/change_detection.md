@@ -111,8 +111,11 @@ A draft says which rows changed; re-evaluating it needs the new values. Three co
 
 ```
 python -m amrtrace.ingest.load_evidence_version --old data/raw --old-manifest data/manifest/sha256.txt --new data/snapshots/AMRTRACE_RAW_V2 --commit
-python -m amrtrace.ingest.reevaluate_change --change-id <applied change> --release-id <new release> --commit
+python -m amrtrace.ingest.reevaluate_change --change-id <applied change> --release-id <new release> --commit --publish
+# or, Admin, the optional exhaustive check before publishing (leave out --publish above):
 python -m amrtrace.ingest.compare_change --change-id <applied change> --commit --gate
+# or, Admin, an audit of a release already published as SELECTIVE (I-27):
+python -m amrtrace.ingest.compare_change --audit <published release> --commit
 ```
 
 - **What is loaded.** Only the rows the new snapshot adds, and the new version of every row it edits, each under its
@@ -225,6 +228,9 @@ as follows (`changes/service.py`):
   over-complete declaration, derivation, unstored versions and the API answer.
 
 ## Limits (stated honestly)
+
+What each change type can do end to end (register, derive, draft, select, re-evaluate) and how the others are
+refused is in `docs/design/operational_scope.md` (A-25).
 
 - **One snapshot step at a time.** Evidence is loaded and re-evaluated from the snapshot the release in force was
   built from (V1 to V2). Comparing V2 with a later V3 would name V2 ids for rows the release still reads under their

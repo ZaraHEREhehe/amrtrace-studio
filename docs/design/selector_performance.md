@@ -182,7 +182,7 @@ publication were re-measured on 2026-11-14.
 
 - **The exhaustive check dominates.** It re-evaluates all 41,858 cases whatever the change, so it costs about the same
   (42 to 45 s) for both changes and is 63% of R3's total and 95% of R4's.
-- **With the gate on every release, the selective path saves no time end to end.** R4's gated workflow (43.9 s) costs
+- **With the gate on every release (the rule until 17 Nov 2026), the selective path saved no time end to end.** R4's gated workflow (43.9 s) costs
   slightly more than its exhaustive recompute alone (41.8 s); R3's costs more again, because 5,556 cases are re-evaluated
   twice. The selective path is what is published, and the exhaustive run is the proof that it is right.
 - **What selection does buy** is a result proven equal to a full recompute (0 mismatches on all three axes) that names
@@ -190,7 +190,26 @@ publication were re-measured on 2026-11-14.
   reduction in **cases**, not a measured speedup of the workflow.
 - **When it would save time.** Selective re-evaluation alone takes 1.8 s for R4 and 26.6 s for R3. That cost would be
   the workflow's cost only if the exhaustive check were not run on every release (for example, sampled, or run once to
-  establish trust); that is a policy the project has not adopted, and it would weaken D-08.
+  establish trust). On 17 Nov 2026 the supervisor agreed that policy: a selective run alone may publish and the
+  exhaustive run is an optional Admin audit (I-27). Its measured cost is below.
+
+### Since the selective-only decision (A-27, 2026-11-23)
+
+The published path is now selection, selective re-evaluation and publication. Measured with
+`scripts/workflow_cost.py --repeats 3` on the D-22 database (same laptop; R4 and R3 as above, R6 and R7 re-read on
+2026-11-22, R8 on 2026-11-23 at commit `cd2de6c`):
+
+| Change | Selected | Selective-only total | Exhaustive run (full recompute and comparison) |
+|---|---:|---:|---:|
+| CHG-CLSI-ED33 (R4) | 116 | 2.15 s | 41.77 s |
+| CHG-NCBI-V2-GENOTYPE (R7) | 24 | 1.59 s | 28.30 s |
+| CHG_A28_GROUP_D (R8) | 158 | 4.36 s (selection 0.255, selective 4.102, publication 0.004) | 52.79 s (the Admin audit) |
+| CHG-NCBI-V2-AST-2 (R6) | 659 | 4.28 s | 29.32 s |
+| CHG-VET01S-ED7 (R3) | 5,556 | 26.81 s | 44.65 s |
+
+The selective-only path took about 1.7 to 19 times less time than the exhaustive run. The gain shrinks as the
+selected share grows, per case selective re-evaluation is still slower, and an Admin audit, when run, costs a full
+recompute (`PROJECT_PLAN.md` section 7.3).
 
 **Not measured.** The two one-row status updates at publication; the comparison separately from the exhaustive
 evaluation (stored as one span); time between stages, when a person starts the next command; repeated full runs

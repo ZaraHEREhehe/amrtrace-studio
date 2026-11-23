@@ -87,6 +87,8 @@ class InterpretationFlagView(BaseModel):
     derived_label: str | None = None
     label_changed: bool | None = None
     host_group: str | None = None
+    # set when the table marks this pair as report-only (A-28)
+    report_only_policy: str | None = None
     rule_key: str | None = None
     table_version: str | None = None
     source: str | None = None
@@ -180,12 +182,26 @@ class ChangeApplicationView(BaseModel):
     entities_derived: bool
 
 class ReevaluationRequest(BaseModel):
-    """A run never publishes on its own (I-21): the release stays a DRAFT unless run_exhaustive and gate are both
-    set and the comparison passes. gate without run_exhaustive is refused (422)."""
+    """I-27 (supervisor decision 17 Nov 2026): a selective run alone may publish.
+
+    publish (default without   the release is published as SELECTIVE ("selectively verified") once the run completes
+    run_exhaustive)
+    publish=false              the release stays a DRAFT
+    run_exhaustive (Admin)     also compare with an exhaustive run; with gate the release is published as EXHAUSTIVE
+                               if the comparison passes and BLOCKED if not, without gate it stays a DRAFT
+
+    gate without run_exhaustive, and an explicit publish=true with run_exhaustive, are refused (422): the exhaustive
+    path publishes only through the gate. A published SELECTIVE release is audited later with POST /releases/{id}/audit."""
 
     release_id: str = Field(min_length=1)
-    run_exhaustive: bool = True
-    gate: bool = True
+    publish: bool | None = None
+    run_exhaustive: bool = False
+    gate: bool = False
+
+    @property
+    def publish_selectively(self) -> bool:
+        """publish unless told otherwise, but never on the exhaustive path (it publishes through the gate)"""
+        return (not self.run_exhaustive) if self.publish is None else self.publish
 
 
 class RunView(BaseModel):
@@ -232,11 +248,19 @@ class EquivalenceReportView(BaseModel):
     axes: list[EquivalenceAxisView]
     passed: bool
     gate_status: str
+    # I-27: an Admin audit of a published release (never changes it), and the cases that differ on any axis
+    audit: bool = False
+    mismatched_cases: int = 0
+    mismatched_case_ids: list[str] = Field(default_factory=list)
 
 
 class ReevaluationResponse(BaseModel):
     selective_run: RunView
     equivalence: EquivalenceReportView | None
+    # I-27: where the release ended (DRAFT, PUBLISHED, BLOCKED; None when nothing was selected) and, once published,
+    # how it was verified (SELECTIVE or EXHAUSTIVE)
+    release_status: str | None = None
+    verification_level: str | None = None
 
 class ReviewCreate(BaseModel):
     reviewer: str = Field(min_length=1)
@@ -277,11 +301,23 @@ class ReviewQueueItemView(BaseModel):
     triage_reason: Optional[str] = None
 
 
+# I-27: a published release whose latest Admin audit failed; listed with the queue, never rewritten
+class FailedAuditView(BaseModel):
+    release_id: str
+    change_id: str
+    report_id: int
+    exhaustive_run_id: str
+    created_at: datetime | None
+    mismatched_cases: int
+    case_ids: list[str]
+
+
 class ReviewQueueView(BaseModel):
     total: int
     limit: int
     offset: int
     items: list[ReviewQueueItemView]
+    failed_audits: list[FailedAuditView] = Field(default_factory=list)
 
 
 # A-14: every state a release wrote, in triage order, with the count in each tier

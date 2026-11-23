@@ -91,3 +91,27 @@ def test_entities_have_the_shape_the_change_registry_validates():
     old, new = (load_table(str(DATA / f"clsi_m100_ed{n}.yaml")) for n in (32, 33))
     (entity,) = DIFFER.diff(old, new)
     assert isinstance(entity, ChangedEntity) and entity.to_dict()["changed_region"]["field"] == "mic"
+
+
+# A-28: marking a rule report-only, or changing the table's policy, changes how every measurement is read
+def marked(version, policy=None, report_only=True):
+    data = {"interpretation_version": version, "standard": "FANTASY_STD", "rules": [
+        {"organism": "Imaginary bacillus", "antibiotic": "mythicin", "method": "MIC", "categories": S10,
+         **({"report_only": True} if report_only else {})}]}
+    if policy is not None:
+        data["report_only_policy"] = policy
+    return parse_table(data)
+
+
+@pytest.mark.parametrize("old,new", [
+    (marked("V1", report_only=False), marked("V2")),
+    (marked("V1"), marked("V2", "not_defined")),
+    (marked("V1", "not_defined"), marked("V2", "keep_submitted")),
+])
+def test_a_change_to_how_a_rule_is_used_counts_as_a_whole_rule_change(old, new):
+    (entity,) = DIFFER.diff(old, new)
+    assert entity.old_version == "V1" and entity.new_version == "V2" and entity.changed_region is None
+
+
+def test_the_same_marker_and_policy_in_a_new_version_is_no_change():
+    assert DIFFER.diff(marked("V1", "not_defined"), marked("V2", "not_defined")) == []
