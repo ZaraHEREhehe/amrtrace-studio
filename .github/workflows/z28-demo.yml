@@ -30,10 +30,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install pinned test dependencies
-        run: python -m pip install --disable-pip-version-check pytest==9.1.1 PyYAML==6.0.3
-
-      - name: Validate demo guard tests
-        run: python -m pytest -q tests/unit/test_z28_demo_seed.py
+        run: python -m pip install --disable-pip-version-check pytest==9.1.1 PyYAML==6.0.3 "psycopg[binary]==3.3.6"
 
       - name: Set demo-only identity and random password
         shell: bash
@@ -42,6 +39,9 @@ jobs:
           echo "Z28_DB_PASSWORD=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "Z28_WEB_PORT=18080" >> "$GITHUB_ENV"
           echo "Z28_API_PORT=18000" >> "$GITHUB_ENV"
+
+      - name: Validate demo guard tests
+        run: python -m pytest -q tests/unit/test_z28_demo_seed.py
 
       - name: Build demo-only images from pinned bases
         run: |
