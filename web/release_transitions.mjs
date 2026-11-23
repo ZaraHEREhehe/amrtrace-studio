@@ -7,6 +7,15 @@ import { STATE_ORDER, stateMeta, formatCount, formatShare } from './view_meta.mj
 import { sankeyModel, countChanged } from './sankey_model.mjs';
 
 const NS = 'http://www.w3.org/2000/svg';
+// Darker shades of the existing five state colors, used only for 1.8 px
+// emphasis strokes. The actual count-encoded ribbon geometry is unchanged.
+const TRANSITION_TRACE_COLOR = Object.freeze({
+  CONCORDANT_RESISTANT: '#16865d',
+  CONCORDANT_SUSCEPTIBLE: '#32856b',
+  DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S: '#ac7c14',
+  DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE: '#bd565b',
+  UNRESOLVED: '#586bc0',
+});
 let currentLoad = 0;
 let currentDrill = 0;
 
@@ -22,6 +31,10 @@ function svg(tag, attributes = {}) {
   return node;
 }
 function label(code) { return stateMeta(code).label; }
+function preciseShare(count, total) {
+  if (!total) return '—';
+  return count > 0 && count / total < 0.001 ? '<0.1%' : formatShare(count, total);
+}
 function selectControl(name, items, selected, callback) {
   const wrapper = el('label', 'sankey-field');
   wrapper.append(el('span', null, name));
@@ -38,14 +51,33 @@ function selectControl(name, items, selected, callback) {
   return wrapper;
 }
 
-function renderFlowChart(parent, response, changedOnly, onSelect, message) {
+function renderFlowChart(parent, response, changedOnly, onSelect, message, expanded = false) {
   parent.replaceChildren();
-  const model = sankeyModel(response);
-  const changed = countChanged(model);
+  // A compact overview by default; expanding restores the original full-height
+  // geometry. Only presentation dimensions change: case counts and ribbons do not.
+  const geometry = expanded
+    ? {top: 44, height: 356, gap: 13}
+    : {top: 23, height: 90, gap: 3};
+  const fullModel = sankeyModel(response, geometry);
+  const changed = countChanged(fullModel);
+  // Only the focused view is re-scaled. It displays real counts and preserves
+  // relative widths *among changed transitions*; the overview still uses the
+  // full-cohort denominator, including all unchanged cases.
+  const focusedResponse = {
+    ...response,
+    flows: response.flows.filter(flow => flow.before_state !== flow.after_state),
+    comparable_cases: changed,
+  };
+  const model = changedOnly && changed ? sankeyModel(focusedResponse, geometry) : fullModel;
   const summary = el('p', 'sankey-summary');
-  summary.textContent = `${formatCount(model.total)} comparable cases · ${formatCount(changed)} changed state · ${formatCount(model.total - changed)} unchanged`;
+  summary.textContent = `${formatCount(fullModel.total)} comparable cases · ${formatCount(changed)} changed state · ${formatCount(fullModel.total - changed)} unchanged`;
   parent.append(summary);
-  if (changedOnly) parent.append(el('p','sankey-hint','Changed-only view: unchanged ribbons are hidden but node totals remain based on all comparable cases.'));
+  if (changedOnly && changed) {
+    const focusNote = el('p', 'sankey-focus-note',
+      `Focused scale: ribbon widths represent the ${formatCount(changed)} changed cases, not all ${formatCount(fullModel.total)} comparable cases. Counts are unchanged.`);
+    focusNote.setAttribute('role', 'note');
+    parent.append(focusNote);
+  }
   if (response.missing_before || response.missing_after) {
     const note = el('p', 'sankey-warning',
       `${formatCount(response.missing_before)} cases missing a prior state; ${formatCount(response.missing_after)} missing a later state. These are excluded from ribbons.`);
@@ -55,53 +87,110 @@ function renderFlowChart(parent, response, changedOnly, onSelect, message) {
     parent.append(el('p', 'sankey-warning',
       'Different source snapshots: flows compare only matching case IDs, not biological events inferred from those differences.'));
   }
-  if (!model.total || (changedOnly && !changed)) {
+  if (!fullModel.total || (changedOnly && !changed)) {
     parent.append(el('p', 'sankey-empty', changedOnly ? 'No cases changed state in this comparison.' : 'No comparable published case states.'));
     return;
   }
 
   const scroller = el('div', 'sankey-scroll');
-  const chart = svg('svg', { viewBox: '0 0 1100 465', role: 'group',
-    'aria-label': `Case state transitions from ${response.before_release} to ${response.after_release}` });
-  const leftTitle = svg('text', {x:228, y:22, 'text-anchor':'middle',class:'sankey-axis-label'});
+  const chart = svg('svg', { viewBox: expanded ? '0 0 1100 465' : '0 0 1100 132', role: 'group',
+    'data-scale-denominator': model.total,
+    'data-cohort-total': fullModel.total,
+    'aria-label': `${changedOnly ? 'Changed-only, rescaled' : 'Full-cohort'} case state transitions from ${response.before_release} to ${response.after_release}` });
+  const leftTitle = svg('text', {x:228, y: expanded ? 22 : 16, 'text-anchor':'middle',class:'sankey-axis-label'});
   leftTitle.textContent = `${response.before_release} (before)`;
-  const rightTitle = svg('text', {x:859, y:22, 'text-anchor':'middle',class:'sankey-axis-label'});
+  const rightTitle = svg('text', {x:859, y: expanded ? 22 : 16, 'text-anchor':'middle',class:'sankey-axis-label'});
   rightTitle.textContent = `${response.after_release} (after)`;
   chart.append(leftTitle, rightTitle);
 
-  // Large flows are painted first; small changed ribbons remain visible above them.
+  // Accurate ribbons and separate, non-data-encoded visibility aids:
+  // 1) every ribbon's *fill area* remains proportional to its case count;
+  // 2) changed routes receive a contrasting thin centreline, regardless of
+  //    whether their correct area is subpixel in the full-cohort view;
+  // 3) a transparent 16px hit target makes rare routes selectable by mouse.
+  const fills = svg('g', {class: 'sankey-flow-layer'});
+  const traces = svg('g', {class: 'sankey-trace-layer'});
+  const hitTargets = svg('g', {class: 'sankey-hit-layer'});
+  const entries = [];
+  let selected = null;
+  function emphasize(active = null) {
+    for (const entry of entries) {
+      const dimmed = Boolean(active && entry.ribbon !== active);
+      const focused = Boolean(active && entry.ribbon === active);
+      entry.fill.classList.toggle('sankey-flow-dimmed', dimmed);
+      entry.fill.classList.toggle('sankey-flow-focused', focused);
+      if (entry.trace) {
+        entry.trace.classList.toggle('sankey-flow-dimmed', dimmed);
+        entry.trace.classList.toggle('sankey-flow-focused', focused);
+      }
+    }
+  }
   for (const ribbon of [...model.ribbons].sort((a,b) => b.count - a.count)) {
-    if (changedOnly && !ribbon.changed) continue;
     const code = ribbon.before_state;
+    const percent = preciseShare(ribbon.count, fullModel.total);
+    const detail = `${label(code)} → ${label(ribbon.after_state)}: ${formatCount(ribbon.count)} cases (${percent} of all comparable cases${changedOnly ? `; ${formatShare(ribbon.count, changed)} of changed cases` : ''})`;
     const path = svg('path', {
       d: ribbon.path, class: 'sankey-ribbon', fill: stateMeta(code).line,
-      'fill-opacity': ribbon.changed ? '.48' : '.28', tabindex: 0, role: 'button',
-      'aria-label': `${label(code)} to ${label(ribbon.after_state)}: ${ribbon.count} cases`,
+      'data-count': ribbon.count, 'data-thickness': ribbon.thickness,
+      'fill-opacity': ribbon.changed ? '.53' : '.28', tabindex: 0, role: 'button',
+      'aria-label': detail,
     });
-    const tip = svg('title');
-    tip.textContent = `${label(code)} → ${label(ribbon.after_state)}: ${formatCount(ribbon.count)} cases (${formatShare(ribbon.count, model.total)})`;
+    const tip = svg('title'); tip.textContent = detail;
     path.append(tip);
-    path.addEventListener('focus', () => { message.textContent = tip.textContent; });
-    path.addEventListener('mouseenter', () => { message.textContent = tip.textContent; });
-    const select = () => onSelect(ribbon);
-    path.addEventListener('click', select);
+    const activate = () => { selected = ribbon; emphasize(ribbon); onSelect(ribbon); };
+    const onHover = () => { message.textContent = detail; emphasize(ribbon); };
+    const onLeave = () => emphasize(selected);
+    path.addEventListener('focus', onHover);
+    path.addEventListener('blur', onLeave);
+    path.addEventListener('mouseenter', onHover);
+    path.addEventListener('mouseleave', onLeave);
+    path.addEventListener('click', activate);
     path.addEventListener('keydown', event => {
-      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); select(); }
+      if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); activate(); }
     });
-    chart.append(path);
+    fills.append(path);
+    let trace = null;
+    if (ribbon.changed) {
+      const x1 = model.left[0].x + 17;
+      const x2 = model.right[0].x;
+      const mid1 = x1 + (x2 - x1) * .43;
+      const mid2 = x1 + (x2 - x1) * .57;
+      const fromY = ribbon.y1 + ribbon.thickness / 2;
+      const toY = ribbon.y2 + ribbon.thickness / 2;
+      const centerline = `M${x1},${fromY} C${mid1},${fromY} ${mid2},${toY} ${x2},${toY}`;
+      trace = svg('path', {
+        d: centerline, class: 'sankey-change-trace', 'data-count': ribbon.count, fill: 'none',
+        stroke: TRANSITION_TRACE_COLOR[code] || '#1c7293',
+        'stroke-width': changedOnly ? 1.1 : 2,
+        'vector-effect': 'non-scaling-stroke',
+        'aria-hidden': 'true', 'pointer-events': 'none',
+      });
+      traces.append(trace);
+      const hit = svg('path', {
+        d: centerline, class: 'sankey-change-hit', 'data-count': ribbon.count, fill: 'none', stroke: 'transparent',
+        'stroke-width': 16, 'vector-effect': 'non-scaling-stroke',
+        'aria-hidden': 'true',
+      });
+      hit.addEventListener('mouseenter', onHover);
+      hit.addEventListener('mouseleave', onLeave);
+      hit.addEventListener('click', activate);
+      hitTargets.append(hit);
+    }
+    entries.push({ribbon, fill: path, trace});
   }
+  chart.append(fills, traces, hitTargets);
   // Keep tiny (<1%) categories readable without inflating their ribbon widths.
   // Label positions may spread out, but the scientific area encoding stays exact.
   for (const [nodes, side] of [[model.left, 'before'], [model.right, 'after']]) {
     const visibleNodes = nodes.filter(node => node.count);
     const labelYs = [];
-    let lastY = 34;
+    let lastY = expanded ? 34 : 22;
     for (const node of visibleNodes) {
       const targetY = node.y + node.height / 2;
-      lastY = Math.max(targetY, lastY + 21);
+      lastY = Math.max(targetY, lastY + (expanded ? 21 : 19));
       labelYs.push(lastY);
     }
-    const excess = Math.max(0, (labelYs.at(-1) ?? 0) - 430);
+    const excess = Math.max(0, (labelYs.at(-1) ?? 0) - (expanded ? 430 : 124));
     for (let i = 0; i < labelYs.length; i++) labelYs[i] -= excess;
     for (const [index, node] of visibleNodes.entries()) {
       if (!node.count) continue;
@@ -128,7 +217,9 @@ function renderFlowChart(parent, response, changedOnly, onSelect, message) {
   }
   scroller.append(chart);
   parent.append(scroller);
-  const notes = el('p','sankey-hint','Hover or select a ribbon to inspect its transition. Ribbon width represents case count. On narrow screens, scroll horizontally to see both releases.');
+  const notes = el('p','sankey-usage-hint sankey-hint',expanded
+    ? 'Darker fine lines mark changed routes; the filled ribbon widths encode case counts. Hover or select a route. On narrow screens, scroll horizontally.'
+    : 'Dark fine lines mark changed routes; ribbon area remains proportional. Use Changed only to magnify rare routes.');
   parent.append(notes);
   const tableDetails = el('details', 'sankey-table-details');
   tableDetails.append(el('summary',null,'View accessible transition counts'));
@@ -161,6 +252,7 @@ export async function loadReleaseTransitionPanel(latest, drugs) {
   status.setAttribute('role','status');
   const controls = el('div','sankey-controls');
   const plot = el('div','sankey-plot');
+  plot.id = 'sankey-plot';
   const feedback = el('p','sankey-feedback');
   feedback.setAttribute('aria-live','polite');
   const details = el('div','sankey-details');
@@ -174,7 +266,7 @@ export async function loadReleaseTransitionPanel(latest, drugs) {
     const index = ix >= 0 ? ix : releases.length - 1;
     if (index < 1) { status.textContent = 'At least two published releases are needed for a transition chart.'; return; }
     const state = { before: releases[index - 1].release_id, after: releases[index].release_id,
-      antibiotic: '', changedOnly: false };
+      antibiotic: '', changedOnly: false, expanded: false };
     const releaseItems = releases.map(r => ({ value:r.release_id, label:r.release_id }));
     const drugItems = [{value:'',label:'All antibiotics'},
       ...(drugs || []).map(d => ({value:d.antibiotic,label:d.antibiotic}))];
@@ -182,18 +274,32 @@ export async function loadReleaseTransitionPanel(latest, drugs) {
     const selection = el('label','sankey-checkbox');
     const toggle = el('input'); toggle.type = 'checkbox';
     toggle.addEventListener('change', () => { state.changedOnly = toggle.checked; ++currentDrill; details.replaceChildren(); renderCurrent(); });
-    selection.append(toggle, el('span',null,'Show changed transitions only'));
+    selection.append(toggle, el('span',null,'Changed only'));
+    selection.title = 'Hide unchanged ribbons to focus on state transitions';
     controls.append(
       selectControl('From release',releaseItems,state.before, v => {state.before = v; void fetchData();}),
       selectControl('To release',releaseItems,state.after, v => {state.after = v; void fetchData();}),
       selectControl('Antibiotic',drugItems,state.antibiotic, v => {state.antibiotic = v; void fetchData();}),
       selection,
     );
+    // Expand only the new G-09 chart, never the surrounding Dashboard.
+    const expand = el('button', 'button sankey-expand-button', 'Expand chart');
+    expand.type = 'button';
+    expand.setAttribute('aria-expanded', 'false');
+    expand.setAttribute('aria-controls', 'sankey-plot');
+    expand.addEventListener('click', () => {
+      state.expanded = !state.expanded;
+      root.classList.toggle('sankey-expanded', state.expanded);
+      expand.textContent = state.expanded ? 'Compact view' : 'Expand chart';
+      expand.setAttribute('aria-expanded', String(state.expanded));
+      renderCurrent();
+    });
+    controls.append(expand);
 
     let response = null;
     let request = 0;
     function renderCurrent() {
-      if (response) renderFlowChart(plot,response,state.changedOnly, showCases,feedback);
+      if (response) renderFlowChart(plot,response,state.changedOnly, showCases,feedback,state.expanded);
     }
     async function fetchData() {
       const token = ++request;
@@ -226,12 +332,18 @@ export async function loadReleaseTransitionPanel(latest, drugs) {
     async function showCases(ribbon) {
       const token = ++currentDrill;
       details.replaceChildren();
-      details.append(el('h4',null,`${label(ribbon.before_state)} → ${label(ribbon.after_state)}`));
-      const intro = el('p','sankey-summary',`${formatCount(ribbon.count)} matching case(s) · Dossiers show the latest published state; use their state histories to inspect ${state.before} and ${state.after}.`);
-      details.append(intro);
+      const panel = el('details', 'sankey-case-details');
+      panel.open = true; // Open after selection; researcher can collapse it at any time.
+      const heading = el('summary', null,
+        `${label(ribbon.before_state)} → ${label(ribbon.after_state)} · ${formatCount(ribbon.count)} cases`);
+      panel.append(heading);
+      const intro = el('p','sankey-summary',
+        `Dossiers show the latest published state; use state history to inspect ${state.before} and ${state.after}.`);
+      panel.append(intro);
       const content = el('div');
       const actions = el('div','sankey-pager');
-      details.append(content,actions);
+      panel.append(content,actions);
+      details.append(panel);
       let offset = 0;
       async function page() {
         if (generation !== currentLoad || token !== currentDrill) return;
