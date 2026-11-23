@@ -61,13 +61,14 @@ D-22 database, read 23 Nov 2026):
 | CHG-NCBI-V2-AST | R5 | 659 | 39,207 | 38,548 | 0 / 0 / 38,548 | no |
 | CHG-NCBI-V2-AST-2 | R6 | 659 | 659 | 0 | 0 / 0 / 0 | yes |
 | CHG-NCBI-V2-GENOTYPE | R7 | 24 | 24 | 0 | 0 / 0 / 0 | yes |
+| CHG_A28_GROUP_D (Admin audit, A-28) | R8 | 158 | 158 | 0 | 0 / 0 / 0 | yes |
 
 R5 is not a selection miss. Its 38,548 "missed" cases were unchanged cases whose stored rule labels named an earlier
 CLSI edition; the comparison counted the label difference as a dependency mismatch (fixed in PR #197). The same
 change re-run as R6 selected the same 659 cases and passed. R5 stays BLOCKED in the ledger.
 
-Across the four published changes, recall is 100%: every case whose result differs under full recomputation was
-selected. The real-data oracles (`tests/oracle/test_real_data.py`), the independent fixtures (I-22) and the I-28
+Across the five published changes (R8 added with A-28), recall is 100%: every case whose result differs under full
+recomputation was selected. The real-data oracles (`tests/oracle/test_real_data.py`), the independent fixtures (I-22) and the I-28
 randomised testing (300 trials, 0 missed) agree.
 
 ## 4. What the selective-only workflow costs
@@ -82,6 +83,7 @@ exhaustive runs are the recorded runs that made each release, one run each, on t
 | CHG-NCBI-V2-GENOTYPE | 24 | 0.487 s | 1.101 s | 0.001 s | 1.59 s | 28.30 s |
 | CHG-NCBI-V2-AST-2 | 659 | 0.836 s | 3.442 s | 0.004 s | 4.28 s | 29.32 s |
 | CHG-VET01S-ED7 | 5,556 | 0.241 s | 26.568 s | 0.004 s | 26.81 s | 44.65 s |
+| CHG_A28_GROUP_D (23 Nov; exhaustive = the Admin audit) | 158 | 0.255 s | 4.102 s | 0.004 s | 4.36 s | 52.79 s |
 
 The selective-only workflow took between 1.7 and about 19 times less time than the exhaustive run; the gain shrinks
 as the selected share grows (13.3% for VET01S). Limits: the exhaustive span includes the comparison, which is not

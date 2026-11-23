@@ -85,10 +85,11 @@ The same CLSI Ed32 to Ed33 change, selected at four granularities on the real co
 Recall is 100% at every level against the oracle, and the fine level's release also matched an exhaustive
 recomputation with 0 mismatches. Precision here is against the oracle; counted by any change to a case's stored
 result it is 100% (`PROJECT_PLAN.md` section 7.1). The fine links re-evaluate about 361 times fewer cases than
-re-running everything, without missing one. That is a reduction in cases, not in time: because the exhaustive check
-runs before every release, the whole gated workflow took 43.9 s against 41.8 s for a full recompute alone
-(`docs/design/selector_performance.md`, A-24). What the links buy is an exact, checked list of the conclusions a
-change can affect.
+re-running everything, without missing one. While an exhaustive check ran before every release, that was a reduction
+in cases, not in time: the gated workflow took 43.9 s against 41.8 s for a full recompute alone (A-24). Since the
+supervisor's decision of 17 Nov 2026 a selective run alone may publish, and the published path took 2.15 s against
+41.77 s for this change (`PROJECT_PLAN.md` section 7.3, A-27). What the links buy is an exact, checked list of the
+conclusions a change can affect, and now also time for changes that touch a small share of the cohort.
 
 ## 4. Why this is a research contribution, not preprocessing
 
@@ -128,6 +129,7 @@ change can affect.
 - New isolates are a new cohort, not a change, and are left out of later snapshots.
 - No user study: the claim is about correctness and the number of cases re-evaluated, not about reviewers'
   decisions.
-- No measured speedup: with the exhaustive check on every release, the gated workflow costs about as much as a full
-  recompute. Selective re-evaluation is expected to pull ahead on a larger cohort, because its cost follows the size
-  of the change, but no larger cohort has been run.
+- The speedup is measured on one cohort and one laptop: the selective-only path took about 1.7 to 19 times less time
+  than an exhaustive run on five real changes, and less as the selected share grows (1.7 times at 13.3% selected).
+  Per case it is slower, and an optional Admin audit costs a full recompute. A larger cohort is expected to widen
+  the gap, because the selective cost follows the size of the change, but no larger cohort has been run.
