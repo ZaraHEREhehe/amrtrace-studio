@@ -7,6 +7,8 @@ CATEGORY_RESISTANT = "R"
 CATEGORY_INTERMEDIATE = "I"
 CATEGORY_CENSORED = "CENSORED"
 CATEGORY_NO_CATEGORY = "NO_CATEGORY"
+# the source gives no category for this pair, the same code a laboratory uses for it
+CATEGORY_NOT_DEFINED = "NOT_DEFINED"
 
 # phenotype stage outputs
 PHENOTYPE_S = "PHENOTYPE_S"
@@ -52,6 +54,10 @@ SUB_REASON_NO_CATEGORY = "no_category"
 # where a result's label came from, written in the flag of every result in interpretation mode
 LABEL_SOURCE_SUBMITTED = "submitted"
 LABEL_SOURCE_DERIVED = "derived"
+
+# what a table may choose for a rule that reports the measurement only
+REPORT_ONLY_NOT_DEFINED = "not_defined"
+REPORT_ONLY_KEEP_SUBMITTED = "keep_submitted"
 
 # dependency vocabulary shared with the materializer
 DEP_INPUT_EVIDENCE = "input_evidence"

@@ -103,6 +103,8 @@ Get-Content -LiteralPath .\db\migrations\0016_copilot_chat_answer.sql -Raw -Enco
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 Get-Content -LiteralPath .\db\migrations\0017_release_verification_level.sql -Raw -Encoding UTF8 |
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
+Get-Content -LiteralPath .\db\migrations\0018_interpretation_rule_report_only.sql -Raw -Encoding UTF8 |
+    docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 ~~~
 
 Migration 0013 lets a later snapshot's evidence be stored beside the V1 rows (I-20); see

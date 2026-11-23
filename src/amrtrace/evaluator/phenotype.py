@@ -97,6 +97,13 @@ def _candidate_keys(row: dict) -> list[str]:
     return [key for key in keys if key]
 
 
+# the table's choice for this rule, or None when the rule is read by its categories as usual
+def _report_only_policy(rule: InterpretationRule | None) -> str | None:
+    if rule is None or not rule.report_only:
+        return None
+    return rule.report_only_policy
+
+
 # what the case tells users about one result: whose label it is and, if ours, which rule gave it
 # the rule's source and species are read from the table through the derived_from edge, because the edition
 # a carried case was read by must not change when a later edition with the same breakpoints is published
@@ -104,8 +111,15 @@ def _label_flag(row: dict, reported: str | None, derived: str | None, rule: Inte
     flag = {"ast_evidence_id": str(row["ast_evidence_id"]), "submitted_label": reported}
     if row.get("host_group") is not None:
         flag["host_group"] = row["host_group"]
+    # a report-only rule says so in the flag, so users can see why no category was worked out
+    policy = _report_only_policy(rule)
+    if policy is not None:
+        flag["report_only_policy"] = policy
     if derived is None:
         flag["label_source"] = c.LABEL_SOURCE_SUBMITTED
+        # the lab's label was kept on purpose, so the rule that decided that is named too
+        if policy is not None:
+            flag["rule_key"] = rule.rule_key
         return flag
     flag.update(
         label_source=c.LABEL_SOURCE_DERIVED,
@@ -137,8 +151,16 @@ def evaluate_phenotype(inputs: CaseInputs, versions: VersionVector) -> Phenotype
             rule = rules.get(rule_key)
             if rule is not None and measured is not None:
                 sign = row.get("sign") or c.SIGN_EXACT
-                derived, used = _derived_category(rule, measured, sign), rule
-                value = derived
+                policy = _report_only_policy(rule)
+                if policy == c.REPORT_ONLY_KEEP_SUBMITTED:
+                    # the lab's label stands, but the rule still decided that, so the edge below is the same
+                    derived, used = None, rule
+                elif policy == c.REPORT_ONLY_NOT_DEFINED:
+                    derived, used = c.CATEGORY_NOT_DEFINED, rule
+                    value = derived
+                else:
+                    derived, used = _derived_category(rule, measured, sign), rule
+                    value = derived
                 # the measurement is kept on the edge so a later change can be narrowed to its region
                 record = _rule_record(
                     c.DEP_INPUT_EVIDENCE,

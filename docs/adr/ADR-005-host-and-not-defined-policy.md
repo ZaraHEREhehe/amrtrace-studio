@@ -176,3 +176,74 @@ WHERE case_id = 'CASE_127597422bd7eaf5cc40d323d5c734b19a9715f40a6d2dce053502e1bb
 |---|---|---|---|
 | Team | Aabia, Insharah, Zara | 2026-10-18 (D-22), 2026-10-19 (D-21) | Section 2 of `PROJECT_PLAN.md` |
 | Supervisor (AMR-005) | Dr. Ali Zeeshan Ijaz | | Requested |
+
+## Amendment 1: report-only pairs and the cat row (A-28)
+
+- Status: **Accepted by the team (D-31, 2026-11-23): option a.** Written supervisor confirmation requested.
+- Date: 2026-11-23
+- Task: A-28 (#200), from the A-26 source check; confirmed independently by Zara (Z-24, 23 Nov 2026)
+
+### What the source check found
+
+1. **Swine gentamicin is a group D pair.** VET01S Ed7 Table 1 puts gentamicin for swine in group D: approved for the
+   species, but with no CLSI veterinary or human breakpoint, so only the MIC is reported (Instructions for Use I.C and
+   I.D). The table in force reads these results with the grey human row instead. Table 2A general comment 2 allows
+   the grey row only for a species and drug pair that Table 1 does not list, and this pair is listed.
+2. **Cat gentamicin should use the dogs row.** VET01S footnote d says cats are read with the dog breakpoints before
+   the human ones. The dog and human gentamicin values are equal (S ≤2, I 4, R ≥8), so no category moves; only the
+   source and breakpoint species shown in the flag are wrong.
+3. **Adult horses.** VET01S has horse rows, but the data has no horse host group and no table has a horse rule, so
+   there is nothing to correct. If horse isolates arrive, a `horse` group and its VET01S rows are added then, with
+   the same check against Table 1.
+
+### How the engine supports it
+
+- A rule may be marked `report_only: true` in the table file. The marker records a fact about the source.
+- The table chooses, once, what the engine does with such a rule (`report_only_policy`). The choice is part of the
+  table version, so the same version always gives the same answer and stays reproducible:
+
+| `report_only_policy` | What happens to a swine gentamicin result with a MIC |
+|---|---|
+| not set (default) | The grey human row is applied, exactly as now |
+| `not_defined` (option a) | No category; the result reads `NOT_DEFINED`, the case stays unresolved (non-binary) |
+| `keep_submitted` (option b) | The laboratory's label stands |
+
+- In both options the rule edge keeps the MIC, so a later edition that gives this pair a breakpoint selects the case.
+- The flag shows the policy and the rule, so a user can see why no category was worked out or why the label stands.
+- The table differ treats a change to the marker or the policy as a whole-rule change, and the selector does not
+  carry a case past an edition whose rule has the same numbers but a different marker or policy (mutants M11, M12).
+
+### The two options
+
+- **Option a (`not_defined`)** follows VET01S most closely: no breakpoint, so no category. Cases with a lab S or R
+  become unresolved.
+- **Option b (`keep_submitted`)** keeps what the laboratory reported. It does not claim a category the engine cannot
+  justify, but it also keeps any lab label that was itself based on a human breakpoint.
+
+### Decision (D-31)
+
+Option a. A group D pair is read as `NOT_DEFINED`. The reasons:
+
+- It follows VET01S: the pair has no breakpoint, so the engine should not give it a category.
+- Option b would keep the very labels the source check found suspect. A swine gentamicin label is re-read only when
+  M100 Ed32 explains it (D-21), so such a label rests on a human breakpoint, which group D says not to use.
+- It matches section 1: an animal result with no applicable host rule already stays `NOT_DEFINED`.
+- The cost is stated, not hidden: swine gentamicin cases with an S or R label become unresolved.
+
+The choice is reversible. Stored tables are never edited, so if the supervisor prefers option b, a later table
+version sets `keep_submitted` and is run as an ordinary change.
+
+### Table and run
+
+- `data/interpretation/clsi_m100_ed36_vet01s_ed7_r1.yaml` (version `CLSI_M100_ED36_VET01S_ED7_R1`): the cat row
+  corrected, swine gentamicin marked `report_only`, and `report_only_policy: not_defined`.
+- Run on the D-22 database on 2026-11-23 as change `CHG_A28_GROUP_D` (release R8, published as SELECTIVE). 158 swine
+  gentamicin cases were selected; 71 changed state (54 from S, 17 from R, all now unresolved) and 87 kept it. The
+  Admin audit recomputed all 41,858 cases and found no mismatch and no missed case. Details are in
+  `docs/design/d22_host_breakpoints.md`, "Group D correction".
+- Only swine gentamicin is marked. Other group D pairs, if any, are a one-line change once checked against Table 1.
+
+| | Name | Date | Note |
+|---|---|---|---|
+| Team | Aabia, Insharah, Zara | 2026-11-23 | D-31, option a |
+| Supervisor | Dr. Ali Zeeshan Ijaz | | Confirmation requested |
