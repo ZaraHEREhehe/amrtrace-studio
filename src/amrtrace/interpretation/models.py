@@ -11,6 +11,8 @@ from typing import Any, Iterable, Optional
 
 LABELS = ("susceptible", "intermediate", "resistant")
 OPS = ("<=", "<", "==", ">=", ">")
+# what to do with a rule the source marks as "report the measurement only": give no category, or keep the lab's label
+REPORT_ONLY_POLICIES = ("not_defined", "keep_submitted")
 
 
 def _norm(text: str) -> str:
@@ -48,10 +50,18 @@ class InterpretationRule:
     source: Optional[str] = None
     # the species the breakpoint was set for, which can differ from the host when a fallback row is used
     breakpoint_species: Optional[str] = None
+    # the source gives no category for this pair; True or None, never False, so older rules keep their shape
+    report_only: Optional[bool] = None
+    # the table's choice for report-only rules; None keeps the old behaviour and the categories are applied as before
+    report_only_policy: Optional[str] = None
 
     @property
     def rule_key(self) -> str:
         return make_rule_key(self.standard, self.organism, self.antibiotic, self.method, self.host)
+
+    # everything that decides how a measurement is read, so two versions can be compared in one step
+    def content(self) -> tuple:
+        return (self.categories, self.report_only, self.report_only_policy)
 
     def to_dict(self) -> dict:
         """The shape handed to the evaluator in CaseInputs.interpretation_rules (and stored in the database)."""
@@ -65,7 +75,7 @@ class InterpretationRule:
             "categories": [c.to_dict() for c in self.categories],
         }
         # optional fields are added only when set, so older rules keep the exact same shape and hashes
-        for field in ("host", "source", "breakpoint_species"):
+        for field in ("host", "source", "breakpoint_species", "report_only", "report_only_policy"):
             value = getattr(self, field)
             if value is not None:
                 data[field] = value
@@ -114,4 +124,6 @@ def rule_from_dict(data: dict[str, Any]) -> InterpretationRule:
         host=data.get("host"),
         source=data.get("source"),
         breakpoint_species=data.get("breakpoint_species"),
+        report_only=data.get("report_only") or None,
+        report_only_policy=data.get("report_only_policy"),
     )

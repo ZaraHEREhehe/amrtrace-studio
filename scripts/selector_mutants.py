@@ -1,6 +1,6 @@
 # task A-29: break the selector on purpose, one way at a time, and check that the tests notice every break
-# each mutant is a small text edit to src/amrtrace/deps/selector.py; the file is always restored afterwards
-# usage: python scripts/selector_mutants.py [--without-unit] [--out docs/design/selector_mutation_results.md]
+# each mutant is a small text edit to the selector (or, for A-28, the table differ it relies on); files are always restored
+# usage: python scripts/selector_mutants.py [--without-unit] [--only M11,M12] [--out docs/design/selector_mutation_results.md]
 # --without-unit leaves out tests/unit, to see whether the end-to-end tests alone would still catch each bug
 
 import argparse
@@ -11,6 +11,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SELECTOR = ROOT / "src" / "amrtrace" / "deps" / "selector.py"
+DIFFER = ROOT / "src" / "amrtrace" / "changes" / "differs" / "interpretation.py"
 
 # every test file that exercises selection, re-evaluation or the comparison against full recomputation
 TESTS = [
@@ -64,7 +65,16 @@ MUTANTS = [
     ("M10", "in_changed_region", "changes with more than one changed MIC interval",
      "    return any(_overlaps(measurement, interval) for interval in intervals)",
      "    return _overlaps(measurement, intervals[0])"),
+    ("M11", "_same_rule_content", "cases carried past an edition that only marked their rule report-only (A-28)",
+     "        found = {row[0]: (row[1], bool(row[2]), row[3]) for row in rows}",
+     "        found = {row[0]: row[1] for row in rows}"),
+    ("M12", "InterpretationTableDiffer.diff", "measurements outside the old region when only the rule's use changed (A-28)",
+     "                regions = differing_regions(before, after) if same_use else None",
+     "                regions = differing_regions(before, after)"),
 ]
+
+# the file each mutant edits; anything not listed here edits the selector
+TARGETS = {"M12": DIFFER}
 
 
 # runs the tests once and returns whether they all passed, the first failing test and the time taken
@@ -83,10 +93,14 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", help="write the results table to this markdown file")
     parser.add_argument("--without-unit", action="store_true", help="run only the end-to-end tests")
+    parser.add_argument("--only", help="comma-separated mutant ids to run, for a quick check of new mutants")
     options = parser.parse_args()
     tests = [t for t in TESTS if not (options.without_unit and t == "tests/unit")]
+    wanted = set(options.only.split(",")) if options.only else None
+    mutants = [m for m in MUTANTS if wanted is None or m[0] in wanted]
 
-    original = SELECTOR.read_text(encoding="utf-8")
+    # every file a mutant may touch is read once, so each one can be put back exactly
+    originals = {path: path.read_text(encoding="utf-8") for path in {SELECTOR, *TARGETS.values()}}
     # the unmutated selector must pass first, or a failure would say nothing about the mutant
     passed, first, elapsed = run_tests(stop_at_first=False, tests=tests)
     if not passed:
@@ -96,17 +110,24 @@ def main() -> int:
 
     rows = []
     try:
-        for mutant_id, function, misses, find, replace in MUTANTS:
+        for mutant_id, function, misses, find, replace in mutants:
+            target = TARGETS.get(mutant_id, SELECTOR)
+            original = originals[target]
             if original.count(find) != 1:
                 raise SystemExit(f"{mutant_id}: the text to mutate is not found exactly once; update the mutant")
-            SELECTOR.write_text(original.replace(find, replace), encoding="utf-8")
-            passed, first, elapsed = run_tests(stop_at_first=True, tests=tests)
+            target.write_text(original.replace(find, replace), encoding="utf-8")
+            try:
+                passed, first, elapsed = run_tests(stop_at_first=True, tests=tests)
+            finally:
+                # only one mutant is ever live, so the next one starts from the real code
+                target.write_text(original, encoding="utf-8")
             status = "survived" if passed else "killed"
             rows.append((mutant_id, function, misses, status, first or "-"))
             print(f"{mutant_id} {status:8} {first or '-'} ({elapsed:.0f} s)")
     finally:
-        # the selector goes back exactly as it was, whatever happened above
-        SELECTOR.write_text(original, encoding="utf-8")
+        # every file goes back exactly as it was, whatever happened above
+        for path, text in originals.items():
+            path.write_text(text, encoding="utf-8")
 
     killed = sum(1 for row in rows if row[3] == "killed")
     table = [

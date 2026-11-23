@@ -32,7 +32,9 @@ through interpretation.
 **Tables.** A rule may now carry `host`, `source` and `breakpoint_species` (migration 0009). A host rule's key
 has the host as a fifth part, for example `clsi|escherichia coli|gentamicin|mic|dog`; rules without a host keep
 their old key. Four tables, all for the five panel drugs (a fifth, `CLSI_M100_ED36_VET01S_ED7`, was added with A-18:
-the Ed33 values under the Ed36 name, because M100 Ed34 to Ed36 change none of these breakpoints):
+the Ed33 values under the Ed36 name, because M100 Ed34 to Ed36 change none of these breakpoints). Since A-28 a rule
+may also be marked `report_only` and a table may set `report_only_policy` (migration 0018); the corrected table
+`CLSI_M100_ED36_VET01S_ED7_R1` reads swine gentamicin as `NOT_DEFINED` (D-31, ADR-005 amendment 1):
 
 | Table | Contents |
 |---|---|
@@ -101,6 +103,30 @@ On the 660-case mini-cohort the end-to-end test gives R3: 262 selected, 149 stat
 an exact CLSI MIC of 4 or 8. Under D-21 a label the lab's edition cannot explain is kept, so those cases cannot
 change; under D-22 animal cases move in R3 instead. What remains are human or unrecorded-host cases with an
 exact MIC of 4 labelled S or 8 labelled I: 112.
+
+## Group D correction (A-28, D-31, run 2026-11-23)
+
+Change `CHG_A28_GROUP_D` (`INTERPRETATION_VERSION`, `CLSI_M100_ED33_VET01S_ED7` to `CLSI_M100_ED36_VET01S_ED7_R1`) was
+run by Aabia on the D-22 database, with migrations 0017 and 0018 applied first.
+
+- **Rules named by the differ:** one, `clsi|escherichia coli|gentamicin|mic|swine`. The breakpoint numbers of the two
+  tables are equal, and the cat row changed only its source, so it reads no measurement differently.
+- **Selection against R7:** 158 cases (level 1 and level 2), all swine gentamicin.
+- **Selective run:** release R8, 158 states, published as SELECTIVE.
+
+| Phenotype before | After | Case state | Cases |
+|---|---|---|---|
+| `PHENOTYPE_S` | `PHENOTYPE_UNRESOLVED_NONBINARY` | changed (now UNRESOLVED) | 54 |
+| `PHENOTYPE_R` | `PHENOTYPE_UNRESOLVED_NONBINARY` | changed (now UNRESOLVED) | 17 |
+| `PHENOTYPE_UNRESOLVED_CENSORED` | `PHENOTYPE_UNRESOLVED_NONBINARY` | unchanged (UNRESOLVED), reason now non-binary | 85 |
+| `PHENOTYPE_UNRESOLVED_NONBINARY` | `PHENOTYPE_UNRESOLVED_NONBINARY` | unchanged | 2 |
+
+So 71 cases changed state and 87 kept it. For 85 of the 87 the case was already unresolved because of a censored
+MIC; it is now unresolved because the pair has no category, so the reason changed even though the state did not.
+
+- **Admin audit** (`compare_change --audit R8 --commit`): all 41,858 cases recomputed. 158 selected, 158 really affected
+  (71 with a different state), none missed; recall and precision 100%, reprocessing ratio 0.38%; 0 state, 0
+  uncertainty and 0 dependency mismatches. R8 stays SELECTIVE with the audit on record.
 
 ## Oracles
 

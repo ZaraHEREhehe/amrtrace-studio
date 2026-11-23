@@ -40,8 +40,8 @@ The filters that narrow the selection, and why each one is safe:
 
 ## 2. Evidence that the tests would catch a selector bug
 
-`scripts/selector_mutants.py` breaks the selector in ten ways, one at a time (results in
-`selector_mutation_results.md`). All ten are caught by the full test set, and all ten are also caught by the
+`scripts/selector_mutants.py` breaks the selector in twelve ways (ten from A-29, two added with A-28), one at a time (results in
+`selector_mutation_results.md`). All twelve are caught by the full test set, and all twelve are also caught by the
 end-to-end tests alone, with the unit tests left out.
 
 Before this task, one mutant (M3, a censored "<=" MIC read as an exact value) was caught only by a unit test: no
