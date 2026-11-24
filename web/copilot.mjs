@@ -1,6 +1,8 @@
-// turns a Review Copilot summary (I-19) into what the dossier shows, kept free of the DOM so it can be tested
+// turns a Review Copilot summary (I-19, I-29) into what the dossier shows, kept free of the DOM so it can be tested
 //
 // The summary is generated text: it is labelled as such and never mixed with the evidence panels (rule 9).
+
+import { routeHash } from "./ids.mjs";
 
 const KIND_LABELS = {
   case: "case",
@@ -29,6 +31,106 @@ export function copilotRows(summary) {
     text: sentence.text,
     sources: (sentence.sources ?? []).map(sourceText),
   }));
+}
+
+
+// ---------- the narrative and the grouped trace (I-29) ----------
+
+export const GROUP_LABELS = {
+  outcome: "Outcome",
+  cause: "Cause",
+  versions: "Versions",
+  evidence: "Evidence",
+  rules: "Rules",
+  labels: "Lab results",
+  review: "Review",
+};
+
+
+// where a cited record opens in the workbench; the review sentence opens the review queue
+export function sourceLink(source, caseId, group = "") {
+  if (group === "review" || source?.kind === "review_event") {
+    return { href: routeHash("review-queue"), text: "Open review queue" };
+  }
+  switch (source?.kind) {
+    case "change_event":
+      return { href: routeHash("changes", source.id), text: "Open change" };
+    case "dependency":
+      return { href: routeHash("dependencies", caseId), text: "Open dependency view" };
+    case "release":
+      return { href: routeHash("exports", source.id), text: `Open release ${source.id}` };
+    default:
+      return { href: routeHash("dossier", caseId), text: "Open dossier" };
+  }
+}
+
+
+// the headline, story, checks and follow-up questions; a summary stored before I-29 shows its first sentence
+export function copilotNarrative(summary) {
+  const narrative = summary?.narrative;
+  if (narrative?.headline?.text) {
+    return {
+      headline: narrative.headline,
+      story: narrative.story ?? [],
+      checks: narrative.checks ?? [],
+      followups: narrative.followups ?? [],
+      generator: narrative.generator ?? summary.generator,
+    };
+  }
+  const sentences = summary?.sentences ?? [];
+  if (!sentences.length) return null;
+  return {
+    headline: { text: sentences[0].text, cites: [1] },
+    story: [],
+    checks: [],
+    followups: [],
+    generator: summary.generator,
+  };
+}
+
+
+// the trace in groups, in the order the sentences came; each row keeps its number so citations can point at it
+export function traceGroups(summary) {
+  const caseId = summary?.case_id ?? "";
+  const groups = [];
+  (summary?.sentences ?? []).forEach((sentence, index) => {
+    const key = sentence.group || "other";
+    let group = groups.find((g) => g.key === key);
+    if (!group) {
+      group = { key, label: GROUP_LABELS[key] ?? "Records", rows: [] };
+      groups.push(group);
+    }
+    const sources = sentence.sources ?? [];
+    group.rows.push({
+      number: index + 1,
+      text: sentence.text,
+      sources: sources.map(sourceText),
+      link: sourceLink(sources[0], caseId, key),
+    });
+  });
+  return groups;
+}
+
+
+// what a citation chip shows: the sentence it points at, its records and where to open them
+export function citation(summary, number) {
+  const sentence = (summary?.sentences ?? [])[number - 1];
+  if (!sentence) return null;
+  const sources = sentence.sources ?? [];
+  return {
+    number,
+    text: sentence.text,
+    sources: sources.map(sourceText),
+    link: sourceLink(sources[0], summary.case_id ?? "", sentence.group),
+  };
+}
+
+
+// who wrote the narrative, in plain words
+export function narrativeByline(generator) {
+  if (!generator || generator === "templates") return "Written by code from the stored records.";
+  const model = String(generator).replace(/^(local|hosted):/, "");
+  return `Written by ${model} from the stored records, and checked against them.`;
 }
 
 

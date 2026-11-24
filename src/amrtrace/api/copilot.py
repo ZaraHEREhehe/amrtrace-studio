@@ -21,9 +21,8 @@ from fastapi import APIRouter, Depends, Query, status
 from amrtrace.copilot import (
     GENERATED_LABEL,
     answer_question,
-    build_summary,
+    build_copilot,
     latest_summary,
-    reword,
     rewriters_from_env,
     save_answer,
     store_summary,
@@ -44,6 +43,7 @@ def _view(body: dict[str, Any], *, stored: bool, summary_id=None, created_at=Non
         **{k: body[k] for k in ("case_id", "outcome", "generator", "template_version", "before_state_id",
                                 "after_state_id", "sentences")},
         notes=body.get("notes") or [],
+        narrative=body.get("narrative"),
         label=GENERATED_LABEL,
         stored=stored,
         summary_id=summary_id,
@@ -51,9 +51,9 @@ def _view(body: dict[str, Any], *, stored: bool, summary_id=None, created_at=Non
     )
 
 
-def _summary(conn, case_id: str, before_release, after_release):
+def _summary(conn, case_id: str, before_release, after_release, rewriters=()):
     try:
-        return build_summary(conn, case_id, before_release=before_release, after_release=after_release)
+        return build_copilot(conn, case_id, rewriters, before_release=before_release, after_release=after_release)
     except CaseNotFound as exc:
         raise ApiError(404, "case_not_found", str(exc), {"case_id": case_id}) from exc
     except ReleaseNotFound as exc:
@@ -84,12 +84,12 @@ def write_case_copilot(
     conn: psycopg.Connection = Depends(get_write_connection),
     actor: Actor = Depends(require_reviewer),
 ) -> CopilotSummaryView:
-    """Writes and stores a summary of the current comparison; a model, when asked for and configured, only rewords."""
-    summary = _summary(conn, case_id, None, None)
-    if payload.mode == "language_model":
-        rewriters = rewriters_from_env()
-        summary = reword(summary, rewriters) if rewriters else replace(
-            summary, notes=(*summary.notes, "no language model is configured, so the template sentences are used"))
+    """Writes and stores a summary of the current comparison; a configured model may compose its narrative (I-29)."""
+    rewriters = rewriters_from_env() if payload.mode == "language_model" else []
+    summary = _summary(conn, case_id, None, None, rewriters)
+    if payload.mode == "language_model" and not rewriters:
+        summary = replace(summary, notes=(*summary.notes,
+                                          "no language model is configured, so the narrative written by code is used"))
     stored = store_summary(conn, summary)
     return _view(stored.body, stored=True, summary_id=stored.summary_id, created_at=stored.created_at)
 

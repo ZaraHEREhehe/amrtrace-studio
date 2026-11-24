@@ -7,6 +7,17 @@ evidence and never an input to state assignment (rule 9).
 """
 
 from .chat import ChatAnswer, SavedAnswer, answer_question, retrieve, save_answer
+from .narrative import (
+    NARRATIVE_VERSION,
+    PROMPT_VERSION,
+    Line,
+    Narrative,
+    build_copilot,
+    compose,
+    display_name,
+    draft_narrative,
+    grounded,
+)
 from .language_model import HostedRewriter, LocalRewriter, Rewriter, keeps_facts, reword, rewriters_from_env
 from .sources import SourceRef, source_exists
 from .store import StoredSummary, latest_summary, store_summary
@@ -17,6 +28,8 @@ GENERATED_LABEL = (
 )
 
 __all__ = [
+    "NARRATIVE_VERSION", "PROMPT_VERSION", "Line", "Narrative", "build_copilot", "compose", "display_name",
+    "draft_narrative", "grounded",
     "GENERATED_LABEL", "TEMPLATE_VERSION", "ChatAnswer", "CopilotSummary", "SavedAnswer", "answer_question",
     "retrieve", "save_answer", "HostedRewriter", "LocalRewriter", "Rewriter",
     "Sentence", "SourceRef", "StoredSummary", "build_summary", "keeps_facts", "latest_summary", "reword",

@@ -439,15 +439,29 @@
             <div id="dossier-diff"></div>
           </section>
 
-          <section class="card">
-            <div class="section-heading compact">
-              <h3>Review Copilot (generated)</h3>
-              <button id="dossier-copilot-write" class="button" type="button">Write and store a summary</button>
+          <section class="card copilot-card" aria-labelledby="dossier-copilot-title">
+            <div class="copilot-head">
+              <span class="copilot-mark" aria-hidden="true">✦</span>
+              <h3 id="dossier-copilot-title">Review Copilot</h3>
+              <span class="badge badge-purple">Generated · not evidence</span>
+              <div class="copilot-head-actions">
+                <span id="dossier-copilot-fresh" class="muted copilot-fresh"></span>
+                <button id="dossier-copilot-write" class="button" type="button">Write and store a summary</button>
+              </div>
             </div>
 
-            <p id="dossier-copilot-caption" class="muted"></p>
             <div id="dossier-copilot-status" class="status" aria-live="polite" hidden></div>
-            <ol id="dossier-copilot" class="copilot-sentences"></ol>
+            <p id="dossier-copilot-headline" class="copilot-headline"></p>
+            <p id="dossier-copilot-story" class="copilot-story"></p>
+            <div id="dossier-copilot-checks" class="copilot-checks" hidden>
+              <strong>Worth a look before you review</strong>
+              <ul id="dossier-copilot-check-list"></ul>
+            </div>
+            <div id="dossier-copilot-followups" class="copilot-followups" aria-label="Follow-up questions"></div>
+            <button id="dossier-copilot-toggle" class="copilot-expander" type="button" aria-expanded="false"
+                    aria-controls="dossier-copilot">Show the full trace</button>
+            <div id="dossier-copilot" class="copilot-trace" hidden></div>
+            <p id="dossier-copilot-caption" class="muted copilot-caption"></p>
 
             <form id="dossier-chat-form" class="copilot-chat" autocomplete="off">
               <label for="dossier-chat-question">Ask about this case</label>
@@ -867,5 +881,6 @@
   <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>
   <script type="module" src="/auth_ui.mjs"></script>
+    <div id="cite-popover" class="cite-popover" role="dialog" aria-label="Cited record" hidden></div>
 </body>
 </html>
