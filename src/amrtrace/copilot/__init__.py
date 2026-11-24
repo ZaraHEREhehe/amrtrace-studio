@@ -1,11 +1,14 @@
-"""Review Copilot (tasks I-19, I-25, I-29, I-30, D-27): why a case changed, and answers to questions.
+"""Review Copilot and Ask AMRTrace (tasks I-19, I-25, I-29, I-30, I-31, D-27): why a case changed, and a conversation.
 
 Built only from stored records (the before/after diff, the dependency records, the evidence rows, the change event and
 the review status). Template sentences form the trace; a narrative on top of them is written by code, or composed by an
 optional language model and kept only when grounded (I-29). Every sentence and line names the stored records it rests
 on. The output is labelled as generated and kept in its own tables (a cache keyed by its inputs, and pins, I-30): it
-is never evidence and never an input to state assignment (rule 9).
+is never evidence and never an input to state assignment (rule 9). Ask AMRTrace (I-31) answers the latest question of
+a conversation about cases, changes and determinants from records it looks up read-only, each sentence citing them.
 """
+
+from .assistant import AssistantAnswer, Gathered, Turn, answer_inputs, ask, gather, recent_turns
 
 from .chat import ChatAnswer, SavedAnswer, answer_question, retrieve, save_answer
 from .cache import (
@@ -45,6 +48,7 @@ GENERATED_LABEL = (
 )
 
 __all__ = [
+    "AssistantAnswer", "Gathered", "Turn", "answer_inputs", "ask", "gather", "recent_turns",
     "KIND_ANSWER", "KIND_SUMMARY", "Cached", "NotCached", "Pin", "cached", "fingerprint", "model_names", "pin",
     "pins_for_case", "prune", "remember", "summary_inputs", "with_narrative",
     "NARRATIVE_VERSION", "PROMPT_VERSION", "Line", "Narrative", "build_copilot", "compose", "display_name",
