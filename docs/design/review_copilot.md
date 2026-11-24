@@ -1,4 +1,4 @@
-# Review Copilot (I-19, I-25, I-29, I-30, D-27)
+# Review Copilot and Ask AMRTrace (I-19, I-25, I-29, I-30, I-31, D-27)
 
 The Review Copilot writes a plain-language summary of why a case changed, for the reviewer looking at its dossier.
 It is **generated text**: it is labelled as generated, kept in its own tables, and never evidence or an input to
@@ -92,6 +92,42 @@ view, release, review queue).
   for reviewers and admins, and the pins under the card.
 - `GET` now runs on a write connection, because a first view writes the cache. Only the two copilot tables are
   written; the ledger is not touched.
+
+## Ask AMRTrace: a conversation (I-31)
+
+`POST /copilot/ask` answers the latest question of a conversation (`copilot/assistant.py`). The body is
+`{"question": "...", "history": [{"role": "user" | "assistant", "text": "..."}], "context": {"case_id"?, "change_id"?}}`.
+The browser keeps the conversation and sends it with each question; the server stays stateless and reads only the
+last 8 turns, each cut to 2,000 characters. The context is the page the question was asked from: the dossier or
+dependency view of a case, or a change.
+
+1. **Records are looked up first, on the server, read-only.** The case in view (the I-25 records: comparison, change,
+   versions, evidence, rules, labels, review), any case or change named in the question or the last four turns, the
+   change that produced the case's state with its reach (cases re-evaluated and moved per published release, and the
+   moves by state), and any determinant symbol in the question that the genotype rows hold. Each record has an id,
+   the text the model may use, and the workbench page that shows it (`link`: dossier, dependencies, changes, exports
+   or review-queue).
+2. **One model call.** The configured model (D-27 order, local then hosted) gets the instructions, the recent turns as
+   chat messages, and the question with the numbered records, and answers in JSON with record ids per sentence. The
+   model is not given tools to call: the lookups above happen before it is asked, so there is one request per
+   question (Groq's free tier limits requests per minute) and small local models without tool calling work too.
+3. **Every sentence is checked** as I-29 checks narrative lines: it must cite records that were looked up, name no
+   identifier or number they do not hold, and say nothing that decides, recommends or treats. A sentence that fails
+   is dropped and counted in the notes. If nothing survives, or there is no model, code answers from the records on
+   the question's topic: a change's reach for "is it the only one?" questions, the determinant record, or the I-25
+   case answer.
+4. **Blocks** are drawn by code from the same records: the case's transition (before and after state), a change's
+   moves as a small table, and a determinant card. A block is returned only when a kept sentence cites its records.
+
+The response holds `answer`, `sources` (with `link`), `blocks`, `suggestions` (follow-up questions), `mode`,
+`generator`, `notes`, the generated label, and `fingerprint`. The answer is cached in `copilot_cache` (kind `answer`)
+under a fingerprint of the question, the recent turns, the context, the looked-up records and blocks, the prompt
+version and the models, so the same question in the same conversation is not sent to the model twice; cached answers
+are pruned 7 days after their last use. A model failure is answered by code and not kept. A Reviewer or Admin pins an
+answer about a case with `POST /cases/{case_id}/copilot/pins` and `{"kind": "answer", "fingerprint": "..."}`.
+Asking needs no sign-in and writes nothing but that cache.
+
+The I-25 routes below stay for the contract agreed with I-24; the workbench uses `/copilot/ask` from I-32 on.
 
 ## Chat: questions about one case (I-25)
 

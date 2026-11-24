@@ -604,3 +604,62 @@ class CopilotChatView(BaseModel):
     created_at: Optional[datetime] = None
 
 
+class AssistantTurnView(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str = Field(max_length=4000)
+
+
+class AssistantContextView(BaseModel):
+    # the page the question is asked from: a case (dossier, dependencies) or a change (I-31)
+    case_id: Optional[str] = Field(default=None, max_length=200)
+    change_id: Optional[str] = Field(default=None, max_length=200)
+
+
+class AssistantRequest(BaseModel):
+    """Ask AMRTrace (I-31): the latest question, the recent turns of the conversation, and the page in view."""
+
+    question: str = Field(min_length=1, max_length=500)
+    history: list[AssistantTurnView] = Field(default_factory=list, max_length=40)
+    context: AssistantContextView = Field(default_factory=AssistantContextView)
+
+
+class AssistantLinkView(BaseModel):
+    # a workbench view (dossier, dependencies, changes, exports, review-queue) and the id it opens, if any
+    view: str
+    id: Optional[str] = None
+
+
+class AssistantSourceView(BaseModel):
+    id: str
+    kind: str
+    label: str
+    link: Optional[AssistantLinkView] = None
+
+
+class AssistantBlockView(BaseModel):
+    # transition (a case's before and after), table (a change's moves) or determinant (a gene card)
+    type: Literal["transition", "table", "determinant"]
+    title: str
+    source_ids: list[str]
+    data: dict[str, Any]
+
+
+class AssistantAnswerView(BaseModel):
+    """Generated text: each sentence cites the records it rests on; blocks are drawn by code from the same records."""
+
+    question: str
+    case_id: Optional[str] = None
+    state_id: Optional[int] = None
+    answer: list[CopilotChatSentenceView]
+    sources: list[AssistantSourceView]
+    blocks: list[AssistantBlockView] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
+    generated: Literal[True] = True
+    mode: Literal["template", "local", "hosted", "records_only"]
+    generator: str
+    label: str
+    notes: list[str] = Field(default_factory=list)
+    # the cache key (I-30); a Reviewer or Admin pins an answer about a case by it
+    fingerprint: str
+    cached: bool = False
+    stored: bool = False

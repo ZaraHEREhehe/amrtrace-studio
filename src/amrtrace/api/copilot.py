@@ -1,4 +1,4 @@
-"""Review Copilot over HTTP (tasks I-19, I-25, I-29, I-30).
+"""Review Copilot and Ask AMRTrace over HTTP (tasks I-19, I-25, I-29, I-30, I-31).
 
     GET  /cases/{case_id}/copilot         why the case's current state differs from the one before it: the trace
                                           sentences and the narrative on top of them. Kept in the copilot cache under
@@ -6,6 +6,9 @@
                                           is cached for those inputs (I-30)
     POST /cases/{case_id}/copilot/pins    keep the current summary on the case; a signed-in Reviewer or Admin (I-30)
     GET  /cases/{case_id}/copilot/pins    the case's pins, newest first
+    POST /copilot/ask                     Ask AMRTrace (I-31): the latest question of a conversation, its recent turns
+                                          and the page in view; records are looked up read-only, and the answer is
+                                          kept in the copilot cache under a fingerprint of all of that
     POST /cases/{case_id}/copilot/chat         ask a question ({"question": "..."}); read-only, writes nothing (I-25)
     POST /cases/{case_id}/copilot/chat/saved   ask and save the answer; needs a signed-in Reviewer or Admin (I-25)
 
@@ -22,11 +25,16 @@ from fastapi import APIRouter, Depends, Query, status
 
 from amrtrace.copilot import (
     GENERATED_LABEL,
+    KIND_ANSWER,
     KIND_SUMMARY,
     NotCached,
+    Turn,
+    answer_inputs,
     answer_question,
+    ask,
     cached,
     fingerprint,
+    gather,
     model_names,
     pin,
     pins_for_case,
@@ -44,6 +52,8 @@ from .auth import Actor, require_reviewer
 from .db import get_connection, get_write_connection
 from .errors import ApiError
 from .schemas import (
+    AssistantAnswerView,
+    AssistantRequest,
     CopilotChatRequest,
     CopilotChatView,
     CopilotPinRequest,
@@ -142,6 +152,46 @@ def pin_case_copilot(
 def case_copilot_pins(case_id: str, conn: psycopg.Connection = Depends(get_connection)) -> list[CopilotPinView]:
     """The generated text reviewers kept on this case, newest first."""
     return [_pin_view(p) for p in pins_for_case(conn, case_id)]
+
+
+def _answer_view(body: dict[str, Any], key: str, *, cached_hit: bool, stored: bool) -> AssistantAnswerView:
+    return AssistantAnswerView(**{k: v for k, v in body.items() if k != "generated"}, label=GENERATED_LABEL,
+                               fingerprint=key, cached=cached_hit, stored=stored)
+
+
+@router.post("/copilot/ask", response_model=AssistantAnswerView)
+def ask_amrtrace(
+    payload: AssistantRequest,
+    conn: psycopg.Connection = Depends(get_write_connection),
+) -> AssistantAnswerView:
+    """Generated text: an answer to the latest question, from records looked up read-only, each sentence citing them.
+
+    Open to anyone who can read the workbench. It writes only the copilot cache, once per set of inputs.
+    """
+    case_id, change_id = payload.context.case_id, payload.context.change_id
+    history = [Turn(t.role, t.text) for t in payload.history]
+    rewriters = rewriters_from_env()
+    try:
+        gathered = gather(conn, payload.question.strip(), history, case_id, change_id)
+    except CaseNotFound as exc:
+        raise ApiError(404, "case_not_found", str(exc), {"case_id": case_id}) from exc
+    key = fingerprint(KIND_ANSWER, answer_inputs(payload.question, history, case_id, change_id,
+                                                 model_names(rewriters), gathered))
+    hit = cached(conn, key)
+    if hit is not None:
+        return _answer_view(hit.body, key, cached_hit=True, stored=True)
+    try:
+        answer = ask(conn, payload.question, history, case_id=case_id, change_id=change_id, rewriters=rewriters,
+                     gathered=gathered)
+    except ValueError as exc:
+        raise ApiError(422, "invalid_question", str(exc), {"case_id": case_id}) from exc
+    body = answer.as_dict()
+    if rewriters and answer.generator in ("templates", "records") and gathered.records:
+        # a configured model failed this time: answer from the code but do not keep it, so asking again retries
+        return _answer_view(body, key, cached_hit=False, stored=False)
+    remember(conn, key, KIND_ANSWER, case_id=answer.case_id, state_id=answer.state_id, generator=answer.generator,
+             body=body)
+    return _answer_view(body, key, cached_hit=False, stored=True)
 
 
 def _chat(conn, case_id: str, question: str):
