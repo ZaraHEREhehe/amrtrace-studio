@@ -539,12 +539,37 @@ class CopilotSummaryView(BaseModel):
     template_version: str
     before_state_id: Optional[int]
     after_state_id: Optional[int]
+    # stored: the text is in the copilot cache; cached: this response was served from it without writing (I-30)
     stored: bool
-    summary_id: Optional[int] = None
+    cached: bool = False
+    fingerprint: Optional[str] = None
     created_at: Optional[datetime] = None
     sentences: list[CopilotSentenceView]
     notes: list[str] = Field(default_factory=list)
     narrative: Optional[CopilotNarrativeView] = None
+
+
+class CopilotPinRequest(BaseModel):
+    # the current summary of the case, or a cached chat answer named by its fingerprint (I-30)
+    kind: Literal["summary", "answer"] = "summary"
+    fingerprint: Optional[str] = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+
+class CopilotPinView(BaseModel):
+    """Generated text a Reviewer or Admin kept on the case (I-30); still generated text, never evidence."""
+
+    pin_id: int
+    kind: str
+    case_id: str
+    state_id: Optional[int]
+    fingerprint: str
+    question: Optional[str] = None
+    generator: str
+    body: dict[str, Any]
+    pinned_by: str
+    created_at: datetime
+    generated: Literal[True] = True
+    label: str
 
 
 class CopilotChatRequest(BaseModel):
@@ -579,6 +604,3 @@ class CopilotChatView(BaseModel):
     created_at: Optional[datetime] = None
 
 
-class CopilotRequest(BaseModel):
-    # templates only, or let a configured language model reword them (falls back to templates)
-    mode: Literal["templates", "language_model"] = "templates"

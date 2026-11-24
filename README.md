@@ -105,6 +105,8 @@ Get-Content -LiteralPath .\db\migrations\0017_release_verification_level.sql -Ra
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 Get-Content -LiteralPath .\db\migrations\0018_interpretation_rule_report_only.sql -Raw -Encoding UTF8 |
     docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
+Get-Content -LiteralPath .\db\migrations\0019_copilot_cache_and_pin.sql -Raw -Encoding UTF8 |
+    docker compose exec -T db psql -X -v ON_ERROR_STOP=1 -1 -U postgres -d amrtrace -f -
 ~~~
 
 Migration 0013 lets a later snapshot's evidence be stored beside the V1 rows (I-20); see
@@ -112,6 +114,8 @@ Migration 0013 lets a later snapshot's evidence be stored beside the V1 rows (I-
 own table (I-19, `docs/design/review_copilot.md`), and 0016 the table for saved copilot chat answers (I-25).
 Migration 0017 records how a change release was verified when it was published, SELECTIVE or EXHAUSTIVE, and holds the
 selective-only publication rule in the database (I-27, `docs/design/ledger_reeval.md` section 4).
+Migration 0019 adds the Review Copilot cache (one row per set of inputs, so the model is asked again only when an
+input changes) and reviewers' pins (I-30); from then on 0015 and 0016 are read-only history.
 
 **Existing local databases upgrading to Z-18:** the block above is an example,
 **not** a command to rerun blindly. These SQL files are not repeatable migrations;
@@ -126,7 +130,7 @@ docker compose stop web api
 Check the existing schema before upgrading (this is a read-only query):
 
 ~~~powershell
-docker compose exec -T db psql -X -U postgres -d amrtrace -c "SELECT to_regclass('public.source_alert') AS m0011, to_regclass('public.support_structure') AS m0012, (SELECT count(*) FROM pg_constraint WHERE conname = 'ast_evidence_source_row_snapshot_key') AS m0013, to_regclass('public.app_user') AS m0014, to_regclass('public.app_session') AS m0014_session, to_regclass('public.copilot_summary') AS m0015, to_regclass('public.copilot_chat_answer') AS m0016, (SELECT count(*) FROM information_schema.columns WHERE table_name = 'release' AND column_name = 'verification_level') AS m0017;"
+docker compose exec -T db psql -X -U postgres -d amrtrace -c "SELECT to_regclass('public.source_alert') AS m0011, to_regclass('public.support_structure') AS m0012, (SELECT count(*) FROM pg_constraint WHERE conname = 'ast_evidence_source_row_snapshot_key') AS m0013, to_regclass('public.app_user') AS m0014, to_regclass('public.app_session') AS m0014_session, to_regclass('public.copilot_summary') AS m0015, to_regclass('public.copilot_chat_answer') AS m0016, (SELECT count(*) FROM information_schema.columns WHERE table_name = 'release' AND column_name = 'verification_level') AS m0017, to_regclass('public.copilot_cache') AS m0019;"
 ~~~
 
 - If `source_alert` is absent, apply `0011_source_alert.sql` using its command above.

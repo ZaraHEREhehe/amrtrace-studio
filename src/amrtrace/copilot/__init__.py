@@ -1,12 +1,27 @@
-"""Review Copilot (tasks I-19 and I-25, D-27): a plain-language summary of why a case changed, and answers to questions.
+"""Review Copilot (tasks I-19, I-25, I-29, I-30, D-27): why a case changed, and answers to questions.
 
 Built only from stored records (the before/after diff, the dependency records, the evidence rows, the change event and
-the review status); templates first, then an optional language model that may only reword them. Every sentence names
-the stored records it came from. The output is labelled as generated and stored in its own table: it is never
-evidence and never an input to state assignment (rule 9).
+the review status). Template sentences form the trace; a narrative on top of them is written by code, or composed by an
+optional language model and kept only when grounded (I-29). Every sentence and line names the stored records it rests
+on. The output is labelled as generated and kept in its own tables (a cache keyed by its inputs, and pins, I-30): it
+is never evidence and never an input to state assignment (rule 9).
 """
 
 from .chat import ChatAnswer, SavedAnswer, answer_question, retrieve, save_answer
+from .cache import (
+    KIND_ANSWER,
+    KIND_SUMMARY,
+    Cached,
+    NotCached,
+    Pin,
+    cached,
+    fingerprint,
+    model_names,
+    pin,
+    pins_for_case,
+    prune,
+    remember,
+)
 from .narrative import (
     NARRATIVE_VERSION,
     PROMPT_VERSION,
@@ -17,6 +32,8 @@ from .narrative import (
     display_name,
     draft_narrative,
     grounded,
+    summary_inputs,
+    with_narrative,
 )
 from .language_model import HostedRewriter, LocalRewriter, Rewriter, keeps_facts, reword, rewriters_from_env
 from .sources import SourceRef, source_exists
@@ -28,6 +45,8 @@ GENERATED_LABEL = (
 )
 
 __all__ = [
+    "KIND_ANSWER", "KIND_SUMMARY", "Cached", "NotCached", "Pin", "cached", "fingerprint", "model_names", "pin",
+    "pins_for_case", "prune", "remember", "summary_inputs", "with_narrative",
     "NARRATIVE_VERSION", "PROMPT_VERSION", "Line", "Narrative", "build_copilot", "compose", "display_name",
     "draft_narrative", "grounded",
     "GENERATED_LABEL", "TEMPLATE_VERSION", "ChatAnswer", "CopilotSummary", "SavedAnswer", "answer_question",

@@ -28,7 +28,8 @@ import {
   resolveCase,
   searchCases,
   startReevaluation,
-  writeCaseCopilot,
+  getCaseCopilotPins,
+  pinCaseCopilot,
   askCaseCopilot,
   saveCaseCopilotAnswer,
 } from "./api.mjs";
@@ -43,7 +44,9 @@ import {
   citation,
   copilotCaption,
   copilotNarrative,
+  freshnessText,
   narrativeByline,
+  pinRows,
   traceGroups,
 } from "./copilot.mjs";
 
@@ -1895,7 +1898,7 @@ function renderDossierOverview(dossier, history = []) {
 
   activeDossierStateId = current?.state_id ?? null;
   byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
-  byId("dossier-copilot-write").disabled = !can("review_case");
+  byId("dossier-copilot-pin").disabled = !can("review_case");
 
   if (current?.release_id) {
     // Use verified Exports flow instead of bypassing browser SHA-256 checks.
@@ -2184,9 +2187,7 @@ function renderDossierCopilot(summary) {
   byId("dossier-copilot-caption").textContent = summary
     ? `${narrativeByline(narrative?.generator)} It is not evidence and is never used to assign a state.`
     : copilotCaption(summary);
-  byId("dossier-copilot-fresh").textContent = summary?.stored && summary.created_at
-    ? `Stored ${new Date(summary.created_at).toLocaleString()}`
-    : "";
+  byId("dossier-copilot-fresh").textContent = freshnessText(summary);
 }
 
 function setTraceOpen(open) {
@@ -2215,21 +2216,52 @@ async function loadDossierCopilot(caseId) {
     renderDossierCopilot(null);
     setStatus(status, "error", errorText(error));
   }
+  void loadDossierCopilotPins(caseId);
 }
 
 
-async function writeDossierCopilot() {
+// the summaries and answers reviewers kept on this case (I-30), newest first
+async function loadDossierCopilotPins(caseId) {
+  let pins = [];
+  try {
+    pins = await getCaseCopilotPins(caseId);
+  } catch {
+    pins = [];
+  }
+  if (caseId !== activeDossierCaseId) return;
+  renderCopilotPins(pins);
+}
+
+function renderCopilotPins(pins) {
+  const list = byId("dossier-copilot-pin-list");
+  clear(list);
+  for (const row of pinRows(pins)) {
+    const item = make("li");
+    item.append(
+      make("span", { text: row.text }),
+      make("span", { className: "muted copilot-pin-meta", text: ` ${row.meta}` }),
+    );
+    list.append(item);
+  }
+  byId("dossier-copilot-pins").hidden = !pins.length;
+  const pinned = pins.some((p) => p.kind === "summary" && p.fingerprint === currentCopilot?.fingerprint);
+  const button = byId("dossier-copilot-pin");
+  button.textContent = pinned ? "Pinned" : "Pin to case";
+  button.disabled = pinned || !can("review_case") || !currentCopilot;
+}
+
+
+async function pinDossierCopilot() {
   if (!activeDossierCaseId) {
     return;
   }
   const status = byId("dossier-copilot-status");
   const caseId = activeDossierCaseId;
-  setStatus(status, "loading", "Writing a summary from the stored records…");
   try {
-    const summary = await writeCaseCopilot(caseId, "language_model");
+    await pinCaseCopilot(caseId, "summary");
     if (caseId === activeDossierCaseId) {
-      renderDossierCopilot(summary);
       hideStatus(status);
+      await loadDossierCopilotPins(caseId);
     }
   } catch (error) {
     setStatus(status, "error", errorText(error));
@@ -3837,7 +3869,7 @@ function boot() {
   subscribeSession(() => {
     syncGateControl();
     byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
-    byId("dossier-copilot-write").disabled = !can("review_case");
+    byId("dossier-copilot-pin").disabled = !can("review_case");
     if (!can("review_case")) byId("dossier-chat-save").disabled = true;
     if (!can("review_case")) byId("review-queue-review-fieldset").disabled = true;
   });
@@ -3872,7 +3904,7 @@ function boot() {
   byId("run-exhaustive").addEventListener("change", syncGateControl);
   byId("dossier-form").addEventListener("submit", submitDossierLookup);
   byId("dossier-diff-form").addEventListener("submit", submitDossierDiff);
-  byId("dossier-copilot-write").addEventListener("click", () => void writeDossierCopilot());
+  byId("dossier-copilot-pin").addEventListener("click", () => void pinDossierCopilot());
   byId("dossier-copilot-toggle").addEventListener("click", () => {
     setTraceOpen(byId("dossier-copilot-toggle").getAttribute("aria-expanded") !== "true");
   });

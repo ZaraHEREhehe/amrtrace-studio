@@ -134,6 +134,37 @@ export function narrativeByline(generator) {
 }
 
 
+// ---------- cache and pins (I-30) ----------
+
+function shortTime(iso) {
+  const when = iso ? new Date(iso) : null;
+  if (!when || Number.isNaN(when.getTime())) return "";
+  return when.toISOString().slice(0, 16).replace("T", " ");
+}
+
+
+// whether the text shown is the kept one for these records, in plain words
+export function freshnessText(summary) {
+  if (!summary) return "";
+  if (summary.stored) {
+    const time = shortTime(summary.created_at);
+    return `Up to date for these records${time ? ` · written ${time} UTC` : ""}`;
+  }
+  return "Not kept: the language model did not answer, so this is the narrative written by code";
+}
+
+
+// one line per pin: what was kept, by whom and when
+export function pinRows(pins) {
+  return (pins ?? []).map((pin) => {
+    const text = pin.kind === "answer"
+      ? `Q: ${pin.question ?? ""}`
+      : pin.body?.narrative?.headline?.text ?? pin.body?.sentences?.[0]?.text ?? "Summary";
+    return { text, meta: `pinned by ${pin.pinned_by} on ${shortTime(pin.created_at)} UTC` };
+  });
+}
+
+
 // the line under the heading: says the text is generated and is not evidence (rule 9), and nothing else
 export const COPILOT_CAPTION = "Generated from stored records. Not evidence, and never used to assign a state.";
 

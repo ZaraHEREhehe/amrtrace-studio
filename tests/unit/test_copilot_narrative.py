@@ -117,3 +117,18 @@ def test_the_narrative_travels_with_the_summary_body():
     assert body["headline"] == {"text": DRAFT.headline.text, "cites": [1]}
     assert body["generator"] == "templates" and body["version"] == "COPILOT_NARRATIVE_V1"
     assert [s["group"] for s in SUMMARY.as_dict()["sentences"]] == ["outcome", "cause", "versions"]
+
+
+# ---------- the cache fingerprint (I-30) ----------
+
+def test_the_fingerprint_changes_only_when_an_input_changes():
+    from amrtrace.copilot import fingerprint, summary_inputs
+
+    base = fingerprint("summary", summary_inputs(SUMMARY, ["hosted:a"]))
+    assert base == fingerprint("summary", dict(reversed(list(summary_inputs(SUMMARY, ["hosted:a"]).items()))))
+    assert len(base) == 64 and int(base, 16) >= 0
+    newer = CopilotSummary("CASE_1", 84324, 90758, "STATE_CHANGED", TRACE)
+    assert fingerprint("summary", summary_inputs(newer, ["hosted:a"])) != base
+    assert fingerprint("summary", summary_inputs(SUMMARY, ["hosted:b"])) != base
+    assert fingerprint("summary", summary_inputs(SUMMARY, ["hosted:a"], before_release="R1")) != base
+    assert fingerprint("answer", summary_inputs(SUMMARY, ["hosted:a"])) != base
