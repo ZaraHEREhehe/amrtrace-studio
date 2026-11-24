@@ -1945,23 +1945,410 @@ tr.clickable {
   }
 }
 
-/* Review Copilot chat (I-24): a question box under the summary, answers labelled as generated */
-.copilot-chat {
-  margin-top: 1rem;
+/* Ask AMRTrace (I-32): a launcher on every page; one panel that floats, docks beside the page, or is a bottom sheet */
+.assistant-launcher {
+  position: fixed;
+  right: calc(22px + env(safe-area-inset-right, 0px));
+  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
+  z-index: 60;
   display: grid;
-  gap: 0.4rem;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 2px solid rgba(147, 197, 253, 0.35);
+  border-radius: 50%;
+  background: var(--navy);
+  color: #93c5fd;
+  font-size: 22px;
+  box-shadow: 0 12px 32px rgba(22, 50, 79, 0.25);
+  cursor: pointer;
 }
 
-.copilot-chat-row {
+.assistant-launcher:hover,
+.assistant-launcher:focus-visible {
+  background: var(--teal);
+  color: #ffffff;
+}
+
+.assistant {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--card);
+  font-size: 13px;
+}
+
+.assistant.floating {
+  position: fixed;
+  right: calc(22px + env(safe-area-inset-right, 0px));
+  bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+  z-index: 70;
+  width: 400px;
+  height: min(620px, calc(100vh - 140px));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(22, 50, 79, 0.22), 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* docked: the last column of the app shell, so the page reflows beside it */
+.assistant.docked {
+  flex: 0 0 400px;
+  height: 100vh;
+  border-left: 1px solid var(--border);
+}
+
+.assistant-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 14px;
+  background: var(--navy);
+  color: #ffffff;
+  cursor: grab;
+  user-select: none;
+}
+
+.assistant.docked .assistant-head {
+  cursor: default;
+}
+
+.assistant-head h2 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.assistant-mark,
+.assistant-spark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--teal);
+  color: #ffffff;
+}
+
+.assistant-mark {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+}
+
+.assistant-badge {
+  padding: 1px 7px;
+  border: 1px solid rgba(253, 230, 138, 0.5);
+  border-radius: 4px;
+  background: rgba(254, 243, 199, 0.15);
+  color: #fde68a;
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+
+.assistant-actions {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.assistant-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #cfe0ee;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.assistant-icon:hover,
+.assistant-icon:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.assistant-context {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-2);
+  font-size: 12px;
 }
 
-.copilot-chat-row input {
-  flex: 1 1 16rem;
+.assistant-context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 2px 8px;
+  border: 1px solid #bfdbfe;
+  border-radius: 4px;
+  background: var(--row-selected);
+  color: var(--teal);
+  font-weight: 600;
+}
+
+.assistant-context-chip button {
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.assistant-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 14px 12px;
+}
+
+.assistant-question {
+  align-self: flex-end;
+  max-width: 82%;
+  padding: 8px 12px;
+  border-radius: 8px 8px 2px 8px;
+  background: var(--teal);
+  color: #ffffff;
+  overflow-wrap: anywhere;
+}
+
+.assistant-turn {
+  display: flex;
+  gap: 8px;
+}
+
+.assistant-spark {
+  width: 22px;
+  height: 22px;
+  margin-top: 2px;
+  font-size: 11px;
+}
+
+.assistant-bubble {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.6;
+}
+
+.assistant-bubble p {
+  margin: 0 0 8px;
+  overflow-wrap: anywhere;
+}
+
+.assistant-block {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  font-size: 12.5px;
+}
+
+.assistant-block-title {
+  margin-bottom: 6px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.assistant-transition {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.assistant-table-wrap {
+  overflow-x: auto;
+}
+
+.assistant-block table {
+  width: 100%;
+  font-size: 12px;
+  border-collapse: collapse;
+}
+
+.assistant-block th,
+.assistant-block td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+
+.assistant-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0;
+}
+
+.assistant-facts dt {
+  color: var(--text-2);
+}
+
+.assistant-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.assistant-sources {
+  margin-top: 6px;
+}
+
+.assistant-sources summary {
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.assistant-sources ol {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 12px;
+}
+
+.assistant-sources li {
+  margin: 3px 0;
+  overflow-wrap: anywhere;
+}
+
+.assistant-sources a {
+  color: var(--teal);
+}
+
+.assistant-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 6px;
+  color: var(--text-2);
+  font-size: 11.5px;
+}
+
+.assistant-tools button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--teal);
+  font-size: 11.5px;
+  cursor: pointer;
+}
+
+.assistant-tools button:disabled {
+  color: var(--text-2);
+  cursor: default;
+}
+
+.assistant-typing {
+  display: inline-flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.assistant-typing i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: assistant-typing 1s infinite;
+}
+
+.assistant-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.assistant-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes assistant-typing {
+  0%, 60%, 100% { opacity: 0.3; }
+  30% { opacity: 1; }
+}
+
+.assistant-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 12px 8px;
+}
+
+.assistant-suggestions:empty {
+  display: none;
+}
+
+.assistant-compose {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.assistant-compose input {
+  flex: 1;
   min-width: 0;
 }
+
+.assistant-compose button {
+  width: 40px;
+  border: 0;
+  border-radius: 4px;
+  background: var(--teal);
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.assistant-compose button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.assistant-foot {
+  margin: 0;
+  padding: 0 12px 10px;
+  color: var(--text-2);
+  font-size: 11px;
+}
+
+@media (max-width: 760px) {
+  .assistant.floating,
+  .assistant.docked {
+    position: fixed;
+    inset: auto 0 0 0;
+    z-index: 70;
+    width: 100%;
+    height: 82vh;
+    border: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .assistant-dock {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-typing i {
+    animation: none;
+  }
+}
+
 /* Z-18: identity controls are additive; existing page layout stays intact. */
 .auth-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .auth-topbar #auth-identity { font-size: 0.85rem; opacity: 0.85; }

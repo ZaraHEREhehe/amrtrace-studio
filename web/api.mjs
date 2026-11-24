@@ -289,22 +289,9 @@ export function getCaseCopilotPins(caseId, fetchImpl = globalThis.fetch) {
 }
 
 
-// Review Copilot chat (I-24 / I-25): asking is read-only; saving needs a Reviewer or Admin
-export function askCaseCopilot(caseId, question, fetchImpl = globalThis.fetch) {
-  return requestJson(
-    `/cases/${encodeURIComponent(caseId)}/copilot/chat`,
-    { method: "POST", body: { question } },
-    fetchImpl,
-  );
-}
-
-
-export function saveCaseCopilotAnswer(caseId, question, fetchImpl = globalThis.fetch) {
-  return requestJson(
-    `/cases/${encodeURIComponent(caseId)}/copilot/chat/saved`,
-    { method: "POST", body: { question } },
-    fetchImpl,
-  );
+// Ask AMRTrace (I-31): the latest question, the recent turns and the page in view; open to anyone who can read
+export function askAmrtrace(question, history = [], context = {}, fetchImpl = globalThis.fetch) {
+  return requestJson("/copilot/ask", { method: "POST", body: { question, history, context } }, fetchImpl);
 }
 
 

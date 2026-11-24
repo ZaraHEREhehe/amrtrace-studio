@@ -468,19 +468,6 @@
               <ul id="dossier-copilot-pin-list"></ul>
             </div>
 
-            <form id="dossier-chat-form" class="copilot-chat" autocomplete="off">
-              <label for="dossier-chat-question">Ask about this case</label>
-              <div class="copilot-chat-row">
-                <input id="dossier-chat-question" name="question" type="text" maxlength="500"
-                       placeholder="For example: why did this case change?">
-                <button id="dossier-chat-ask" class="button button-primary" type="submit">Ask</button>
-                <button id="dossier-chat-save" class="button" type="button" disabled>Save answer</button>
-              </div>
-            </form>
-            <p id="dossier-chat-caption" class="muted"></p>
-            <div id="dossier-chat-status" class="status" aria-live="polite" hidden></div>
-            <p id="dossier-chat-mode" class="muted"></p>
-            <ol id="dossier-chat-answer" class="copilot-sentences"></ol>
           </section>
 
           <section class="card">
@@ -881,7 +868,34 @@
         </section>
       </main>
     </div>
+
+    <aside id="assistant" class="assistant" role="dialog" aria-labelledby="assistant-title" hidden>
+      <div id="assistant-head" class="assistant-head">
+        <span class="assistant-mark" aria-hidden="true">✦</span>
+        <h2 id="assistant-title">Ask AMRTrace</h2>
+        <span class="assistant-badge" title="Generated text. It is not evidence and is never used to assign a state.">Not evidence</span>
+        <div class="assistant-actions">
+          <button id="assistant-new" class="assistant-icon" type="button" title="New conversation" aria-label="New conversation">⟲</button>
+          <button id="assistant-dock" class="assistant-icon assistant-dock" type="button" title="Dock to the side" aria-label="Dock to the side">▥</button>
+          <button id="assistant-close" class="assistant-icon" type="button" title="Minimise" aria-label="Minimise">—</button>
+        </div>
+      </div>
+      <div id="assistant-context" class="assistant-context"></div>
+      <div id="assistant-messages" class="assistant-messages" aria-live="polite"></div>
+      <div id="assistant-suggestions" class="assistant-suggestions" aria-label="Suggested questions"></div>
+      <form id="assistant-form" class="assistant-compose" autocomplete="off">
+        <input id="assistant-input" type="text" maxlength="500" aria-label="Your question"
+               placeholder="Ask about this case, a change or a gene…">
+        <button id="assistant-send" type="submit" aria-label="Send">↑</button>
+      </form>
+      <p class="assistant-foot">Answers come only from AMRTrace's stored records. It explains; it cannot change states or submit reviews.</p>
+    </aside>
   </div>
+
+
+  <!-- Ask AMRTrace (I-32): a launcher on every page and one panel that floats or docks beside the page -->
+  <button id="assistant-launcher" class="assistant-launcher" type="button" aria-label="Open Ask AMRTrace"
+          aria-controls="assistant" aria-expanded="false" title="Ask AMRTrace about this page">✦</button>
 
   <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>

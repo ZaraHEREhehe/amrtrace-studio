@@ -30,17 +30,11 @@ import {
   startReevaluation,
   getCaseCopilotPins,
   pinCaseCopilot,
-  askCaseCopilot,
-  saveCaseCopilotAnswer,
 } from "./api.mjs";
 
 import { can, currentAccount, subscribeSession } from "./auth_client.mjs";
 
 import {
-  chatCaption,
-  chatModeText,
-  chatQuestion,
-  chatRows,
   citation,
   copilotCaption,
   copilotNarrative,
@@ -49,6 +43,8 @@ import {
   pinRows,
   traceGroups,
 } from "./copilot.mjs";
+
+import { askAssistant, initAssistant } from "./assistant_ui.mjs";
 
 import {
   caseName,
@@ -2198,12 +2194,9 @@ function setTraceOpen(open) {
   byId("dossier-copilot").hidden = !open;
 }
 
-// a follow-up question goes to the chat box under the card (I-32 moves it to the assistant)
+// a follow-up question opens Ask AMRTrace with the case as context and asks it there (I-32)
 function askFollowUp(question) {
-  const input = byId("dossier-chat-question");
-  if (!input) return;
-  input.value = question;
-  byId("dossier-chat-form").requestSubmit();
+  askAssistant(question);
 }
 
 
@@ -2269,81 +2262,6 @@ async function pinDossierCopilot() {
 }
 
 
-// the Review Copilot chat (I-24): each answer sentence with the records it cites, always labelled as generated
-let lastChatQuestion = null;
-
-function renderDossierChat(response) {
-  const list = byId("dossier-chat-answer");
-  clear(list);
-  byId("dossier-chat-caption").textContent = chatCaption(response);
-  byId("dossier-chat-mode").textContent = chatModeText(response);
-  for (const row of chatRows(response)) {
-    const item = make("li", { className: "copilot-sentence" });
-    item.append(
-      make("p", { text: row.text }),
-      make("p", { className: "muted copilot-sources", text: `From: ${row.sources.join("; ")}` }),
-    );
-    list.append(item);
-  }
-  byId("dossier-chat-save").disabled = !response || !chatRows(response).length || !can("review_case");
-}
-
-
-function resetDossierChat() {
-  lastChatQuestion = null;
-  byId("dossier-chat-question").value = "";
-  hideStatus(byId("dossier-chat-status"));
-  renderDossierChat(null);
-}
-
-
-async function askDossierChat(event) {
-  event.preventDefault();
-  const status = byId("dossier-chat-status");
-  const question = chatQuestion(byId("dossier-chat-question").value);
-  if (!activeDossierCaseId) return;
-  if (!question) {
-    setStatus(status, "error", "Type a question of up to 500 characters.");
-    return;
-  }
-  const caseId = activeDossierCaseId;
-  byId("dossier-chat-ask").disabled = true;
-  setStatus(status, "loading", "Looking through the stored records…");
-  try {
-    const response = await askCaseCopilot(caseId, question);
-    if (caseId === activeDossierCaseId) {
-      lastChatQuestion = question;
-      renderDossierChat(response);
-      hideStatus(status);
-    }
-  } catch (error) {
-    if (caseId === activeDossierCaseId) {
-      renderDossierChat(null);
-      setStatus(status, "error", errorText(error));
-    }
-  } finally {
-    byId("dossier-chat-ask").disabled = false;
-  }
-}
-
-
-async function saveDossierChat() {
-  if (!activeDossierCaseId || !lastChatQuestion) return;
-  const status = byId("dossier-chat-status");
-  const caseId = activeDossierCaseId;
-  setStatus(status, "loading", "Saving the answer…");
-  try {
-    const saved = await saveCaseCopilotAnswer(caseId, lastChatQuestion);
-    if (caseId === activeDossierCaseId) {
-      renderDossierChat(saved);
-      setStatus(status, "success", "Answer saved.");
-    }
-  } catch (error) {
-    setStatus(status, "error", errorText(error));
-  }
-}
-
-
 function renderDossierDependencies(subgraph) {
   const summary = byId(
     "dossier-dependency-summary",
@@ -2397,7 +2315,6 @@ async function loadDossier(caseId) {
 
   activeDossierCaseId = null;
   activeDossierStateId = null;
-  resetDossierChat();
 
   byId("dossier-review-fieldset").disabled = true;
   byId("dossier-export").hidden = true;
@@ -2457,7 +2374,6 @@ async function loadDossier(caseId) {
     renderDossierDependencies(dependencies);
     // generated text loads on its own, so a copilot problem never hides the evidence panels
     void loadDossierCopilot(caseId);
-    resetDossierChat();
 
     byId("dossier-before-release").value =
       diff.before?.release_id ?? "";
@@ -3866,11 +3782,11 @@ function toggleChangeForm() {
 
 function boot() {
   bindNavigation();
+  initAssistant();
   subscribeSession(() => {
     syncGateControl();
     byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
     byId("dossier-copilot-pin").disabled = !can("review_case");
-    if (!can("review_case")) byId("dossier-chat-save").disabled = true;
     if (!can("review_case")) byId("review-queue-review-fieldset").disabled = true;
   });
 
@@ -3914,8 +3830,12 @@ function boot() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") hideCitePopover();
   });
-  byId("dossier-chat-form").addEventListener("submit", (event) => void askDossierChat(event));
-  byId("dossier-chat-save").addEventListener("click", () => void saveDossierChat());
+  // an answer pinned from Ask AMRTrace shows under the card when its case is open
+  document.addEventListener("copilot-pinned", (event) => {
+    if (event.detail?.caseId && event.detail.caseId === activeDossierCaseId) {
+      void loadDossierCopilotPins(activeDossierCaseId);
+    }
+  });
   byId("dossier-review-form").addEventListener("submit", submitDossierReview);
   byId("dossier-review-action").addEventListener("change", syncReviewCorrection);
   byId("explorer-form").addEventListener("submit", submitExplorer);
