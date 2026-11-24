@@ -1,12 +1,12 @@
 // Ask AMRTrace on the page (I-32): a launcher on every page opens one panel that floats (drag its header) or docks
 // beside the page. The conversation is kept in this tab; each question is sent with the last turns and the page in
-// view. Answers cite stored records, each citation opens the page that shows the record, and the panel says plainly
-// that the text is generated and is not evidence. Nothing here can change a state or submit a review.
+// view. Answers cite stored records; a citation shows the record, and opens its page or, when that page is already
+// open, scrolls to it. One small tag says the text is AI generated. Nothing here can change a state or submit a review.
 
 import { askAmrtrace, pinCaseCopilot } from "./api.mjs";
 import {
-  ASSISTANT_CAPTION,
   DOCK_KEY,
+  SIZE_KEY,
   STORE_KEY,
   answerText,
   assistantContext,
@@ -14,10 +14,13 @@ import {
   blockView,
   canPinAnswer,
   citedSource,
+  clampSize,
   greeting,
   historyFor,
   modeText,
   readConversation,
+  readSize,
+  samePage,
   sentenceRows,
   sourceRows,
   startingSuggestions,
@@ -33,6 +36,8 @@ let docked = false;
 let pending = false;
 let removedContextKey = null;
 let conversation = { turns: [] };
+let popoverShownAt = 0;  // a click that scrolls its button into view must not close the popover it opens
+let sizes = {};          // {floating: {width, height}, docked: {width}}, remembered in this browser
 
 
 function byId(id) {
@@ -113,12 +118,78 @@ function syncFrame() {
   dockButton.textContent = docked ? "⧉" : "▥";
   dockButton.title = docked ? "Undock to a floating window" : "Dock to the side";
   dockButton.setAttribute("aria-label", dockButton.title);
-  if (dockedNow) {
-    panel.style.left = "";
-    panel.style.top = "";
-    panel.style.right = "";
-    panel.style.bottom = "";
+  applySize(panel, dockedNow);
+}
+
+
+function viewport() {
+  return { width: window.innerWidth, height: window.innerHeight };
+}
+
+
+// docked, the panel may take up to 60% of the window so the page keeps room
+function dockViewport() {
+  return { width: Math.round(window.innerWidth * 0.6) + 16, height: window.innerHeight };
+}
+
+
+function applySize(panel, dockedNow) {
+  if (isSheet()) {
+    for (const key of ["width", "height", "flexBasis", "left", "top", "right", "bottom"]) panel.style[key] = "";
+    return;
   }
+  if (dockedNow) {
+    for (const key of ["width", "height", "left", "top", "right", "bottom"]) panel.style[key] = "";
+    const width = sizes.docked?.width;
+    panel.style.flexBasis = width ? `${clampSize({ width, height: 9999 }, dockViewport()).width}px` : "";
+    return;
+  }
+  panel.style.flexBasis = "";
+  const size = clampSize(sizes.floating, { width: window.innerWidth, height: window.innerHeight - 100 });
+  panel.style.width = size ? `${size.width}px` : "";
+  panel.style.height = size ? `${size.height}px` : "";
+}
+
+
+function saveSizes() {
+  writeStored("local", SIZE_KEY, JSON.stringify(sizes));
+}
+
+
+// the grip at the panel's top-left corner (floating) or left edge (docked) resizes it; the size is remembered
+function bindResize() {
+  const grip = byId("assistant-resize");
+  const panel = byId("assistant");
+  grip.addEventListener("pointerdown", (event) => {
+    if (isSheet()) return;
+    event.preventDefault();
+    const box = panel.getBoundingClientRect();
+    const dockedNow = docked;
+    grip.setPointerCapture(event.pointerId);
+    const move = (moved) => {
+      if (dockedNow) {
+        const size = clampSize({ width: box.right - moved.clientX, height: 9999 }, dockViewport());
+        sizes.docked = { width: size.width };
+        panel.style.flexBasis = `${size.width}px`;
+        return;
+      }
+      const size = clampSize({ width: box.right - moved.clientX, height: box.bottom - moved.clientY }, viewport());
+      sizes.floating = size;
+      panel.style.width = `${size.width}px`;
+      panel.style.height = `${size.height}px`;
+      panel.style.left = `${Math.max(8, box.right - size.width)}px`;
+      panel.style.top = `${Math.max(8, box.bottom - size.height)}px`;
+      panel.style.right = "auto";
+      panel.style.bottom = "auto";
+    };
+    const up = () => {
+      grip.removeEventListener("pointermove", move);
+      grip.removeEventListener("pointerup", up);
+      saveSizes();
+    };
+    grip.addEventListener("pointermove", move);
+    grip.addEventListener("pointerup", up);
+  });
 }
 
 
@@ -207,21 +278,52 @@ function showPopover(anchor, row) {
   }
   popover.replaceChildren(
     make("span", { className: "cite-popover-kind", text: `${row.kind} · source ${row.number}` }),
-    make("p", { text: row.label }),
+    make("p", { text: row.label, attributes: { title: row.id } }),
   );
   if (row.link) {
-    const link = make("a", { text: `${row.link.text} →`, attributes: { href: row.link.href } });
-    link.addEventListener("click", hidePopover);
+    const here = samePage(row.link.href, window.location.hash);
+    const link = make("a", {
+      text: here ? "Show it on this page →" : `${row.link.text} →`,
+      attributes: { href: row.link.href },
+    });
+    link.addEventListener("click", (event) => {
+      hidePopover();
+      if (here) {
+        event.preventDefault();
+        reveal(row);
+      }
+    });
     popover.append(link);
   }
   popover.dataset.anchor = key;
   popover.hidden = false;
+  popoverShownAt = Date.now();
   const box = anchor.getBoundingClientRect();
   const left = Math.min(Math.max(12, box.left - 20), window.innerWidth - popover.offsetWidth - 12);
   let top = box.bottom + 8;
   if (top + popover.offsetHeight > window.innerHeight - 12) top = Math.max(12, box.top - popover.offsetHeight - 8);
   popover.style.left = `${left}px`;
   popover.style.top = `${top}px`;
+}
+
+
+// scrolls the open page to the cited record (an evidence row, or the card that holds that kind of record) and flashes it
+const KIND_PLACES = { case: "case_state", case_state: "case_state" };
+
+function visible(element) {
+  return element && element.offsetParent !== null;
+}
+
+function reveal(row) {
+  const exact = [...document.querySelectorAll("[data-record]")].find((el) => el.dataset.record === row.id && visible(el));
+  const kind = KIND_PLACES[row.recordKind] ?? row.recordKind;
+  const place = exact ?? [...document.querySelectorAll("[data-record-kind]")]
+    .find((el) => el.dataset.recordKind === kind && visible(el));
+  if (!place) return;
+  place.scrollIntoView({ behavior: "smooth", block: "center" });
+  place.classList.remove("record-flash");
+  void place.offsetWidth;
+  place.classList.add("record-flash");
 }
 
 
@@ -314,8 +416,17 @@ function renderAnswer(turn, turnIndex) {
     const list = make("ol");
     for (const source of sources) {
       const item = make("li");
-      const text = `${source.kind}: ${source.label}`;
-      item.append(source.link ? make("a", { text, attributes: { href: source.link.href } }) : make("span", { text }));
+      const button = make("button", {
+        className: "assistant-source",
+        attributes: { type: "button", title: source.id, "data-turn": String(turnIndex) },
+      });
+      button.append(make("span", { className: "cite-chip cite-chip-static", text: String(source.number) }),
+                    make("span", { text: source.label }));
+      button.addEventListener("click", (event) => {
+        event.stopPropagation();
+        showPopover(button, source);
+      });
+      item.append(button);
       list.append(item);
     }
     details.append(list);
@@ -327,12 +438,11 @@ function renderAnswer(turn, turnIndex) {
 
 
 function answerTools(response, turn) {
-  const tools = make("div", { className: "assistant-tools" });
-  tools.append(make("span", { text: modeText(response), attributes: { title: (response.notes ?? []).join("\n") } }));
+  const tools = make("div", { className: "assistant-tools", attributes: { title: modeText(response) } });
   const copy = make("button", { text: "Copy", attributes: { type: "button" } });
   copy.addEventListener("click", () => {
-    const lines = [answerText(response), "", ...sourceRows(response).map((s) => `[${s.number}] ${s.kind}: ${s.label}`),
-                   "", ASSISTANT_CAPTION];
+    const lines = [answerText(response), "", ...sourceRows(response).map((s) => `[${s.number}] ${s.id}`),
+                   "", "AI generated from AMRTrace's stored records."];
     navigator.clipboard?.writeText(lines.join("\n")).then(
       () => { copy.textContent = "Copied"; },
       () => { copy.textContent = "Copy failed"; },
@@ -449,8 +559,10 @@ export function initAssistant() {
   if (!byId("assistant")) return;
   conversation = readConversation(readStored("session", STORE_KEY));
   docked = readStored("local", DOCK_KEY) === "1";
+  sizes = readSize(readStored("local", SIZE_KEY));
   syncFrame();
   bindDrag();
+  bindResize();
   byId("assistant-launcher").addEventListener("click", () => setOpen(!open));
   byId("assistant-close").addEventListener("click", () => setOpen(false));
   byId("assistant-dock").addEventListener("click", () => setDocked(!docked));
@@ -467,7 +579,9 @@ export function initAssistant() {
     input.value = "";
     void send(text);
   });
-  byId("assistant-messages").addEventListener("scroll", hidePopover);
+  byId("assistant-messages").addEventListener("scroll", () => {
+    if (Date.now() - popoverShownAt > 300) hidePopover();
+  });
   window.addEventListener("hashchange", () => {
     removedContextKey = null;
     render();

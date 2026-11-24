@@ -1628,6 +1628,9 @@ function renderDataTable(
 
   for (const item of rows) {
     const row = make("tr");
+    // evidence rows can be found by the records Ask AMRTrace cites
+    if (item.ast_evidence_id) row.dataset.record = `ast_evidence:${item.ast_evidence_id}`;
+    if (item.genotype_evidence_id) row.dataset.record = `genotype_evidence:${item.genotype_evidence_id}`;
 
     for (const [, getter] of columns) {
       const value =
@@ -1803,7 +1806,9 @@ function renderDossierOverview(dossier, history = []) {
   );
 
   transition.append(previousBox, arrow, currentBox, trigger);
-  container.append(cardWith("State transition", transition));
+  const transitionCard = cardWith("State transition", transition);
+  transitionCard.dataset.recordKind = "case_state";
+  container.append(transitionCard);
 
   // release timeline: one dot per published state, the current one filled in teal
   const steps = make("div", { className: "timeline" });
@@ -2180,10 +2185,10 @@ function renderDossierCopilot(summary) {
   toggle.hidden = !count;
   setTraceOpen(toggle.getAttribute("aria-expanded") === "true" && count > 0);
 
-  byId("dossier-copilot-caption").textContent = summary
-    ? `${narrativeByline(narrative?.generator)} It is not evidence and is never used to assign a state.`
+  // one small tag says the card is AI generated; who wrote it and when sit in its tooltip
+  byId("dossier-copilot-tag").title = summary
+    ? [narrativeByline(narrative?.generator), freshnessText(summary), "Not evidence."].filter(Boolean).join(" ")
     : copilotCaption(summary);
-  byId("dossier-copilot-fresh").textContent = freshnessText(summary);
 }
 
 function setTraceOpen(open) {

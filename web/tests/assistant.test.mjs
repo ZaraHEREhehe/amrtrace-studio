@@ -14,7 +14,11 @@ import {
   greeting,
   historyFor,
   modeText,
+  clampSize,
   readConversation,
+  readSize,
+  samePage,
+  shortLabel,
   sentenceRows,
   sourceRows,
   startingSuggestions,
@@ -80,7 +84,7 @@ test("each sentence cites its sources by number, and each source opens its page"
   const rows = sourceRows(ANSWER);
   assert.deepEqual(rows.map((row) => row.link.href), ["#/changes/CHG-A", `#/dossier/${CASE}`]);
   assert.equal(rows[0].kind, "Change");
-  assert.equal(citedSource(ANSWER, 2).label, "state 12 (R3)");
+  assert.equal(citedSource(ANSWER, 2).label, "State 12 (R3)");
   assert.equal(citedSource(ANSWER, 9), null);
   const unlinked = sourceRows({ sources: [{ id: "determinant:x", kind: "determinant", label: "determinant x", link: null }] });
   assert.equal(unlinked[0].link, null);
@@ -156,5 +160,28 @@ test("the assistant is on every page and draws without injecting HTML", () => {
   assert.match(index, /id="assistant"[^>]*role="dialog"/);
   assert.doesNotMatch(index, /dossier-chat-form/);
   assert.doesNotMatch(ui, /\.innerHTML\s*=|insertAdjacentHTML/);
-  assert.match(ui, /Not evidence|ASSISTANT_CAPTION/);
+  assert.match(index, /class="ai-tag[^"]*"[^>]*>AI generated</);
+  assert.doesNotMatch(index, /assistant-foot|Generated · not evidence|dossier-copilot-caption/);
+});
+
+
+test("long ids in source labels are cut, and a link to the open page is known as such", () => {
+  assert.equal(shortLabel("genotype row GMV1_3efe21d301d66afe6206b2189fcfa44bf733981b03d5b07e497f773973bb3cdb"),
+               "Genotype row GMV1_3efe21d301d6…");
+  assert.equal(shortLabel("change CHG-A"), "Change CHG-A");
+  assert.equal(sourceRows(ANSWER)[1].recordKind, "case_state");
+  assert.equal(samePage(`#/dossier/${CASE}`, `#/dossier/${encodeURIComponent(CASE)}`), true);
+  assert.equal(samePage("#/dashboard", ""), true);
+  assert.equal(samePage("#/changes/CHG-A", `#/dossier/${CASE}`), false);
+});
+
+
+test("the panel's size stays within the window and a stored size is read defensively", () => {
+  const viewport = { width: 1400, height: 900 };
+  assert.deepEqual(clampSize({ width: 100, height: 100 }, viewport), { width: 320, height: 360 });
+  assert.deepEqual(clampSize({ width: 5000, height: 5000 }, viewport), { width: 1384, height: 884 });
+  assert.deepEqual(clampSize({ width: 520.4, height: 700 }, viewport), { width: 520, height: 700 });
+  assert.equal(clampSize(undefined, viewport), null);
+  assert.deepEqual(readSize("nope"), {});
+  assert.deepEqual(readSize(JSON.stringify({ floating: { width: 500, height: 600 } })).floating.width, 500);
 });

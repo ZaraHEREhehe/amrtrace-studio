@@ -2,7 +2,7 @@
 // question, and how an answer's sentences, sources and blocks are shown. The answer comes from POST /copilot/ask
 // (I-31); every sentence cites records, and each record names the workbench page that shows it.
 
-import { routeHash, shortCaseId } from "./ids.mjs";
+import { routeHash, shortCaseId, shortId } from "./ids.mjs";
 import { stateMeta } from "./view_meta.mjs";
 
 // the server reads the last 8 turns; the page keeps a few more so a reload shows the conversation
@@ -11,7 +11,9 @@ export const MAX_KEPT_TURNS = 30;
 export const MAX_QUESTION = 500;
 export const STORE_KEY = "amrtrace-assistant-v1";
 export const DOCK_KEY = "amrtrace-assistant-dock";
-export const ASSISTANT_CAPTION = "Generated from stored records. Not evidence, and never used to assign a state.";
+export const SIZE_KEY = "amrtrace-assistant-size";
+export const MIN_WIDTH = 320;
+export const MIN_HEIGHT = 360;
 
 
 // the page in view as context: a case on the dossier or dependency pages, a change on the changes page
@@ -94,14 +96,58 @@ export function sourceLinkOf(source) {
 }
 
 
+// long hashes in a record's label are cut like everywhere else in the workbench; the full id stays in `id`
+export function shortLabel(label) {
+  const text = String(label ?? "").replace(/\S{25,}/g, (word) => (word.includes("_") ? shortId(word) : word));
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+
 export function sourceRows(response) {
   return (response?.sources ?? []).map((source, index) => ({
     number: index + 1,
     id: source.id,
+    recordKind: source.kind,
     kind: KIND_TEXT[source.kind] ?? source.kind,
-    label: source.label || source.id,
+    label: shortLabel(source.label || source.id),
     link: sourceLinkOf(source),
   }));
+}
+
+
+// true when a link points at the page already open, so following it would change nothing
+export function samePage(href, hash) {
+  const norm = (value) => {
+    const text = String(value ?? "");
+    try {
+      return decodeURIComponent(text || "#/dashboard");
+    } catch {
+      return text || "#/dashboard";
+    }
+  };
+  return norm(href) === norm(hash);
+}
+
+
+// a size the panel can take in this window: never smaller than the minimum, never off screen
+export function clampSize(size, viewport) {
+  const width = Number(size?.width);
+  const height = Number(size?.height);
+  if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
+  return {
+    width: Math.round(Math.min(Math.max(MIN_WIDTH, width), Math.max(MIN_WIDTH, viewport.width - 16))),
+    height: Math.round(Math.min(Math.max(MIN_HEIGHT, height), Math.max(MIN_HEIGHT, viewport.height - 16))),
+  };
+}
+
+
+export function readSize(text) {
+  try {
+    const value = JSON.parse(text ?? "null");
+    return value && typeof value === "object" ? value : {};
+  } catch {
+    return {};
+  }
 }
 
 

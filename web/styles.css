@@ -1992,6 +1992,7 @@ tr.clickable {
 
 /* docked: the last column of the app shell, so the page reflows beside it */
 .assistant.docked {
+  position: relative;
   flex: 0 0 400px;
   height: 100vh;
   border-left: 1px solid var(--border);
@@ -2036,15 +2037,6 @@ tr.clickable {
   font-size: 13px;
 }
 
-.assistant-badge {
-  padding: 1px 7px;
-  border: 1px solid rgba(253, 230, 138, 0.5);
-  border-radius: 4px;
-  background: rgba(254, 243, 199, 0.15);
-  color: #fde68a;
-  font-size: 10.5px;
-  white-space: nowrap;
-}
 
 .assistant-actions {
   display: flex;
@@ -2226,8 +2218,28 @@ tr.clickable {
   overflow-wrap: anywhere;
 }
 
-.assistant-sources a {
+.assistant-source {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.assistant-source:hover,
+.assistant-source:focus-visible {
   color: var(--teal);
+}
+
+.assistant-sources ol {
+  list-style: none;
+  padding-left: 0;
 }
 
 .assistant-tools {
@@ -2282,9 +2294,16 @@ tr.clickable {
 
 .assistant-suggestions {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
-  padding: 0 12px 8px;
+  overflow-x: auto;
+  padding: 6px 12px 8px;
+  scrollbar-width: thin;
+}
+
+.assistant-suggestions .copilot-followup {
+  flex: none;
+  white-space: nowrap;
 }
 
 .assistant-suggestions:empty {
@@ -2318,21 +2337,83 @@ tr.clickable {
   cursor: default;
 }
 
-.assistant-foot {
-  margin: 0;
-  padding: 0 12px 10px;
+
+/* the resize grip: the top-left corner when floating, the left edge when docked */
+.assistant-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border-top: 2px solid rgba(147, 197, 253, 0.6);
+  border-left: 2px solid rgba(147, 197, 253, 0.6);
+  border-top-left-radius: 8px;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.assistant.docked .assistant-resize {
+  bottom: 0;
+  width: 6px;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  cursor: ew-resize;
+}
+
+.assistant.docked .assistant-resize:hover {
+  background: rgba(28, 114, 147, 0.25);
+}
+
+.assistant.floating {
+  min-width: 320px;
+  min-height: 360px;
+  max-width: calc(100vw - 16px);
+  max-height: calc(100vh - 16px);
+}
+
+/* the small tag that marks AI generated text, in place of the old badges and captions */
+.ai-tag {
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
   color: var(--text-2);
-  font-size: 11px;
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: help;
+}
+
+.ai-tag-dark {
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #cfe0ee;
+}
+
+/* a cited record shown on the open page */
+.record-flash {
+  animation: record-flash 1.6s ease-out;
+}
+
+@keyframes record-flash {
+  from { background: #fef9c3; box-shadow: 0 0 0 3px #fde68a; }
+  to { box-shadow: 0 0 0 3px transparent; }
 }
 
 @media (max-width: 760px) {
+  .assistant-resize {
+    display: none;
+  }
+
   .assistant.floating,
   .assistant.docked {
     position: fixed;
     inset: auto 0 0 0;
     z-index: 70;
     width: 100%;
+    max-width: none;
     height: 82vh;
+    max-height: none;
     border: 1px solid var(--border);
     border-radius: 14px 14px 0 0;
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -2344,7 +2425,8 @@ tr.clickable {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .assistant-typing i {
+  .assistant-typing i,
+  .record-flash {
     animation: none;
   }
 }

@@ -172,8 +172,13 @@ A round ✦ launcher sits at the bottom right of every page (`web/assistant_ui.m
   the Review Copilot card when that case is open.
 - **Suggestions** below the conversation: the last answer's follow-ups while the same case is in view, otherwise
   questions for the page. The Review Copilot card's follow-up questions open the panel and ask there.
-- The header carries "Not evidence", and the foot says the assistant explains but cannot change states or submit
-  reviews. The page builds every element with DOM calls; it never injects HTML from the API.
+- **Resizing**: drag the grip at the floating panel's top-left corner, or the docked panel's left edge (up to 60% of
+  the window). The size is remembered in this browser.
+- **Sources** open the same popover as the citation chips. When the record's page is the one already open, the link
+  reads "Show it on this page" and scrolls to the record (the evidence row, or the card that holds it) and flashes it.
+- **Labels**: one small "AI generated" tag in the panel header and on the Review Copilot card; who wrote the text, when,
+  and that it is not evidence sit in that tag's tooltip. The API responses still carry the generated label. The page
+  builds every element with DOM calls; it never injects HTML from the API.
 
 ## Why it can never become evidence
 
