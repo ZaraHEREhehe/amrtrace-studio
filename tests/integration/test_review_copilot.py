@@ -25,6 +25,7 @@ from amrtrace.changes.service import apply_change
 from amrtrace.copilot import (
     GENERATED_LABEL,
     SourceRef,
+    build_copilot,
     build_summary,
     latest_summary,
     reword,
@@ -243,3 +244,36 @@ def test_a_stored_summary_cannot_be_edited_or_deleted(world):
         with pytest.raises(psycopg.errors.RestrictViolation, match="append-only"):
             conn.execute(statement, (stored.summary_id,))
         conn.execute("ROLLBACK TO SAVEPOINT attempt")
+
+
+# ---------- the narrative on top of the trace (I-29) ----------
+
+def test_the_narrative_tells_the_story_and_cites_trace_sentences_that_exist(world, monkeypatch):
+    conn, changed = world
+
+    def no_network(*args, **kwargs):
+        raise OSError("network is switched off for this test")
+
+    monkeypatch.setattr(socket, "socket", no_network)
+    monkeypatch.setattr(socket, "create_connection", no_network)
+    for case_id in changed[:5]:
+        summary = build_copilot(conn, case_id)
+        narrative = summary.narrative
+        assert summary.generator == "templates" and narrative["generator"] == "templates"
+        assert narrative["headline"]["text"].startswith("Release R3 moved this case from")
+        assert CHANGE_ID in narrative["headline"]["text"]
+        assert narrative["story"], "a changed case gets a story, not only a headline"
+        groups = {s.group for s in summary.sentences}
+        assert {"outcome", "cause"} <= groups and "" not in groups
+        lines = [narrative["headline"], *narrative["story"], *narrative["checks"]]
+        for line in lines:
+            assert line["cites"], line
+            assert all(1 <= n <= len(summary.sentences) for n in line["cites"]), line
+        assert any(CHANGE_ID in q for q in narrative["followups"])
+
+
+def test_the_api_returns_the_narrative_and_the_grouped_trace(world, client):
+    conn, changed = world
+    body = client.get(f"/cases/{changed[0]}/copilot").json()
+    assert body["narrative"]["headline"]["text"] and body["narrative"]["story"]
+    assert all(sentence["group"] for sentence in body["sentences"])

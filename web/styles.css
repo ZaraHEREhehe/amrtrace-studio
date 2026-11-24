@@ -1653,6 +1653,277 @@ tr.clickable {
   overflow-wrap: anywhere;
 }
 
+/* Review Copilot card (I-29): a headline and short story citing a grouped trace, checks worth a look */
+.copilot-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.copilot-head h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.copilot-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: var(--navy);
+  color: #93c5fd;
+  font-size: 12px;
+}
+
+.copilot-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.copilot-fresh {
+  font-size: 12px;
+}
+
+.copilot-headline {
+  max-width: 70ch;
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  text-wrap: balance;
+}
+
+.copilot-story {
+  max-width: 72ch;
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.cite-chip {
+  display: inline-grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  margin: 0 1px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--row-selected);
+  color: var(--teal);
+  font: 600 10.5px/1 Inter, ui-sans-serif, system-ui, sans-serif;
+  vertical-align: 2px;
+  cursor: pointer;
+}
+
+.cite-chip:hover,
+.cite-chip:focus-visible {
+  background: var(--teal);
+  color: #ffffff;
+}
+
+.cite-chip-static {
+  flex: none;
+  cursor: default;
+  vertical-align: 0;
+}
+
+.cite-chip-static:hover {
+  background: var(--row-selected);
+  color: var(--teal);
+}
+
+.copilot-checks {
+  max-width: 72ch;
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 4px;
+  background: #fef3c7;
+}
+
+.copilot-checks strong {
+  color: #92400e;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.copilot-checks ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.copilot-checks li {
+  margin: 3px 0;
+}
+
+.copilot-followups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 10px 0 4px;
+}
+
+.copilot-followup {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--text-2);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.copilot-followup:hover {
+  border-color: var(--teal);
+  color: var(--teal);
+}
+
+.copilot-expander {
+  margin-top: 8px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--teal);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.copilot-expander::before {
+  content: "▸ ";
+}
+
+.copilot-expander[aria-expanded="true"]::before {
+  content: "▾ ";
+}
+
+.copilot-trace {
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.copilot-trace-group {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 4px 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.copilot-trace-label {
+  padding-top: 2px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.copilot-trace-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 -6px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.copilot-trace-row.flash {
+  animation: copilot-flash 1.6s ease-out;
+}
+
+@keyframes copilot-flash {
+  from { background: #fef9c3; }
+  to { background: transparent; }
+}
+
+.copilot-trace-body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.copilot-trace-sources {
+  display: block;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.copilot-trace-link {
+  flex: none;
+  color: var(--teal);
+  font-size: 12px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.copilot-trace-link:hover {
+  text-decoration: underline;
+}
+
+.copilot-caption {
+  margin: 12px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+}
+
+.cite-popover {
+  position: fixed;
+  z-index: 90;
+  width: min(320px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  box-shadow: 0 12px 32px rgba(22, 50, 79, 0.18), 0 1px 3px rgba(0, 0, 0, 0.08);
+  font-size: 12.5px;
+}
+
+.cite-popover p {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+
+.cite-popover-kind {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cite-popover-sources {
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.cite-popover a {
+  color: var(--teal);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+@media (max-width: 640px) {
+  .copilot-trace-group {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copilot-trace-row.flash {
+    animation: none;
+  }
+}
+
 /* Review Copilot chat (I-24): a question box under the summary, answers labelled as generated */
 .copilot-chat {
   margin-top: 1rem;

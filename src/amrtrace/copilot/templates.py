@@ -12,7 +12,7 @@ package (evaluator, deps, ledger, changes, reeval) imports this module or reads 
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any, Iterable, Optional
 
 from psycopg.rows import dict_row
@@ -40,7 +40,9 @@ from .sources import (
     SourceRef,
 )
 
-TEMPLATE_VERSION = "COPILOT_TEMPLATES_V1"
+TEMPLATE_VERSION = "COPILOT_TEMPLATES_V2"
+# what each sentence is about, so the dossier can show the trace in groups (I-29); V2 = V1 sentences plus a group
+GROUPS = ("outcome", "cause", "versions", "evidence", "rules", "labels", "review")
 # at most this many records of one kind are named one by one; the rest are counted in one sentence
 SHOWN_PER_KIND = 3
 # version records name the versions themselves; the version sentences already say what moved
@@ -55,6 +57,8 @@ class Sentence:
     sources: tuple[SourceRef, ...]
     # the template text this sentence started as; equal to text unless a language model reworded it
     template_text: str = ""
+    # one of GROUPS, or empty for a sentence written outside the summary (the chat's current-graph sentences)
+    group: str = ""
 
     def __post_init__(self) -> None:
         if not self.sources:
@@ -63,7 +67,7 @@ class Sentence:
             object.__setattr__(self, "template_text", self.text)
 
     def as_dict(self) -> dict[str, Any]:
-        return {"text": self.text, "template_text": self.template_text,
+        return {"text": self.text, "template_text": self.template_text, "group": self.group,
                 "sources": [s.as_dict() for s in self.sources]}
 
 
@@ -77,12 +81,15 @@ class CopilotSummary:
     generator: str = "templates"
     template_version: str = TEMPLATE_VERSION
     notes: tuple[str, ...] = field(default=())
+    # the short story on top of the sentences (I-29, copilot/narrative.py); its lines cite sentences by number
+    narrative: Optional[dict[str, Any]] = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
             "case_id": self.case_id, "before_state_id": self.before_state_id, "after_state_id": self.after_state_id,
             "outcome": self.outcome, "generator": self.generator, "template_version": self.template_version,
             "sentences": [s.as_dict() for s in self.sentences], "notes": list(self.notes),
+            "narrative": self.narrative,
         }
 
 
@@ -293,24 +300,30 @@ def _version_sentences(diff: CaseDiff) -> list[Sentence]:
             for v in diff.version_changes]
 
 
+def _grouped(group: str, sentences: Iterable[Sentence]) -> list[Sentence]:
+    return [replace(s, group=group) for s in sentences]
+
+
 def summary_from_diff(conn, diff: CaseDiff) -> CopilotSummary:
-    sentences = _outcome_sentences(diff)
+    sentences = _grouped("outcome", _outcome_sentences(diff))
     if diff.triggered_by_change_id:
         change = _change_sentence(conn, diff.triggered_by_change_id)
         if change is not None:
-            sentences.append(change)
+            sentences += _grouped("cause", [change])
     if diff.before and diff.after and diff.before.state_id != diff.after.state_id:
-        sentences += _version_sentences(diff)
-        details = _evidence_sentences(conn, diff) + _rule_sentences(diff)
-        sentences += details or [Sentence(
-            "No evidence row or rule edge was added or removed; only version labels moved.",
-            (_state_ref(diff.after),),
-        )]
+        sentences += _grouped("versions", _version_sentences(diff))
+        evidence, rules = _evidence_sentences(conn, diff), _rule_sentences(diff)
+        sentences += _grouped("evidence", evidence) + _grouped("rules", rules)
+        if not (evidence or rules):
+            sentences += _grouped("rules", [Sentence(
+                "No evidence row or rule edge was added or removed; only version labels moved.",
+                (_state_ref(diff.after),),
+            )])
     if diff.after:
-        sentences += _label_sentences(conn, diff)
+        sentences += _grouped("labels", _label_sentences(conn, diff))
         review = _review_sentence(conn, diff.case_id)
         if review is not None:
-            sentences.append(review)
+            sentences += _grouped("review", [review])
     return CopilotSummary(
         case_id=diff.case_id,
         before_state_id=diff.before.state_id if diff.before else None,

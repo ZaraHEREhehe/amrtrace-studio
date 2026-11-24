@@ -31,6 +31,43 @@ Only stored records, all of which the dossier already shows:
    another; Groq retires models, so the name is a setting). Keys live in `.env`, never in the repository. Each
    summary's notes (in the API response and the stored row) say which model was used or why it was not.
 
+## The narrative on top of the trace (I-29)
+
+Reviewers found the list of template sentences hard to read: it repeated the page in bullets. Since I-29 the
+template sentences are the **trace**, grouped by what they are about (outcome, cause, versions, evidence, rules, lab
+results, review; `COPILOT_TEMPLATES_V2` adds the group, the sentences are unchanged), and a short **narrative** sits on
+top of them (`copilot/narrative.py`, `COPILOT_NARRATIVE_V1`):
+
+| Part | What it is | Written by |
+| --- | --- | --- |
+| Headline | one sentence: what happened to the case and why | code, or a model |
+| Story | two to five plain sentences: the cause, what it means for the lab result, where the review stands | code, or a model |
+| Checks ("worth a look") | a change that says it replaced a different version than the one the case was read with; rules and evidence moving in the same release; a lab result a rule no longer reads as S, I or R; a trace cut short | code only |
+| Follow-ups | questions the chat can answer next | code only |
+
+Every line cites the trace sentences it rests on by number. Version codes read as editions
+(`CLSI_M100_ED36_VET01S_ED7_R1` reads "CLSI M100 ed. 36, VET01S ed. 7, R1"); the trace keeps the codes as stored.
+
+**Compose, then verify.** The code always writes the narrative first, so the copilot works with no model and no
+network. A configured model (D-27 order) may then write its own headline and story from the numbered trace and the
+code's draft. Each line it writes is kept only if:
+
+1. it cites trace sentences that exist;
+2. every identifier and number in it appears in the sentences it cites (a subset, so the model may summarise; the
+   parts of a code and its readable edition name count as present);
+3. it says nothing that decides, recommends or treats (`should`, `recommend`, `reclassify`, `is actually`, `treat`,
+   `prescribe`, `dose`, `clinically` and similar are refused);
+4. it is at most 400 characters.
+
+If the headline fails, or no story line survives, the code's narrative is used and the notes say why. Checks and
+follow-ups never come from a model. This replaces the I-19 rule that a model may only reword sentence by sentence,
+which is why the old output could only ever be the same bullets in other words.
+
+The dossier card shows the headline, the story with numbered citation chips (each opens a small popover with the
+sentence, its records and a link to the page that shows them), the checks in an amber box, the follow-up questions,
+and "Show the full trace" with the grouped sentences and an "Open …" link per row (case dossier, change, dependency
+view, release, review queue).
+
 ## Where it goes
 
 - `GET /cases/{case_id}/copilot`: the newest stored summary for the case's current comparison, or fresh template
@@ -84,5 +121,5 @@ the generated label and notes. Asking writes nothing and needs no sign-in, like 
 ## Limits
 
 - The templates explain what changed in the stored records, not the biology behind it.
-- A language model's wording is checked for identifiers and numbers only; a reworded sentence could still change
-  the emphasis of its template, which is why the template text is stored beside it.
+- A language model's wording is checked for identifiers, numbers and state-assigning words only; a composed sentence
+  could still change the emphasis of the trace, which is why the trace and its records are always one click away.

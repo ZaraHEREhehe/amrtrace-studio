@@ -507,7 +507,27 @@ class CopilotSourceView(BaseModel):
 class CopilotSentenceView(BaseModel):
     text: str
     template_text: str
+    # outcome, cause, versions, evidence, rules, labels or review (I-29); empty in summaries stored before I-29
+    group: str = ""
     sources: list[CopilotSourceView]
+
+
+class CopilotLineView(BaseModel):
+    text: str
+    # the trace sentences the line rests on, by number (1 is the first sentence)
+    cites: list[int]
+
+
+class CopilotNarrativeView(BaseModel):
+    """The short story on top of the trace (I-29): headline, story and checks, each line citing trace sentences."""
+
+    headline: CopilotLineView
+    story: list[CopilotLineView]
+    checks: list[CopilotLineView] = Field(default_factory=list)
+    followups: list[str] = Field(default_factory=list)
+    generator: str
+    version: str
+    notes: list[str] = Field(default_factory=list)
 
 
 class CopilotSummaryView(BaseModel):
@@ -524,6 +544,7 @@ class CopilotSummaryView(BaseModel):
     created_at: Optional[datetime] = None
     sentences: list[CopilotSentenceView]
     notes: list[str] = Field(default_factory=list)
+    narrative: Optional[CopilotNarrativeView] = None
 
 
 class CopilotChatRequest(BaseModel):

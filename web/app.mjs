@@ -40,8 +40,11 @@ import {
   chatModeText,
   chatQuestion,
   chatRows,
+  citation,
   copilotCaption,
-  copilotRows,
+  copilotNarrative,
+  narrativeByline,
+  traceGroups,
 } from "./copilot.mjs";
 
 import {
@@ -2046,23 +2049,160 @@ function renderDossierDiff(diff) {
 }
 
 
-// the Review Copilot panel (I-19): generated text, labelled as such, each sentence with the records it came from
-function renderDossierCopilot(summary) {
-  const list = byId("dossier-copilot");
-  clear(list);
-  byId("dossier-copilot-caption").textContent = copilotCaption(summary);
+// the Review Copilot card (I-19, I-29): a headline and short story citing the trace, checks worth a look, and the
+// full trace in groups behind a toggle. Generated text, labelled as such, never mixed with the evidence panels.
+let currentCopilot = null;
 
-  for (const row of copilotRows(summary)) {
-    const item = make("li", { className: "copilot-sentence" });
-    item.append(
-      make("p", { text: row.text }),
-      make("p", {
-        className: "muted copilot-sources",
-        text: `From: ${row.sources.join("; ")}`,
-      }),
-    );
-    list.append(item);
+function citeButton(number, onPick) {
+  const button = make("button", {
+    className: "cite-chip",
+    text: String(number),
+    attributes: { type: "button", "aria-label": `Show cited record ${number}` },
+  });
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onPick(button, number);
+  });
+  return button;
+}
+
+function appendLine(parent, line, onPick) {
+  parent.append(document.createTextNode(line.text));
+  for (const number of line.cites ?? []) {
+    parent.append(citeButton(number, onPick));
   }
+}
+
+// one small popover for every citation chip on the page: what the record says and where it opens
+function showCitePopover(anchor, item) {
+  const popover = byId("cite-popover");
+  if (!popover || !item) return;
+  if (!popover.hidden && popover.dataset.anchor === anchor.dataset.citeKey) {
+    hideCitePopover();
+    return;
+  }
+  clear(popover);
+  popover.append(
+    make("span", { className: "cite-popover-kind", text: item.kind ?? `Trace record ${item.number}` }),
+    make("p", { text: item.text }),
+  );
+  if (item.sources?.length) {
+    popover.append(make("p", { className: "muted cite-popover-sources", text: item.sources.join("; ") }));
+  }
+  if (item.link) {
+    const link = make("a", { text: `${item.link.text} →`, attributes: { href: item.link.href } });
+    link.addEventListener("click", hideCitePopover);
+    popover.append(link);
+  }
+  anchor.dataset.citeKey = anchor.dataset.citeKey || String(Math.random());
+  popover.dataset.anchor = anchor.dataset.citeKey;
+  popover.hidden = false;
+  const box = anchor.getBoundingClientRect();
+  const width = popover.offsetWidth;
+  const height = popover.offsetHeight;
+  const left = Math.min(Math.max(12, box.left - 20), window.innerWidth - width - 12);
+  let top = box.bottom + 8;
+  if (top + height > window.innerHeight - 12) top = Math.max(12, box.top - height - 8);
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+}
+
+function hideCitePopover() {
+  const popover = byId("cite-popover");
+  if (popover) popover.hidden = true;
+}
+
+function pickCopilotCitation(anchor, number) {
+  showCitePopover(anchor, citation(currentCopilot, number));
+  const row = document.querySelector(`#dossier-copilot [data-trace="${number}"]`);
+  if (row) {
+    row.classList.remove("flash");
+    void row.offsetWidth;
+    row.classList.add("flash");
+  }
+}
+
+function renderCopilotTrace(summary) {
+  const trace = byId("dossier-copilot");
+  clear(trace);
+  for (const group of traceGroups(summary)) {
+    const rows = make("div", { className: "copilot-trace-rows" });
+    for (const row of group.rows) {
+      const item = make("div", { className: "copilot-trace-row", attributes: { "data-trace": String(row.number) } });
+      const body = make("div", { className: "copilot-trace-body" });
+      body.append(
+        make("span", { text: row.text }),
+        make("span", { className: "copilot-trace-sources", text: row.sources.join("; ") }),
+      );
+      item.append(
+        make("span", { className: "cite-chip cite-chip-static", text: String(row.number) }),
+        body,
+        make("a", { className: "copilot-trace-link", text: `${row.link.text} →`, attributes: { href: row.link.href } }),
+      );
+      rows.append(item);
+    }
+    const section = make("div", { className: "copilot-trace-group" });
+    section.append(make("span", { className: "copilot-trace-label", text: group.label }), rows);
+    trace.append(section);
+  }
+}
+
+function renderDossierCopilot(summary) {
+  currentCopilot = summary;
+  hideCitePopover();
+  const narrative = copilotNarrative(summary);
+  const headline = byId("dossier-copilot-headline");
+  const story = byId("dossier-copilot-story");
+  const checks = byId("dossier-copilot-check-list");
+  const followups = byId("dossier-copilot-followups");
+  for (const element of [headline, story, checks, followups]) clear(element);
+
+  headline.textContent = narrative ? narrative.headline.text : "";
+  for (const [index, line] of (narrative?.story ?? []).entries()) {
+    if (index) story.append(document.createTextNode(" "));
+    appendLine(story, line, pickCopilotCitation);
+  }
+  for (const line of narrative?.checks ?? []) {
+    const item = make("li");
+    appendLine(item, line, pickCopilotCitation);
+    checks.append(item);
+  }
+  byId("dossier-copilot-checks").hidden = !narrative?.checks?.length;
+  for (const question of narrative?.followups ?? []) {
+    const chip = make("button", { className: "copilot-followup", text: question, attributes: { type: "button" } });
+    chip.addEventListener("click", () => askFollowUp(question));
+    followups.append(chip);
+  }
+  followups.hidden = !narrative?.followups?.length;
+
+  renderCopilotTrace(summary);
+  const count = summary?.sentences?.length ?? 0;
+  const toggle = byId("dossier-copilot-toggle");
+  toggle.hidden = !count;
+  setTraceOpen(toggle.getAttribute("aria-expanded") === "true" && count > 0);
+
+  byId("dossier-copilot-caption").textContent = summary
+    ? `${narrativeByline(narrative?.generator)} It is not evidence and is never used to assign a state.`
+    : copilotCaption(summary);
+  byId("dossier-copilot-fresh").textContent = summary?.stored && summary.created_at
+    ? `Stored ${new Date(summary.created_at).toLocaleString()}`
+    : "";
+}
+
+function setTraceOpen(open) {
+  const toggle = byId("dossier-copilot-toggle");
+  const count = currentCopilot?.sentences?.length ?? 0;
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.textContent = open ? "Hide the full trace" : `Show the full trace · ${count} records`;
+  byId("dossier-copilot").hidden = !open;
+}
+
+// a follow-up question goes to the chat box under the card (I-32 moves it to the assistant)
+function askFollowUp(question) {
+  const input = byId("dossier-chat-question");
+  if (!input) return;
+  input.value = question;
+  byId("dossier-chat-form").requestSubmit();
 }
 
 
@@ -3733,6 +3873,15 @@ function boot() {
   byId("dossier-form").addEventListener("submit", submitDossierLookup);
   byId("dossier-diff-form").addEventListener("submit", submitDossierDiff);
   byId("dossier-copilot-write").addEventListener("click", () => void writeDossierCopilot());
+  byId("dossier-copilot-toggle").addEventListener("click", () => {
+    setTraceOpen(byId("dossier-copilot-toggle").getAttribute("aria-expanded") !== "true");
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest?.("#cite-popover")) hideCitePopover();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideCitePopover();
+  });
   byId("dossier-chat-form").addEventListener("submit", (event) => void askDossierChat(event));
   byId("dossier-chat-save").addEventListener("click", () => void saveDossierChat());
   byId("dossier-review-form").addEventListener("submit", submitDossierReview);

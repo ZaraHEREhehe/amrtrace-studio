@@ -22,7 +22,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Protocol
 
-from .templates import CopilotSummary, Sentence
+from .templates import CopilotSummary
 
 DEFAULT_LOCAL_URL = "http://127.0.0.1:11434"
 HOSTED_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -172,7 +172,7 @@ def reword(summary: CopilotSummary, rewriters: Sequence[Rewriter]) -> CopilotSum
         kept = 0
         for sentence, answer in zip(summary.sentences, answers):
             if keeps_facts(sentence.template_text, answer):
-                sentences.append(Sentence(answer.strip(), sentence.sources, sentence.template_text))
+                sentences.append(replace(sentence, text=answer.strip()))
                 kept += 1
             else:
                 sentences.append(sentence)
