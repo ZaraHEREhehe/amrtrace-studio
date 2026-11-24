@@ -393,12 +393,28 @@ def compose(summary: CopilotSummary, draft: Narrative, rewriters: Sequence[Rewri
 
 # ---------- the whole copilot output for one case ----------
 
-def build_copilot(conn, case_id: str, rewriters: Sequence[Rewriter] = (), *, before_release: Optional[str] = None,
-                  after_release: Optional[str] = None) -> CopilotSummary:
-    """The trace sentences and the narrative on top of them. Reads only; a model is asked only when one is given."""
-    diff = case_diff(conn, case_id, before_release=before_release, after_release=after_release)
-    summary = summary_from_diff(conn, diff)
+def with_narrative(conn, diff: CaseDiff, summary: CopilotSummary,
+                   rewriters: Sequence[Rewriter] = ()) -> CopilotSummary:
+    """The summary with its narrative: the code's draft, or a model's grounded composition when one is given."""
     draft = draft_narrative(conn, diff, summary)
     narrative = compose(summary, draft, rewriters) if rewriters else draft
     return replace(summary, narrative=narrative.as_dict(), generator=narrative.generator,
                    notes=(*summary.notes, *narrative.notes))
+
+
+def summary_inputs(summary: CopilotSummary, models: Sequence[str], **extra: Any) -> dict[str, Any]:
+    """Everything a summary is written from, for its cache fingerprint (I-30)."""
+    sources = sorted({json.dumps(ref.as_dict(), sort_keys=True) for s in summary.sentences for ref in s.sources})
+    return {
+        "case_id": summary.case_id, "before_state_id": summary.before_state_id,
+        "after_state_id": summary.after_state_id, "outcome": summary.outcome, "sources": sources,
+        "template_version": summary.template_version, "narrative_version": NARRATIVE_VERSION,
+        "prompt_version": PROMPT_VERSION, "models": list(models), **extra,
+    }
+
+
+def build_copilot(conn, case_id: str, rewriters: Sequence[Rewriter] = (), *, before_release: Optional[str] = None,
+                  after_release: Optional[str] = None) -> CopilotSummary:
+    """The trace sentences and the narrative on top of them. Reads only; a model is asked only when one is given."""
+    diff = case_diff(conn, case_id, before_release=before_release, after_release=after_release)
+    return with_narrative(conn, diff, summary_from_diff(conn, diff), rewriters)

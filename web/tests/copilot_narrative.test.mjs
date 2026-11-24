@@ -63,3 +63,24 @@ test("the byline says who wrote the narrative in plain words", () => {
   assert.equal(narrativeByline("hosted:openai/gpt-oss-20b"),
     "Written by openai/gpt-oss-20b from the stored records, and checked against them.");
 });
+
+// I-30: the card says whether the text is the kept one, and lists the pins
+import { freshnessText, pinRows } from "../copilot.mjs";
+
+test("the card says the text is kept for these records, or that a model failure was not kept", () => {
+  assert.equal(freshnessText({ stored: true, created_at: "2026-11-24T09:05:00Z" }),
+    "Up to date for these records · written 2026-11-24 09:05 UTC");
+  assert.match(freshnessText({ stored: false }), /^Not kept/);
+  assert.equal(freshnessText(null), "");
+});
+
+test("each pin shows what was kept, by whom and when", () => {
+  const rows = pinRows([
+    { kind: "summary", body: { narrative: { headline: { text: "R8 moved it." } } }, pinned_by: "rev", created_at: "2026-11-24T09:05:00Z" },
+    { kind: "answer", question: "Why?", body: {}, pinned_by: "adm", created_at: "2026-11-24T10:00:00Z" },
+  ]);
+  assert.deepEqual(rows, [
+    { text: "R8 moved it.", meta: "pinned by rev on 2026-11-24 09:05 UTC" },
+    { text: "Q: Why?", meta: "pinned by adm on 2026-11-24 10:00 UTC" },
+  ]);
+});

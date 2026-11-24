@@ -264,7 +264,7 @@ export function getCaseDiff(
 }
 
 
-// Review Copilot (I-19): generated text about why a case changed, never evidence
+// Review Copilot (I-19, I-30): generated text about why a case changed, never evidence; cached by its inputs
 export function getCaseCopilot(caseId, fetchImpl = globalThis.fetch) {
   return requestJson(
     `/cases/${encodeURIComponent(caseId)}/copilot`,
@@ -274,16 +274,18 @@ export function getCaseCopilot(caseId, fetchImpl = globalThis.fetch) {
 }
 
 
-export function writeCaseCopilot(
-  caseId,
-  mode = "templates",
-  fetchImpl = globalThis.fetch,
-) {
+// Review Copilot pins (I-30): a Reviewer or Admin keeps the current summary, or a cached answer, on the case
+export function pinCaseCopilot(caseId, kind = "summary", fingerprint = null, fetchImpl = globalThis.fetch) {
   return requestJson(
-    `/cases/${encodeURIComponent(caseId)}/copilot`,
-    { method: "POST", body: { mode } },
+    `/cases/${encodeURIComponent(caseId)}/copilot/pins`,
+    { method: "POST", body: fingerprint ? { kind, fingerprint } : { kind } },
     fetchImpl,
   );
+}
+
+
+export function getCaseCopilotPins(caseId, fetchImpl = globalThis.fetch) {
+  return requestJson(`/cases/${encodeURIComponent(caseId)}/copilot/pins`, {}, fetchImpl);
 }
 
 
