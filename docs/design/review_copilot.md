@@ -1,4 +1,4 @@
-# Review Copilot and Ask AMRTrace (I-19, I-25, I-29, I-30, I-31, D-27)
+# Review Copilot and Ask AMRTrace (I-19, I-25, I-29, I-30, I-31, I-32, D-27)
 
 The Review Copilot writes a plain-language summary of why a case changed, for the reviewer looking at its dossier.
 It is **generated text**: it is labelled as generated, kept in its own tables, and never evidence or an input to
@@ -127,7 +127,7 @@ are pruned 7 days after their last use. A model failure is answered by code and 
 answer about a case with `POST /cases/{case_id}/copilot/pins` and `{"kind": "answer", "fingerprint": "..."}`.
 Asking needs no sign-in and writes nothing but that cache.
 
-The I-25 routes below stay for the contract agreed with I-24; the workbench uses `/copilot/ask` from I-32 on.
+The I-25 routes below stay for the contract agreed with I-24; the workbench asks `/copilot/ask` since I-32.
 
 ## Chat: questions about one case (I-25)
 
@@ -150,11 +150,35 @@ the generated label and notes. Asking writes nothing and needs no sign-in, like 
 - **Saving**: `POST /cases/{case_id}/copilot/chat/saved` (signed-in Reviewer or Admin, as for summaries) answers the
   question again on the server and stores that answer in `copilot_chat_answer` (migration 0016, append-only) with who
   saved it. Answer text sent by the browser is never stored.
-- **In the dossier (I-24)**, the Review Copilot card has an "Ask about this case" box under the summary. Each answer
-  sentence is followed by the records it cites, the generated caption is always shown with an answer (it does not
-  depend on anything in the response), and one plain line says how the answer was written (from the stored records,
-  reworded by a model, or no direct answer so the records are listed). "Save answer" is enabled only for a signed-in
-  Reviewer or Admin, after an answer is shown.
+- **In the dossier (I-24)** the card had an "Ask about this case" box. I-32 removed it: questions are asked in
+  Ask AMRTrace, below.
+
+## Ask AMRTrace on the page (I-32)
+
+A round ✦ launcher sits at the bottom right of every page (`web/assistant_ui.mjs`, pure helpers in
+`web/assistant.mjs`). It opens one panel:
+
+- **Floating** by default (drag it by its header), **docked** as a column beside the page (the page reflows; the choice
+  is remembered in `localStorage`), and a bottom sheet on phones. "—" minimises it back to the launcher, "⟲" starts a
+  new conversation.
+- **Context**: the page in view (a case on the dossier or dependency pages, a change on the changes page) is shown as
+  a chip and sent with each question. The chip's × asks without it, for that page.
+- **Conversation**: kept in the tab (`sessionStorage`), so it survives navigation and reloads but not closing the tab.
+  Each question carries the last 8 turns.
+- **Answers**: each sentence ends with numbered citation chips. A chip opens a popover naming the record and linking to
+  the page that shows it (dossier, dependencies, change, release or review queue). Under the text are the blocks
+  (transition, the change's moves as a table, a determinant card), the list of sources, how the answer was written,
+  Copy, and, for a signed-in Reviewer or Admin and an answer about a case, "Pin to case". A pinned answer appears under
+  the Review Copilot card when that case is open.
+- **Suggestions** below the conversation: the last answer's follow-ups while the same case is in view, otherwise
+  questions for the page. The Review Copilot card's follow-up questions open the panel and ask there.
+- **Resizing**: drag the grip at the floating panel's top-left corner, or the docked panel's left edge (up to 60% of
+  the window). The size is remembered in this browser.
+- **Sources** open the same popover as the citation chips. When the record's page is the one already open, the link
+  reads "Show it on this page" and scrolls to the record (the evidence row, or the card that holds it) and flashes it.
+- **Labels**: one small "AI generated" tag in the panel header and on the Review Copilot card; who wrote the text, when,
+  and that it is not evidence sit in that tag's tooltip. The API responses still carry the generated label. The page
+  builds every element with DOM calls; it never injects HTML from the API.
 
 ## Why it can never become evidence
 
