@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from typing import Any, Iterable, Optional, Sequence
 
@@ -251,7 +251,7 @@ def _reword(sentences: list[Sentence], rewriters: Sequence[Rewriter], notes: lis
         except Exception as exc:  # an optional layer: any failure falls back to the next model, then to templates
             notes.append(f"{rewriter.name} was not used: {type(exc).__name__}: {exc}")
             continue
-        kept = [Sentence(a.strip(), s.sources, s.template_text) if keeps_facts(s.template_text, a) else s
+        kept = [replace(s, text=a.strip()) if keeps_facts(s.template_text, a) else s
                 for s, a in zip(sentences, answers)]
         changed = sum(1 for s, k in zip(sentences, kept) if k.text != s.text)
         notes.append(f"{rewriter.name} reworded {changed} of {len(sentences)} sentences; the rest are templates")

@@ -15,6 +15,7 @@ from .releases import router as releases_router
 from .review_queue import router as review_queue_router
 from .runs import router as runs_router
 from .summary import router as summary_router
+from .transitions import router as transitions_router
 from .errors import register_error_handlers
 
 
@@ -33,6 +34,7 @@ def create_app() -> FastAPI:
     app.include_router(dossier_router)
     app.include_router(drafts_router)
     app.include_router(releases_router)
+    app.include_router(transitions_router)
     app.include_router(review_queue_router)
     app.include_router(runs_router)
     app.include_router(summary_router)

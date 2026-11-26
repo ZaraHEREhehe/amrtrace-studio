@@ -264,7 +264,7 @@ export function getCaseDiff(
 }
 
 
-// Review Copilot (I-19): generated text about why a case changed, never evidence
+// Review Copilot (I-19, I-30): generated text about why a case changed, never evidence; cached by its inputs
 export function getCaseCopilot(caseId, fetchImpl = globalThis.fetch) {
   return requestJson(
     `/cases/${encodeURIComponent(caseId)}/copilot`,
@@ -274,40 +274,47 @@ export function getCaseCopilot(caseId, fetchImpl = globalThis.fetch) {
 }
 
 
-export function writeCaseCopilot(
-  caseId,
-  mode = "templates",
-  fetchImpl = globalThis.fetch,
-) {
+// Review Copilot pins (I-30): a Reviewer or Admin keeps the current summary, or a cached answer, on the case
+export function pinCaseCopilot(caseId, kind = "summary", fingerprint = null, fetchImpl = globalThis.fetch) {
   return requestJson(
-    `/cases/${encodeURIComponent(caseId)}/copilot`,
-    { method: "POST", body: { mode } },
+    `/cases/${encodeURIComponent(caseId)}/copilot/pins`,
+    { method: "POST", body: fingerprint ? { kind, fingerprint } : { kind } },
     fetchImpl,
   );
 }
 
 
-// Review Copilot chat (I-24 / I-25): asking is read-only; saving needs a Reviewer or Admin
-export function askCaseCopilot(caseId, question, fetchImpl = globalThis.fetch) {
-  return requestJson(
-    `/cases/${encodeURIComponent(caseId)}/copilot/chat`,
-    { method: "POST", body: { question } },
-    fetchImpl,
-  );
+export function getCaseCopilotPins(caseId, fetchImpl = globalThis.fetch) {
+  return requestJson(`/cases/${encodeURIComponent(caseId)}/copilot/pins`, {}, fetchImpl);
 }
 
 
-export function saveCaseCopilotAnswer(caseId, question, fetchImpl = globalThis.fetch) {
-  return requestJson(
-    `/cases/${encodeURIComponent(caseId)}/copilot/chat/saved`,
-    { method: "POST", body: { question } },
-    fetchImpl,
-  );
+// Ask AMRTrace (I-31): the latest question, the recent turns and the page in view; open to anyone who can read
+export function askAmrtrace(question, history = [], context = {}, fetchImpl = globalThis.fetch) {
+  return requestJson("/copilot/ask", { method: "POST", body: { question, history, context } }, fetchImpl);
 }
 
 
 export function listPublishedReleases(fetchImpl = globalThis.fetch) {
   return requestJson("/releases", {}, fetchImpl);
+}
+
+// G-09: read-only cohort-wide transitions at two published release cutoffs.
+export function getReleaseTransitions(before, after, antibiotic = null, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({ before, after });
+  if (antibiotic) params.set("antibiotic", antibiotic);
+  return requestJson(`/releases/transitions?${params}`, {}, fetchImpl);
+}
+
+// A flow's exact member cases; the server performs the same effective-state lookup.
+export function getReleaseTransitionCases(before, after, fromState, toState,
+  antibiotic = null, limit = 25, offset = 0, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({
+    before, after, from_state: fromState, to_state: toState,
+    limit: String(limit), offset: String(offset),
+  });
+  if (antibiotic) params.set("antibiotic", antibiotic);
+  return requestJson(`/releases/transitions/cases?${params}`, {}, fetchImpl);
 }
 
 export function getReleaseIdentity(releaseId, fetchImpl = globalThis.fetch) {

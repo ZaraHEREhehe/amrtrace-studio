@@ -28,21 +28,23 @@ import {
   resolveCase,
   searchCases,
   startReevaluation,
-  writeCaseCopilot,
-  askCaseCopilot,
-  saveCaseCopilotAnswer,
+  getCaseCopilotPins,
+  pinCaseCopilot,
 } from "./api.mjs";
 
 import { can, currentAccount, subscribeSession } from "./auth_client.mjs";
 
 import {
-  chatCaption,
-  chatModeText,
-  chatQuestion,
-  chatRows,
+  citation,
   copilotCaption,
-  copilotRows,
+  copilotNarrative,
+  freshnessText,
+  narrativeByline,
+  pinRows,
+  traceGroups,
 } from "./copilot.mjs";
+
+import { askAssistant, initAssistant } from "./assistant_ui.mjs";
 
 import {
   caseName,
@@ -118,6 +120,8 @@ import {
   interpretationRows,
   labelsChangedBadge,
 } from "./interpretation.mjs";
+
+import { loadReleaseTransitionPanel } from "./release_transitions.mjs";
 
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -1626,6 +1630,9 @@ function renderDataTable(
 
   for (const item of rows) {
     const row = make("tr");
+    // evidence rows can be found by the records Ask AMRTrace cites
+    if (item.ast_evidence_id) row.dataset.record = `ast_evidence:${item.ast_evidence_id}`;
+    if (item.genotype_evidence_id) row.dataset.record = `genotype_evidence:${item.genotype_evidence_id}`;
 
     for (const [, getter] of columns) {
       const value =
@@ -1801,7 +1808,9 @@ function renderDossierOverview(dossier, history = []) {
   );
 
   transition.append(previousBox, arrow, currentBox, trigger);
-  container.append(cardWith("State transition", transition));
+  const transitionCard = cardWith("State transition", transition);
+  transitionCard.dataset.recordKind = "case_state";
+  container.append(transitionCard);
 
   // release timeline: one dot per published state, the current one filled in teal
   const steps = make("div", { className: "timeline" });
@@ -1892,7 +1901,7 @@ function renderDossierOverview(dossier, history = []) {
 
   activeDossierStateId = current?.state_id ?? null;
   byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
-  byId("dossier-copilot-write").disabled = !can("review_case");
+  byId("dossier-copilot-pin").disabled = !can("review_case");
 
   if (current?.release_id) {
     // Use verified Exports flow instead of bypassing browser SHA-256 checks.
@@ -2046,23 +2055,155 @@ function renderDossierDiff(diff) {
 }
 
 
-// the Review Copilot panel (I-19): generated text, labelled as such, each sentence with the records it came from
-function renderDossierCopilot(summary) {
-  const list = byId("dossier-copilot");
-  clear(list);
-  byId("dossier-copilot-caption").textContent = copilotCaption(summary);
+// the Review Copilot card (I-19, I-29): a headline and short story citing the trace, checks worth a look, and the
+// full trace in groups behind a toggle. Generated text, labelled as such, never mixed with the evidence panels.
+let currentCopilot = null;
 
-  for (const row of copilotRows(summary)) {
-    const item = make("li", { className: "copilot-sentence" });
-    item.append(
-      make("p", { text: row.text }),
-      make("p", {
-        className: "muted copilot-sources",
-        text: `From: ${row.sources.join("; ")}`,
-      }),
-    );
-    list.append(item);
+function citeButton(number, onPick) {
+  const button = make("button", {
+    className: "cite-chip",
+    text: String(number),
+    attributes: { type: "button", "aria-label": `Show cited record ${number}` },
+  });
+  button.addEventListener("click", (event) => {
+    event.stopPropagation();
+    onPick(button, number);
+  });
+  return button;
+}
+
+function appendLine(parent, line, onPick) {
+  parent.append(document.createTextNode(line.text));
+  for (const number of line.cites ?? []) {
+    parent.append(citeButton(number, onPick));
   }
+}
+
+// one small popover for every citation chip on the page: what the record says and where it opens
+function showCitePopover(anchor, item) {
+  const popover = byId("cite-popover");
+  if (!popover || !item) return;
+  if (!popover.hidden && popover.dataset.anchor === anchor.dataset.citeKey) {
+    hideCitePopover();
+    return;
+  }
+  clear(popover);
+  popover.append(
+    make("span", { className: "cite-popover-kind", text: item.kind ?? `Trace record ${item.number}` }),
+    make("p", { text: item.text }),
+  );
+  if (item.sources?.length) {
+    popover.append(make("p", { className: "muted cite-popover-sources", text: item.sources.join("; ") }));
+  }
+  if (item.link) {
+    const link = make("a", { text: `${item.link.text} →`, attributes: { href: item.link.href } });
+    link.addEventListener("click", hideCitePopover);
+    popover.append(link);
+  }
+  anchor.dataset.citeKey = anchor.dataset.citeKey || String(Math.random());
+  popover.dataset.anchor = anchor.dataset.citeKey;
+  popover.hidden = false;
+  const box = anchor.getBoundingClientRect();
+  const width = popover.offsetWidth;
+  const height = popover.offsetHeight;
+  const left = Math.min(Math.max(12, box.left - 20), window.innerWidth - width - 12);
+  let top = box.bottom + 8;
+  if (top + height > window.innerHeight - 12) top = Math.max(12, box.top - height - 8);
+  popover.style.left = `${left}px`;
+  popover.style.top = `${top}px`;
+}
+
+function hideCitePopover() {
+  const popover = byId("cite-popover");
+  if (popover) popover.hidden = true;
+}
+
+function pickCopilotCitation(anchor, number) {
+  showCitePopover(anchor, citation(currentCopilot, number));
+  const row = document.querySelector(`#dossier-copilot [data-trace="${number}"]`);
+  if (row) {
+    row.classList.remove("flash");
+    void row.offsetWidth;
+    row.classList.add("flash");
+  }
+}
+
+function renderCopilotTrace(summary) {
+  const trace = byId("dossier-copilot");
+  clear(trace);
+  for (const group of traceGroups(summary)) {
+    const rows = make("div", { className: "copilot-trace-rows" });
+    for (const row of group.rows) {
+      const item = make("div", { className: "copilot-trace-row", attributes: { "data-trace": String(row.number) } });
+      const body = make("div", { className: "copilot-trace-body" });
+      body.append(
+        make("span", { text: row.text }),
+        make("span", { className: "copilot-trace-sources", text: row.sources.join("; ") }),
+      );
+      item.append(
+        make("span", { className: "cite-chip cite-chip-static", text: String(row.number) }),
+        body,
+        make("a", { className: "copilot-trace-link", text: `${row.link.text} →`, attributes: { href: row.link.href } }),
+      );
+      rows.append(item);
+    }
+    const section = make("div", { className: "copilot-trace-group" });
+    section.append(make("span", { className: "copilot-trace-label", text: group.label }), rows);
+    trace.append(section);
+  }
+}
+
+function renderDossierCopilot(summary) {
+  currentCopilot = summary;
+  hideCitePopover();
+  const narrative = copilotNarrative(summary);
+  const headline = byId("dossier-copilot-headline");
+  const story = byId("dossier-copilot-story");
+  const checks = byId("dossier-copilot-check-list");
+  const followups = byId("dossier-copilot-followups");
+  for (const element of [headline, story, checks, followups]) clear(element);
+
+  headline.textContent = narrative ? narrative.headline.text : "";
+  for (const [index, line] of (narrative?.story ?? []).entries()) {
+    if (index) story.append(document.createTextNode(" "));
+    appendLine(story, line, pickCopilotCitation);
+  }
+  for (const line of narrative?.checks ?? []) {
+    const item = make("li");
+    appendLine(item, line, pickCopilotCitation);
+    checks.append(item);
+  }
+  byId("dossier-copilot-checks").hidden = !narrative?.checks?.length;
+  for (const question of narrative?.followups ?? []) {
+    const chip = make("button", { className: "copilot-followup", text: question, attributes: { type: "button" } });
+    chip.addEventListener("click", () => askFollowUp(question));
+    followups.append(chip);
+  }
+  followups.hidden = !narrative?.followups?.length;
+
+  renderCopilotTrace(summary);
+  const count = summary?.sentences?.length ?? 0;
+  const toggle = byId("dossier-copilot-toggle");
+  toggle.hidden = !count;
+  setTraceOpen(toggle.getAttribute("aria-expanded") === "true" && count > 0);
+
+  // one small tag says the card is AI generated; who wrote it and when sit in its tooltip
+  byId("dossier-copilot-tag").title = summary
+    ? [narrativeByline(narrative?.generator), freshnessText(summary), "Not evidence."].filter(Boolean).join(" ")
+    : copilotCaption(summary);
+}
+
+function setTraceOpen(open) {
+  const toggle = byId("dossier-copilot-toggle");
+  const count = currentCopilot?.sentences?.length ?? 0;
+  toggle.setAttribute("aria-expanded", String(open));
+  toggle.textContent = open ? "Hide the full trace" : `Show the full trace · ${count} records`;
+  byId("dossier-copilot").hidden = !open;
+}
+
+// a follow-up question opens Ask AMRTrace with the case as context and asks it there (I-32)
+function askFollowUp(question) {
+  askAssistant(question);
 }
 
 
@@ -2075,96 +2216,52 @@ async function loadDossierCopilot(caseId) {
     renderDossierCopilot(null);
     setStatus(status, "error", errorText(error));
   }
+  void loadDossierCopilotPins(caseId);
 }
 
 
-async function writeDossierCopilot() {
+// the summaries and answers reviewers kept on this case (I-30), newest first
+async function loadDossierCopilotPins(caseId) {
+  let pins = [];
+  try {
+    pins = await getCaseCopilotPins(caseId);
+  } catch {
+    pins = [];
+  }
+  if (caseId !== activeDossierCaseId) return;
+  renderCopilotPins(pins);
+}
+
+function renderCopilotPins(pins) {
+  const list = byId("dossier-copilot-pin-list");
+  clear(list);
+  for (const row of pinRows(pins)) {
+    const item = make("li");
+    item.append(
+      make("span", { text: row.text }),
+      make("span", { className: "muted copilot-pin-meta", text: ` ${row.meta}` }),
+    );
+    list.append(item);
+  }
+  byId("dossier-copilot-pins").hidden = !pins.length;
+  const pinned = pins.some((p) => p.kind === "summary" && p.fingerprint === currentCopilot?.fingerprint);
+  const button = byId("dossier-copilot-pin");
+  button.textContent = pinned ? "Pinned" : "Pin to case";
+  button.disabled = pinned || !can("review_case") || !currentCopilot;
+}
+
+
+async function pinDossierCopilot() {
   if (!activeDossierCaseId) {
     return;
   }
   const status = byId("dossier-copilot-status");
   const caseId = activeDossierCaseId;
-  setStatus(status, "loading", "Writing a summary from the stored records…");
   try {
-    const summary = await writeCaseCopilot(caseId, "language_model");
+    await pinCaseCopilot(caseId, "summary");
     if (caseId === activeDossierCaseId) {
-      renderDossierCopilot(summary);
       hideStatus(status);
-    }
-  } catch (error) {
-    setStatus(status, "error", errorText(error));
-  }
-}
-
-
-// the Review Copilot chat (I-24): each answer sentence with the records it cites, always labelled as generated
-let lastChatQuestion = null;
-
-function renderDossierChat(response) {
-  const list = byId("dossier-chat-answer");
-  clear(list);
-  byId("dossier-chat-caption").textContent = chatCaption(response);
-  byId("dossier-chat-mode").textContent = chatModeText(response);
-  for (const row of chatRows(response)) {
-    const item = make("li", { className: "copilot-sentence" });
-    item.append(
-      make("p", { text: row.text }),
-      make("p", { className: "muted copilot-sources", text: `From: ${row.sources.join("; ")}` }),
-    );
-    list.append(item);
-  }
-  byId("dossier-chat-save").disabled = !response || !chatRows(response).length || !can("review_case");
-}
-
-
-function resetDossierChat() {
-  lastChatQuestion = null;
-  byId("dossier-chat-question").value = "";
-  hideStatus(byId("dossier-chat-status"));
-  renderDossierChat(null);
-}
-
-
-async function askDossierChat(event) {
-  event.preventDefault();
-  const status = byId("dossier-chat-status");
-  const question = chatQuestion(byId("dossier-chat-question").value);
-  if (!activeDossierCaseId) return;
-  if (!question) {
-    setStatus(status, "error", "Type a question of up to 500 characters.");
-    return;
-  }
-  const caseId = activeDossierCaseId;
-  byId("dossier-chat-ask").disabled = true;
-  setStatus(status, "loading", "Looking through the stored records…");
-  try {
-    const response = await askCaseCopilot(caseId, question);
-    if (caseId === activeDossierCaseId) {
-      lastChatQuestion = question;
-      renderDossierChat(response);
-      hideStatus(status);
-    }
-  } catch (error) {
-    if (caseId === activeDossierCaseId) {
-      renderDossierChat(null);
-      setStatus(status, "error", errorText(error));
-    }
-  } finally {
-    byId("dossier-chat-ask").disabled = false;
-  }
-}
-
-
-async function saveDossierChat() {
-  if (!activeDossierCaseId || !lastChatQuestion) return;
-  const status = byId("dossier-chat-status");
-  const caseId = activeDossierCaseId;
-  setStatus(status, "loading", "Saving the answer…");
-  try {
-    const saved = await saveCaseCopilotAnswer(caseId, lastChatQuestion);
-    if (caseId === activeDossierCaseId) {
-      renderDossierChat(saved);
-      setStatus(status, "success", "Answer saved.");
+      await loadDossierCopilotPins(caseId);
     }
   } catch (error) {
     setStatus(status, "error", errorText(error));
@@ -2225,7 +2322,6 @@ async function loadDossier(caseId) {
 
   activeDossierCaseId = null;
   activeDossierStateId = null;
-  resetDossierChat();
 
   byId("dossier-review-fieldset").disabled = true;
   byId("dossier-export").hidden = true;
@@ -2285,7 +2381,6 @@ async function loadDossier(caseId) {
     renderDossierDependencies(dependencies);
     // generated text loads on its own, so a copilot problem never hides the evidence panels
     void loadDossierCopilot(caseId);
-    resetDossierChat();
 
     byId("dossier-before-release").value =
       diff.before?.release_id ?? "";
@@ -3245,6 +3340,7 @@ async function loadDashboard() {
     const [summary, runs] = await Promise.all([getSummary(), listRuns(null, 6)]);
     renderDashboard(summary, runs);
     renderReleaseChips(summary.latest_release);
+    void loadReleaseTransitionPanel(summary.latest_release, summary.drugs);
     hideStatus(status);
   } catch (error) {
     setStatus(status, "error", errorText(error));
@@ -3694,11 +3790,11 @@ function toggleChangeForm() {
 
 function boot() {
   bindNavigation();
+  initAssistant();
   subscribeSession(() => {
     syncGateControl();
     byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
-    byId("dossier-copilot-write").disabled = !can("review_case");
-    if (!can("review_case")) byId("dossier-chat-save").disabled = true;
+    byId("dossier-copilot-pin").disabled = !can("review_case");
     if (!can("review_case")) byId("review-queue-review-fieldset").disabled = true;
   });
 
@@ -3732,9 +3828,22 @@ function boot() {
   byId("run-exhaustive").addEventListener("change", syncGateControl);
   byId("dossier-form").addEventListener("submit", submitDossierLookup);
   byId("dossier-diff-form").addEventListener("submit", submitDossierDiff);
-  byId("dossier-copilot-write").addEventListener("click", () => void writeDossierCopilot());
-  byId("dossier-chat-form").addEventListener("submit", (event) => void askDossierChat(event));
-  byId("dossier-chat-save").addEventListener("click", () => void saveDossierChat());
+  byId("dossier-copilot-pin").addEventListener("click", () => void pinDossierCopilot());
+  byId("dossier-copilot-toggle").addEventListener("click", () => {
+    setTraceOpen(byId("dossier-copilot-toggle").getAttribute("aria-expanded") !== "true");
+  });
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest?.("#cite-popover")) hideCitePopover();
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") hideCitePopover();
+  });
+  // an answer pinned from Ask AMRTrace shows under the card when its case is open
+  document.addEventListener("copilot-pinned", (event) => {
+    if (event.detail?.caseId && event.detail.caseId === activeDossierCaseId) {
+      void loadDossierCopilotPins(activeDossierCaseId);
+    }
+  });
   byId("dossier-review-form").addEventListener("submit", submitDossierReview);
   byId("dossier-review-action").addEventListener("change", syncReviewCorrection);
   byId("explorer-form").addEventListener("submit", submitExplorer);

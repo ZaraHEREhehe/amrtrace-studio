@@ -139,6 +139,14 @@
             </section>
           </div>
 
+          <!-- G-09: independent, read-only full-cohort release transition chart -->
+          <section class="card sankey-dashboard-card">
+            <div class="section-heading compact">
+              <h3>Release transitions</h3>
+            </div>
+            <div id="dashboard-transitions"></div>
+          </section>
+
           <div class="grid-wide-narrow stack">
             <section class="card card-flush">
               <div class="section-heading compact">
@@ -402,7 +410,7 @@
               <div id="dossier-review-status" class="status" aria-live="polite" hidden></div>
 
               <h4>Review history</h4>
-              <div id="dossier-reviews"></div>
+              <div id="dossier-reviews" data-record-kind="review_event"></div>
             </section>
           </div>
 
@@ -439,32 +447,36 @@
             <div id="dossier-diff"></div>
           </section>
 
-          <section class="card">
-            <div class="section-heading compact">
-              <h3>Review Copilot (generated)</h3>
-              <button id="dossier-copilot-write" class="button" type="button">Write and store a summary</button>
+          <section class="card copilot-card" aria-labelledby="dossier-copilot-title">
+            <div class="copilot-head">
+              <span class="copilot-mark" aria-hidden="true">✦</span>
+              <h3 id="dossier-copilot-title">Review Copilot</h3>
+              <span id="dossier-copilot-tag" class="ai-tag">AI generated</span>
+              <div class="copilot-head-actions">
+                <button id="dossier-copilot-pin" class="button" type="button"
+                        title="Keep this summary on the case so other reviewers see it later. Reviewers and admins only.">Pin to case</button>
+              </div>
             </div>
 
-            <p id="dossier-copilot-caption" class="muted"></p>
             <div id="dossier-copilot-status" class="status" aria-live="polite" hidden></div>
-            <ol id="dossier-copilot" class="copilot-sentences"></ol>
+            <p id="dossier-copilot-headline" class="copilot-headline"></p>
+            <p id="dossier-copilot-story" class="copilot-story"></p>
+            <div id="dossier-copilot-checks" class="copilot-checks" hidden>
+              <strong>Worth a look before you review</strong>
+              <ul id="dossier-copilot-check-list"></ul>
+            </div>
+            <div id="dossier-copilot-followups" class="copilot-followups" aria-label="Follow-up questions"></div>
+            <button id="dossier-copilot-toggle" class="copilot-expander" type="button" aria-expanded="false"
+                    aria-controls="dossier-copilot">Show the full trace</button>
+            <div id="dossier-copilot" class="copilot-trace" hidden></div>
+            <div id="dossier-copilot-pins" class="copilot-pins" hidden>
+              <strong>Pinned by reviewers</strong>
+              <ul id="dossier-copilot-pin-list"></ul>
+            </div>
 
-            <form id="dossier-chat-form" class="copilot-chat" autocomplete="off">
-              <label for="dossier-chat-question">Ask about this case</label>
-              <div class="copilot-chat-row">
-                <input id="dossier-chat-question" name="question" type="text" maxlength="500"
-                       placeholder="For example: why did this case change?">
-                <button id="dossier-chat-ask" class="button button-primary" type="submit">Ask</button>
-                <button id="dossier-chat-save" class="button" type="button" disabled>Save answer</button>
-              </div>
-            </form>
-            <p id="dossier-chat-caption" class="muted"></p>
-            <div id="dossier-chat-status" class="status" aria-live="polite" hidden></div>
-            <p id="dossier-chat-mode" class="muted"></p>
-            <ol id="dossier-chat-answer" class="copilot-sentences"></ol>
           </section>
 
-          <section class="card">
+          <section class="card" data-record-kind="dependency">
             <div class="section-heading compact">
               <h3>Dependency path</h3>
             </div>
@@ -862,10 +874,38 @@
         </section>
       </main>
     </div>
+
+    <aside id="assistant" class="assistant" role="dialog" aria-labelledby="assistant-title" hidden>
+      <div id="assistant-resize" class="assistant-resize" title="Drag to resize" aria-hidden="true"></div>
+      <div id="assistant-head" class="assistant-head">
+        <span class="assistant-mark" aria-hidden="true">✦</span>
+        <h2 id="assistant-title">Ask AMRTrace</h2>
+        <span class="ai-tag ai-tag-dark" title="Written from AMRTrace's stored records. Not evidence; it cannot change states or submit reviews.">AI generated</span>
+        <div class="assistant-actions">
+          <button id="assistant-new" class="assistant-icon" type="button" title="New conversation" aria-label="New conversation">⟲</button>
+          <button id="assistant-dock" class="assistant-icon assistant-dock" type="button" title="Dock to the side" aria-label="Dock to the side">▥</button>
+          <button id="assistant-close" class="assistant-icon" type="button" title="Minimise" aria-label="Minimise">—</button>
+        </div>
+      </div>
+      <div id="assistant-context" class="assistant-context"></div>
+      <div id="assistant-messages" class="assistant-messages" aria-live="polite"></div>
+      <div id="assistant-suggestions" class="assistant-suggestions" aria-label="Suggested questions"></div>
+      <form id="assistant-form" class="assistant-compose" autocomplete="off">
+        <input id="assistant-input" type="text" maxlength="500" aria-label="Your question"
+               placeholder="Ask about this case, a change or a gene…">
+        <button id="assistant-send" type="submit" aria-label="Send">↑</button>
+      </form>
+    </aside>
   </div>
+
+
+  <!-- Ask AMRTrace (I-32): a launcher on every page and one panel that floats or docks beside the page -->
+  <button id="assistant-launcher" class="assistant-launcher" type="button" aria-label="Open Ask AMRTrace"
+          aria-controls="assistant" aria-expanded="false" title="Ask AMRTrace about this page">✦</button>
 
   <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>
   <script type="module" src="/auth_ui.mjs"></script>
+    <div id="cite-popover" class="cite-popover" role="dialog" aria-label="Cited record" hidden></div>
 </body>
 </html>

@@ -507,7 +507,27 @@ class CopilotSourceView(BaseModel):
 class CopilotSentenceView(BaseModel):
     text: str
     template_text: str
+    # outcome, cause, versions, evidence, rules, labels or review (I-29); empty in summaries stored before I-29
+    group: str = ""
     sources: list[CopilotSourceView]
+
+
+class CopilotLineView(BaseModel):
+    text: str
+    # the trace sentences the line rests on, by number (1 is the first sentence)
+    cites: list[int]
+
+
+class CopilotNarrativeView(BaseModel):
+    """The short story on top of the trace (I-29): headline, story and checks, each line citing trace sentences."""
+
+    headline: CopilotLineView
+    story: list[CopilotLineView]
+    checks: list[CopilotLineView] = Field(default_factory=list)
+    followups: list[str] = Field(default_factory=list)
+    generator: str
+    version: str
+    notes: list[str] = Field(default_factory=list)
 
 
 class CopilotSummaryView(BaseModel):
@@ -519,11 +539,37 @@ class CopilotSummaryView(BaseModel):
     template_version: str
     before_state_id: Optional[int]
     after_state_id: Optional[int]
+    # stored: the text is in the copilot cache; cached: this response was served from it without writing (I-30)
     stored: bool
-    summary_id: Optional[int] = None
+    cached: bool = False
+    fingerprint: Optional[str] = None
     created_at: Optional[datetime] = None
     sentences: list[CopilotSentenceView]
     notes: list[str] = Field(default_factory=list)
+    narrative: Optional[CopilotNarrativeView] = None
+
+
+class CopilotPinRequest(BaseModel):
+    # the current summary of the case, or a cached chat answer named by its fingerprint (I-30)
+    kind: Literal["summary", "answer"] = "summary"
+    fingerprint: Optional[str] = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+
+class CopilotPinView(BaseModel):
+    """Generated text a Reviewer or Admin kept on the case (I-30); still generated text, never evidence."""
+
+    pin_id: int
+    kind: str
+    case_id: str
+    state_id: Optional[int]
+    fingerprint: str
+    question: Optional[str] = None
+    generator: str
+    body: dict[str, Any]
+    pinned_by: str
+    created_at: datetime
+    generated: Literal[True] = True
+    label: str
 
 
 class CopilotChatRequest(BaseModel):
@@ -558,6 +604,62 @@ class CopilotChatView(BaseModel):
     created_at: Optional[datetime] = None
 
 
-class CopilotRequest(BaseModel):
-    # templates only, or let a configured language model reword them (falls back to templates)
-    mode: Literal["templates", "language_model"] = "templates"
+class AssistantTurnView(BaseModel):
+    role: Literal["user", "assistant"]
+    text: str = Field(max_length=4000)
+
+
+class AssistantContextView(BaseModel):
+    # the page the question is asked from: a case (dossier, dependencies) or a change (I-31)
+    case_id: Optional[str] = Field(default=None, max_length=200)
+    change_id: Optional[str] = Field(default=None, max_length=200)
+
+
+class AssistantRequest(BaseModel):
+    """Ask AMRTrace (I-31): the latest question, the recent turns of the conversation, and the page in view."""
+
+    question: str = Field(min_length=1, max_length=500)
+    history: list[AssistantTurnView] = Field(default_factory=list, max_length=40)
+    context: AssistantContextView = Field(default_factory=AssistantContextView)
+
+
+class AssistantLinkView(BaseModel):
+    # a workbench view (dossier, dependencies, changes, exports, review-queue) and the id it opens, if any
+    view: str
+    id: Optional[str] = None
+
+
+class AssistantSourceView(BaseModel):
+    id: str
+    kind: str
+    label: str
+    link: Optional[AssistantLinkView] = None
+
+
+class AssistantBlockView(BaseModel):
+    # transition (a case's before and after), table (a change's moves) or determinant (a gene card)
+    type: Literal["transition", "table", "determinant"]
+    title: str
+    source_ids: list[str]
+    data: dict[str, Any]
+
+
+class AssistantAnswerView(BaseModel):
+    """Generated text: each sentence cites the records it rests on; blocks are drawn by code from the same records."""
+
+    question: str
+    case_id: Optional[str] = None
+    state_id: Optional[int] = None
+    answer: list[CopilotChatSentenceView]
+    sources: list[AssistantSourceView]
+    blocks: list[AssistantBlockView] = Field(default_factory=list)
+    suggestions: list[str] = Field(default_factory=list)
+    generated: Literal[True] = True
+    mode: Literal["template", "local", "hosted", "records_only"]
+    generator: str
+    label: str
+    notes: list[str] = Field(default_factory=list)
+    # the cache key (I-30); a Reviewer or Admin pins an answer about a case by it
+    fingerprint: str
+    cached: bool = False
+    stored: bool = False
