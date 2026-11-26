@@ -121,6 +121,8 @@ import {
   labelsChangedBadge,
 } from "./interpretation.mjs";
 
+import { loadReleaseTransitionPanel } from "./release_transitions.mjs";
+
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
@@ -3338,6 +3340,7 @@ async function loadDashboard() {
     const [summary, runs] = await Promise.all([getSummary(), listRuns(null, 6)]);
     renderDashboard(summary, runs);
     renderReleaseChips(summary.latest_release);
+    void loadReleaseTransitionPanel(summary.latest_release, summary.drugs);
     hideStatus(status);
   } catch (error) {
     setStatus(status, "error", errorText(error));

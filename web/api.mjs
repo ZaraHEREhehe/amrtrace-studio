@@ -299,6 +299,24 @@ export function listPublishedReleases(fetchImpl = globalThis.fetch) {
   return requestJson("/releases", {}, fetchImpl);
 }
 
+// G-09: read-only cohort-wide transitions at two published release cutoffs.
+export function getReleaseTransitions(before, after, antibiotic = null, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({ before, after });
+  if (antibiotic) params.set("antibiotic", antibiotic);
+  return requestJson(`/releases/transitions?${params}`, {}, fetchImpl);
+}
+
+// A flow's exact member cases; the server performs the same effective-state lookup.
+export function getReleaseTransitionCases(before, after, fromState, toState,
+  antibiotic = null, limit = 25, offset = 0, fetchImpl = globalThis.fetch) {
+  const params = new URLSearchParams({
+    before, after, from_state: fromState, to_state: toState,
+    limit: String(limit), offset: String(offset),
+  });
+  if (antibiotic) params.set("antibiotic", antibiotic);
+  return requestJson(`/releases/transitions/cases?${params}`, {}, fetchImpl);
+}
+
 export function getReleaseIdentity(releaseId, fetchImpl = globalThis.fetch) {
   return requestJson(`/releases/${encodeURIComponent(releaseId)}/identity`, {}, fetchImpl);
 }

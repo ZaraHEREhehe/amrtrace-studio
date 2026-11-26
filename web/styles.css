@@ -2446,3 +2446,128 @@ tr.clickable {
 [hidden] {
   display: none !important;
 }
+
+/* G-09: an additive chart using the same white cards and existing state palette. */
+.sankey-dashboard-card { margin-bottom: 16px; }
+#dashboard-transitions { min-width: 0; }
+.sankey-controls { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; margin-bottom: 12px; }
+.sankey-field { display: grid; gap: 4px; min-width: 125px; font-size: 11px; color: var(--text-2); }
+.sankey-field select { min-width: 120px; max-width: 250px; border: 1px solid var(--border); border-radius: 4px; background: var(--card); padding: 6px 8px; }
+.sankey-checkbox { display: inline-flex; gap: 7px; align-items: center; font-size: 11px; color: var(--text-2); padding-bottom: 6px; cursor: pointer; }
+.sankey-checkbox input { accent-color: var(--teal); }
+.sankey-summary { margin: 7px 0; font-size: 12px; color: var(--navy); font-weight: 500; }
+.sankey-status, .sankey-hint { margin: 6px 0; font-size: 11px; color: var(--text-2); }
+.sankey-warning { padding: 7px 10px; border-left: 3px solid var(--amber); background: #fff7ed; color: #92400e; font-size: 11px; }
+.sankey-empty { padding: 20px 12px; background: var(--bg); color: var(--text-2); border: 1px solid var(--border); text-align: center; }
+.sankey-scroll { overflow-x: auto; max-width: 100%; border: 1px solid var(--border); border-radius: 4px; background: var(--card); }
+.sankey-scroll svg { min-width: 780px; width: 100%; height: auto; display: block; }
+.sankey-ribbon { cursor: pointer; outline: none; transition: fill-opacity .12s ease; }
+.sankey-ribbon:hover, .sankey-ribbon:focus { fill-opacity: .82; stroke: var(--teal); stroke-width: 1.2px; }
+.sankey-axis-label { font-size: 13px; font-weight: 600; fill: var(--navy); }
+.sankey-node-label { font-size: 12px; fill: var(--text); }
+.sankey-label-guide { stroke: var(--border); stroke-width: 1px; }
+.sankey-details { border-top: 1px solid var(--border); margin-top: 14px; padding-top: 8px; }
+.sankey-details:empty { display: none; }
+.sankey-case-list { list-style: none; padding: 0; margin: 6px 0; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px 12px; }
+.sankey-case-list li { min-width: 0; overflow-wrap: anywhere; }
+.sankey-case-list a { color: var(--teal); }
+.sankey-pager { display: flex; gap: 12px; align-items: center; justify-content: end; flex-wrap: wrap; }
+.sankey-pager button { border: 1px solid var(--border); border-radius: 4px; background: var(--card); padding: 5px 9px; }
+.sankey-pager button:hover:not(:disabled) { background: var(--row-hover); }
+.sankey-pager button:disabled { opacity: .5; cursor: not-allowed; }
+.sankey-table-details { margin-top: 8px; font-size: 11px; }
+.sankey-table-details summary { cursor: pointer; color: var(--teal); }
+.sankey-count-table { margin-top: 8px; width: 100%; border-collapse: collapse; }
+.sankey-count-table th, .sankey-count-table td { border-bottom: 1px solid var(--border); padding: 5px 8px; text-align: left; }
+.sankey-count-button { border: 0; background: none; padding: 2px; color: var(--teal); text-decoration: underline; cursor: pointer; }
+@media (max-width: 760px) {
+  .sankey-field { flex: 1 1 130px; }
+  .sankey-field select { max-width: 100%; }
+  .sankey-case-list { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sankey-ribbon { transition: none; }
+}
+
+/* G-09 follow-up: compact release overview with reversible detailed view.
+   Scope: Dashboard presentation only; does not alter case data or calculations. */
+.sankey-dashboard-card .section-heading { margin-bottom: 8px; }
+.sankey-controls { gap: 8px 12px; margin-bottom: 5px; align-items: end; }
+.sankey-field { min-width: 118px; }
+.sankey-field select { padding: 5px 7px; }
+.sankey-checkbox { white-space: nowrap; padding: 0 0 7px; }
+.sankey-expand-button { margin-left: auto; padding: 5px 10px; white-space: nowrap; align-self: end; }
+.sankey-status { margin: 0 0 6px; line-height: 1.35; }
+.sankey-summary { margin: 4px 0 5px; }
+.sankey-hint { margin: 4px 0; line-height: 1.4; }
+/* Layout-only SVG height: ribbon proportions still derive from unchanged case counts. */
+#dashboard-transitions:not(.sankey-expanded) .sankey-scroll svg {
+  height: 112px;
+  min-width: 780px;
+  width: 100%;
+}
+#dashboard-transitions.sankey-expanded .sankey-scroll svg { height: auto; }
+#dashboard-transitions:not(.sankey-expanded) .sankey-usage-hint { display: none; }
+@media (max-width: 860px) {
+  .sankey-controls { flex-wrap: wrap; }
+  .sankey-expand-button { margin-left: 0; }
+}
+/* Tighten vertical spacing on the Dashboard only; keep every old control/row. */
+@media (min-width: 1101px) {
+  .page[data-view="dashboard"] .page-header { margin-bottom: 10px; }
+  .page[data-view="dashboard"] .kpi-card { padding: 12px 14px; }
+  .page[data-view="dashboard"] .kpi-grid { margin-bottom: 10px; }
+  .page[data-view="dashboard"] .grid-wide-narrow.stack { margin-bottom: 10px; }
+  .page[data-view="dashboard"] .state-legend { gap: 5px; margin-top: 10px; }
+  .page[data-view="dashboard"] .bar-chart { gap: 7px; }
+  .page[data-view="dashboard"] #dashboard-runs td,
+  .page[data-view="dashboard"] #dashboard-runs th { padding-top: 5px; padding-bottom: 5px; }
+  .page[data-view="dashboard"] .quick-actions { gap: 5px; }
+  .page[data-view="dashboard"] .quick-actions .button { padding-top: 5px; padding-bottom: 5px; }
+  .page[data-view="dashboard"] .facts { margin-top: 9px; padding-top: 8px; }
+  .page[data-view="dashboard"] #dashboard-facts dt,
+  .page[data-view="dashboard"] #dashboard-facts dd { padding-top: 4px; padding-bottom: 4px; }
+  .page[data-view="dashboard"] .sankey-dashboard-card { padding: 10px 12px; margin-bottom: 10px; }
+  .page[data-view="dashboard"] .sankey-status { margin-bottom: 3px; }
+  .page[data-view="dashboard"] .sankey-controls { margin-bottom: 2px; }
+  .page[data-view="dashboard"] .sankey-summary { margin: 2px 0; }
+  .page[data-view="dashboard"] .sankey-table-details { margin-top: 4px; }
+}
+
+/* G-09 changed-flow focus: presentation only, no changes to area encoding. */
+.sankey-focus-note {
+  margin: 4px 0 6px;
+  padding: 6px 9px;
+  border-left: 3px solid var(--teal);
+  background: #eff7fa;
+  color: var(--navy);
+  font-size: 11px;
+  line-height: 1.35;
+}
+.sankey-change-trace { opacity: .92; stroke-linecap: round; pointer-events: none; }
+.sankey-change-hit { cursor: pointer; pointer-events: stroke; }
+.sankey-ribbon.sankey-flow-dimmed,
+.sankey-change-trace.sankey-flow-dimmed { opacity: .12; }
+.sankey-ribbon.sankey-flow-focused { fill-opacity: .85; stroke: var(--teal); stroke-width: 1.25px; }
+.sankey-change-trace.sankey-flow-focused { opacity: 1; stroke-width: 3px; }
+.sankey-ribbon:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+.sankey-case-details {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+}
+.sankey-case-details > summary {
+  padding: 8px 10px;
+  cursor: pointer;
+  color: var(--navy);
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sankey-case-details[open] > summary { border-bottom: 1px solid var(--border); background: #f4f8fa; }
+.sankey-case-details > :not(summary) { margin-left: 10px; margin-right: 10px; }
+.sankey-case-details > .sankey-pager { margin-bottom: 10px; }
+@media (prefers-reduced-motion: reduce) {
+  .sankey-ribbon, .sankey-change-trace { transition: none !important; }
+}
