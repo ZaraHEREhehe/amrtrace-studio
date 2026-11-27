@@ -12,57 +12,58 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">A</div>
-        <div>
-          <h1>AMRTrace Studio</h1>
-          <p>Research workbench</p>
-        </div>
+        <img class="brand-logo" src="/logo_dark.png" alt="AMRTrace Studio. Track, re-evaluate, verify.">
+        <img class="brand-mark-only" src="/logo_mark_dark.png" alt="AMRTrace Studio">
+        <button class="sidebar-toggle sidebar-expand" type="button" aria-expanded="true" aria-label="Collapse sidebar"><span class="toggle-bars" aria-hidden="true"></span></button>
       </div>
 
       <nav class="nav-stack" aria-label="Primary">
         <div class="nav-group">
           <div class="nav-group-label">Overview</div>
           <button class="nav-button" type="button" data-nav="dashboard">
-            <span class="nav-icon" aria-hidden="true">⬡</span>Dashboard
+            <span class="nav-icon" aria-hidden="true">⬡</span><span class="nav-label">Dashboard</span>
           </button>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">Data</div>
           <button class="nav-button" type="button" data-nav="explorer">
-            <span class="nav-icon" aria-hidden="true">⊞</span>Case Explorer
+            <span class="nav-icon" aria-hidden="true">⊞</span><span class="nav-label">Case Explorer</span>
           </button>
           <button class="nav-button" type="button" data-nav="dossier">
-            <span class="nav-icon" aria-hidden="true">◧</span>Case Dossier
+            <span class="nav-icon" aria-hidden="true">◧</span><span class="nav-label">Case Dossier</span>
           </button>
           <button class="nav-button" type="button" data-nav="dependencies">
-            <span class="nav-icon" aria-hidden="true">◈</span>Dependency View
+            <span class="nav-icon" aria-hidden="true">◈</span><span class="nav-label">Dependency View</span>
           </button>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">Workflow</div>
           <button class="nav-button" type="button" data-nav="changes">
-            <span class="nav-icon" aria-hidden="true">⊛</span>Change Events
+            <span class="nav-icon" aria-hidden="true">⊛</span><span class="nav-label">Change Events</span>
           </button>
           <button class="nav-button" type="button" data-nav="review-queue">
-            <span class="nav-icon" aria-hidden="true">✓</span>Review Queue
+            <span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Review Queue</span>
           </button>
           <button class="nav-button" type="button" data-nav="runs">
-            <span class="nav-icon" aria-hidden="true">↺</span>Runs &amp; Equivalence
+            <span class="nav-icon" aria-hidden="true">↺</span><span class="nav-label">Runs &amp; Equivalence</span>
           </button>
         </div>
         <div class="nav-group">
           <div class="nav-group-label">Tools</div>
           <button class="nav-button" type="button" data-nav="exports">
-            <span class="nav-icon" aria-hidden="true">↓</span>Exports
+            <span class="nav-icon" aria-hidden="true">↓</span><span class="nav-label">Exports</span>
           </button>
         </div>
       </nav>
 
       <div class="nav-group" id="admin-nav" hidden>
         <div class="nav-group-label">Administration</div>
-        <button class="nav-button" type="button" data-nav="admin">User accounts</button>
+        <button class="nav-button" type="button" data-nav="admin"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">User accounts</span></button>
+      </div>
+      <div class="sidebar-collapse-row">
+        <button class="sidebar-toggle" type="button" aria-expanded="true" aria-label="Collapse sidebar"><span class="toggle-chevron" aria-hidden="true"></span></button>
       </div>
       <div class="sidebar-foot">FYP F26-118 · research prototype</div>
     </aside>
@@ -905,6 +906,7 @@
 
   <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>
+  <script type="module" src="/sidebar.mjs"></script>
   <script type="module" src="/auth_ui.mjs"></script>
     <div id="cite-popover" class="cite-popover" role="dialog" aria-label="Cited record" hidden></div>
 </body>

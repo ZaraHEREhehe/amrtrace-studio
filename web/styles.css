@@ -2571,3 +2571,137 @@ tr.clickable {
 @media (prefers-reduced-motion: reduce) {
   .sankey-ribbon, .sankey-change-trace { transition: none !important; }
 }
+/* poster logo on the dark sidebar; the mark alone when collapsed */
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 16px 12px 14px 16px;
+}
+
+.brand-logo {
+  display: block;
+  width: 100%;
+  max-width: 156px;
+  height: auto;
+}
+
+.brand-mark-only {
+  display: none;
+  width: 36px;
+  height: auto;
+}
+
+.nav-label {
+  white-space: nowrap;
+}
+
+.sidebar {
+  transition: flex-basis 0.18s ease;
+}
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(219, 234, 254, 0.75);
+}
+
+/* three bars at the top, only while collapsed */
+.sidebar-expand {
+  display: none;
+}
+
+/* arrow at the bottom, only while expanded */
+.sidebar-collapse-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.sidebar-toggle:focus-visible,
+.nav-button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: -2px;
+}
+
+.toggle-chevron {
+  width: 8px;
+  height: 8px;
+  margin-left: 3px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.toggle-bars {
+  width: 16px;
+  height: 14px;
+  background:
+    linear-gradient(currentColor, currentColor) 0 1px / 16px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 6px / 16px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 0 11px / 16px 2px no-repeat;
+}
+
+.sidebar-collapsed .sidebar {
+  flex-basis: 64px;
+}
+
+.sidebar-collapsed .brand {
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 0;
+}
+
+.sidebar-collapsed .sidebar-expand {
+  display: flex;
+  order: -1;
+}
+
+.sidebar-collapsed .sidebar-collapse-row {
+  display: none;
+}
+
+.sidebar-collapsed .brand-logo,
+.sidebar-collapsed .nav-label,
+.sidebar-collapsed .nav-group-label,
+.sidebar-collapsed .sidebar-foot {
+  display: none;
+}
+
+.sidebar-collapsed .brand-mark-only {
+  display: block;
+}
+
+.sidebar-collapsed .nav-button {
+  justify-content: center;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.sidebar-collapsed .nav-group + .nav-group {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@media (max-width: 760px) {
+  .sidebar-toggle,
+  .sidebar-collapse-row {
+    display: none;
+  }
+}
+
