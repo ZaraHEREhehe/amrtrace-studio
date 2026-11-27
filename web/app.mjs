@@ -267,6 +267,39 @@ function caseLink(caseId) {
 }
 
 
+// the graph link shows when the row is hovered or focused
+function explorerGraphLink(caseId) {
+  return make("a", {
+    className: "row-action",
+    text: "Graph",
+    attributes: {
+      href: routeHash("dependencies", caseId),
+      title: "Open dependency graph",
+    },
+  });
+}
+
+
+// the explorer's case cell: the drug as the readable name, the accession quietly underneath
+function explorerCase(row) {
+  const cell = make("span", { className: "case-two" });
+
+  cell.append(
+    make("a", {
+      className: "case-drug-main",
+      text: drugLabel(row.antibiotic) ?? "—",
+      attributes: {
+        href: routeHash("dossier", row.case_id),
+        title: `${row.case_id} (open dossier)`,
+      },
+    }),
+    make("span", { className: "case-ref", text: row.target_acc ?? "" }),
+  );
+
+  return cell;
+}
+
+
 // a link to another page for ids that are already short, such as change and run ids
 function pageLink(view, id) {
   if (!id) {
@@ -1595,6 +1628,7 @@ function renderDataTable(
   columns,
   rows,
   emptyMessage,
+  options = {},
 ) {
   if (!rows.length) {
     return make("div", {
@@ -1629,6 +1663,17 @@ function renderDataTable(
     // evidence rows can be found by the records Ask AMRTrace cites
     if (item.ast_evidence_id) row.dataset.record = `ast_evidence:${item.ast_evidence_id}`;
     if (item.genotype_evidence_id) row.dataset.record = `genotype_evidence:${item.genotype_evidence_id}`;
+
+    // a whole row can open a page, while links and buttons inside it keep their own behaviour
+    if (options.rowHref) {
+      const href = options.rowHref(item);
+      row.classList.add("clickable");
+      row.addEventListener("click", (event) => {
+        if (!event.target.closest("a, button")) {
+          window.location.hash = href;
+        }
+      });
+    }
 
     for (const [, getter] of columns) {
       const value =
@@ -3405,9 +3450,13 @@ async function loadExplorer(filters, offset = 0) {
   const pager = byId("explorer-pager");
 
   await fillDrugFilter();
-  byId("explorer-q").value = filters.q;
+  const search = byId("explorer-q");
+  if (document.activeElement !== search) {
+    search.value = filters.q;
+  }
   byId("explorer-drug").value = filters.drug;
   byId("explorer-state").value = filters.state;
+  byId("explorer-clear").hidden = !(filters.q || filters.drug || filters.state);
   explorerOffset = offset;
 
   setStatus(status, "loading", "Loading cases…");
@@ -3421,16 +3470,16 @@ async function loadExplorer(filters, offset = 0) {
     results.append(
       renderDataTable(
         [
-          ["Case", (row) => caseLink(row.case_id)],
-          ["Isolate", (row) => make("code", { text: row.target_acc })],
-          ["Antibiotic", "antibiotic"],
+          ["Case", explorerCase],
           ["Current state", (row) => stateBadge(row.current_state)],
           ["Release", "current_release_id"],
           ["Review status", (row) => reviewBadge(row.review_status)],
           ["Labels changed", (row) => (row.labels_changed ? badge(String(row.labels_changed), "badge-amber") : "—")],
+          ["", (row) => explorerGraphLink(row.case_id)],
         ],
         page,
         "No cases match these filters.",
+        { rowHref: (row) => routeHash("dossier", row.case_id) },
       ),
     );
 
@@ -3839,6 +3888,16 @@ function boot() {
   byId("dossier-review-form").addEventListener("submit", submitDossierReview);
   byId("dossier-review-action").addEventListener("change", syncReviewCorrection);
   byId("explorer-form").addEventListener("submit", submitExplorer);
+
+  // filters apply as they change; typing waits a moment so every key does not reload the list
+  let explorerTimer = null;
+  byId("explorer-q").addEventListener("input", () => {
+    clearTimeout(explorerTimer);
+    explorerTimer = setTimeout(() => byId("explorer-form").requestSubmit(), 350);
+  });
+  byId("explorer-drug").addEventListener("change", () => byId("explorer-form").requestSubmit());
+  byId("explorer-state").addEventListener("change", () => byId("explorer-form").requestSubmit());
+  byId("explorer-clear").addEventListener("click", () => navigate("explorer", null));
   byId("review-queue-filters").addEventListener("submit", submitReviewQueueFilters);
   byId("review-queue-refresh").addEventListener("click", () => void loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset));
   byId("review-queue-close").addEventListener("click", () => {

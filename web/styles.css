@@ -3101,3 +3101,74 @@ tr.clickable {
 }
 
 
+/* case explorer: one readable case column, quieter headers, whole-row hover */
+.table-wrap th {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.case-two {
+  display: grid;
+  gap: 1px;
+}
+
+.case-drug-main {
+  color: var(--navy);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.case-drug-main:hover {
+  color: var(--teal);
+}
+
+.case-ref {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+tr.clickable td:last-child {
+  text-align: right;
+}
+
+.row-action {
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0;
+  text-decoration: none;
+  transition: opacity 0.12s ease;
+}
+
+tr.clickable:hover .row-action,
+tr.clickable:focus-within .row-action {
+  opacity: 1;
+}
+
+.row-action:hover {
+  color: var(--teal);
+  text-decoration: underline;
+}
+
+.filter-clear {
+  align-self: flex-end;
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--teal);
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.filter-clear:hover {
+  text-decoration: underline;
+}
+
+.filter-clear[hidden] {
+  display: none;
+}

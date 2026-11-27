@@ -184,7 +184,7 @@
             <form id="explorer-form" class="filter-bar">
               <div class="field field-grow">
                 <label for="explorer-q">Search</label>
-                <input id="explorer-q" name="q" autocomplete="off" placeholder="Case ID start or accession">
+                <input id="explorer-q" name="q" autocomplete="off" placeholder="Search by accession or case ID">
               </div>
 
               <div class="field">
@@ -206,7 +206,7 @@
                 </select>
               </div>
 
-              <button class="button button-primary" type="submit">Apply</button>
+              <button id="explorer-clear" class="filter-clear" type="button" hidden>Clear filters</button>
             </form>
 
             <div id="explorer-status" class="status" aria-live="polite" hidden></div>
