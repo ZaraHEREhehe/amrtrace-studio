@@ -3172,3 +3172,66 @@ tr.clickable:focus-within .row-action {
 .filter-clear[hidden] {
   display: none;
 }
+
+
+/* case explorer: the less used filters sit in a box that opens from the search row */
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #ffffff;
+  color: var(--text-2);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.filter-toggle:hover {
+  background: var(--row-hover);
+}
+
+.filter-toggle[aria-expanded="true"] {
+  border-color: var(--teal);
+  color: var(--navy);
+}
+
+.filter-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--navy);
+  color: #ffffff;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.filter-count[hidden] {
+  display: none;
+}
+
+.filter-caret {
+  font-size: 10px;
+  transition: transform 0.12s ease;
+}
+
+.filter-toggle[aria-expanded="true"] .filter-caret {
+  transform: rotate(180deg);
+}
+
+.filter-panel {
+  display: grid;
+  flex: 1 1 100%;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.filter-panel[hidden] {
+  display: none;
+}

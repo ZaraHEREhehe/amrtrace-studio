@@ -565,7 +565,7 @@ export function listCases(filters = {}, fetchImpl = globalThis.fetch) {
     offset: String(filters.offset ?? 0),
   });
 
-  for (const key of ["q", "drug", "state"]) {
+  for (const key of ["q", "drug", "state", "release", "review_status", "labels_changed"]) {
     if (filters[key]) {
       params.set(key, filters[key]);
     }

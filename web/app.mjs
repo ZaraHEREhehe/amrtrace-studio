@@ -3419,12 +3419,24 @@ async function loadReleaseChips() {
 const EXPLORER_PAGE = 50;
 let explorerOffset = 0;
 let drugsFilled = false;
+let releasesFilled = false;
+// once the person opens or closes the filter box, it stays as they left it
+let filterPanelTouched = false;
+// the review statuses a case can show, in the order the filter lists them
+const REVIEW_STATUS_CODES = ["UNVERIFIED", "CONFIRMED", "CORRECTED", "MARKED_UNRESOLVED", "NOT_REQUIRED"];
 
 
 // "state=UNRESOLVED&drug=gentamicin" in the address becomes the explorer's filters, so dashboard links land filtered
 function explorerFiltersFromRoute(id) {
   const params = new URLSearchParams(id ?? "");
-  return { q: params.get("q") ?? "", drug: params.get("drug") ?? "", state: params.get("state") ?? "" };
+  return {
+    q: params.get("q") ?? "",
+    drug: params.get("drug") ?? "",
+    state: params.get("state") ?? "",
+    release: params.get("release") ?? "",
+    review_status: params.get("review_status") ?? "",
+    labels_changed: params.get("labels_changed") ?? "",
+  };
 }
 
 
@@ -3444,19 +3456,61 @@ async function fillDrugFilter() {
 }
 
 
+// the release filter lists the published releases, newest first
+async function fillReleaseFilter() {
+  if (releasesFilled) {
+    return;
+  }
+
+  try {
+    const releases = await listPublishedReleases();
+    const newestFirst = [...releases].sort((a, b) => b.release_seq - a.release_seq);
+    fillSelect(byId("explorer-release"), "All releases", newestFirst, (release) => release.release_id, (release) => release.release_id);
+    releasesFilled = true;
+  } catch {
+    // without the list the filter still works as "all releases"
+  }
+}
+
+
+// the filter box opens by itself when a link arrives with filters set, and then follows the person
+function setFilterPanel(open) {
+  byId("explorer-filter-panel").hidden = !open;
+  byId("explorer-filters-toggle").setAttribute("aria-expanded", String(open));
+}
+
+
+// the number on the Filters button counts the filters inside the box, not the search text
+function showFilterCount(filters) {
+  const active = [filters.drug, filters.state, filters.release, filters.review_status, filters.labels_changed].filter(Boolean).length;
+  const badge = byId("explorer-filter-count");
+  badge.textContent = String(active);
+  badge.hidden = active === 0;
+
+  if (active > 0 && !filterPanelTouched) {
+    setFilterPanel(true);
+  }
+}
+
+
 async function loadExplorer(filters, offset = 0) {
   const status = byId("explorer-status");
   const results = byId("explorer-results");
   const pager = byId("explorer-pager");
 
-  await fillDrugFilter();
+  await Promise.all([fillDrugFilter(), fillReleaseFilter()]);
+  fillSelect(byId("explorer-review"), "All statuses", REVIEW_STATUS_CODES, (code) => code, (code) => reviewStatusMeta(code).label);
   const search = byId("explorer-q");
   if (document.activeElement !== search) {
     search.value = filters.q;
   }
   byId("explorer-drug").value = filters.drug;
   byId("explorer-state").value = filters.state;
-  byId("explorer-clear").hidden = !(filters.q || filters.drug || filters.state);
+  byId("explorer-release").value = filters.release;
+  byId("explorer-review").value = filters.review_status;
+  byId("explorer-labels").value = filters.labels_changed;
+  byId("explorer-clear").hidden = !(filters.q || filters.drug || filters.state || filters.release || filters.review_status || filters.labels_changed);
+  showFilterCount(filters);
   explorerOffset = offset;
 
   setStatus(status, "loading", "Loading cases…");
@@ -3510,7 +3564,7 @@ function submitExplorer(event) {
   const data = new FormData(event.currentTarget);
   const params = new URLSearchParams();
 
-  for (const key of ["q", "drug", "state"]) {
+  for (const key of ["q", "drug", "state", "release", "review_status", "labels_changed"]) {
     const value = String(data.get(key) ?? "").trim();
     if (value) {
       params.set(key, value);
@@ -3895,8 +3949,13 @@ function boot() {
     clearTimeout(explorerTimer);
     explorerTimer = setTimeout(() => byId("explorer-form").requestSubmit(), 350);
   });
-  byId("explorer-drug").addEventListener("change", () => byId("explorer-form").requestSubmit());
-  byId("explorer-state").addEventListener("change", () => byId("explorer-form").requestSubmit());
+  for (const id of ["explorer-drug", "explorer-state", "explorer-release", "explorer-review", "explorer-labels"]) {
+    byId(id).addEventListener("change", () => byId("explorer-form").requestSubmit());
+  }
+  byId("explorer-filters-toggle").addEventListener("click", () => {
+    filterPanelTouched = true;
+    setFilterPanel(byId("explorer-filter-panel").hidden);
+  });
   byId("explorer-clear").addEventListener("click", () => navigate("explorer", null));
   byId("review-queue-filters").addEventListener("submit", submitReviewQueueFilters);
   byId("review-queue-refresh").addEventListener("click", () => void loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset));

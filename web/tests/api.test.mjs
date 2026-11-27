@@ -430,6 +430,21 @@ test("the dashboard summary and the filtered case list call the same-origin API"
   ]);
 });
 
+test("the case list passes the release, review status and changed-label filters on", async () => {
+  const seen = [];
+  const fake = async (url) => {
+    seen.push(url);
+    return { ok: true, status: 200, text: async () => "[]" };
+  };
+  const { listCases } = await import("../api.mjs");
+  await listCases({ release: "R8", review_status: "UNVERIFIED", labels_changed: "changed" }, fake);
+  await listCases({ release: "", review_status: "", labels_changed: "" }, fake);
+  assert.deepEqual(seen, [
+    "/api/cases?limit=50&offset=0&release=R8&review_status=UNVERIFIED&labels_changed=changed",
+    "/api/cases?limit=50&offset=0",
+  ]);
+});
+
 test("422 refusal with string detail is exposed by the API client", async () => {
   const { requestJson, ApiError } = await import("../api.mjs");
   const fakeFetch = async () => ({

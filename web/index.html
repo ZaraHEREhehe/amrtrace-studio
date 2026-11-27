@@ -187,26 +187,52 @@
                 <input id="explorer-q" name="q" autocomplete="off" placeholder="Search by accession or case ID">
               </div>
 
-              <div class="field">
-                <label for="explorer-drug">Antibiotic</label>
-                <select id="explorer-drug" name="drug">
-                  <option value="">All antibiotics</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="explorer-state">Current state</label>
-                <select id="explorer-state" name="state">
-                  <option value="">All states</option>
-                  <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
-                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
-                  <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
-                  <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
-                  <option value="UNRESOLVED">Unresolved</option>
-                </select>
-              </div>
-
+              <button id="explorer-filters-toggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="explorer-filter-panel">Filters <span id="explorer-filter-count" class="filter-count" hidden>0</span><span class="filter-caret" aria-hidden="true">&#9662;</span></button>
               <button id="explorer-clear" class="filter-clear" type="button" hidden>Clear filters</button>
+
+              <div id="explorer-filter-panel" class="filter-panel" hidden>
+                <div class="field">
+                  <label for="explorer-drug">Antibiotic</label>
+                  <select id="explorer-drug" name="drug">
+                    <option value="">All antibiotics</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="explorer-state">Current state</label>
+                  <select id="explorer-state" name="state">
+                    <option value="">All states</option>
+                    <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
+                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                    <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
+                    <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
+                    <option value="UNRESOLVED">Unresolved</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="explorer-release">Release</label>
+                  <select id="explorer-release" name="release">
+                    <option value="">All releases</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="explorer-review">Review status</label>
+                  <select id="explorer-review" name="review_status">
+                    <option value="">All statuses</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="explorer-labels">Labels changed</label>
+                  <select id="explorer-labels" name="labels_changed">
+                    <option value="">Any</option>
+                    <option value="changed">Changed (1 or more)</option>
+                    <option value="unchanged">Not changed</option>
+                  </select>
+                </div>
+              </div>
             </form>
 
             <div id="explorer-status" class="status" aria-live="polite" hidden></div>
