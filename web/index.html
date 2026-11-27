@@ -81,36 +81,9 @@
           <button type="button" class="button" id="auth-show-login">Sign in</button>
           <button type="button" class="button" id="auth-signout" hidden>Sign out</button>
         </div>
-
-        <form id="topbar-search" class="topbar-search" role="search">
-          <input
-            id="topbar-case"
-            name="case_id"
-            autocomplete="off"
-            list="case-suggestions"
-            aria-label="Find a case"
-            placeholder="Find a case: short ID, or accession and drug"
-          >
-          <button class="button" type="submit">Open</button>
-        </form>
       </header>
 
-      <section id="auth-login-panel" class="card auth-panel" hidden>
-        <h2>Sign in</h2>
-        <p class="muted">Accounts are provisioned by an administrator. There is no public sign-up.</p>
-        <form id="auth-login-form" class="auth-login-form">
-          <label for="auth-username">Username</label>
-          <input id="auth-username" autocomplete="username" required>
-          <label for="auth-password">Password</label>
-          <input id="auth-password" type="password" autocomplete="current-password" required>
-          <button type="submit" class="button button-primary" id="auth-login-submit">Sign in</button>
-          <button type="button" class="button" id="auth-cancel-login">Cancel</button>
-        </form>
-        <div id="auth-status" role="status" class="status" aria-live="polite" hidden></div>
-      </section>
-
       <main class="main">
-        <div id="topbar-status" class="status" aria-live="polite" hidden></div>
 
         <!-- dashboard: the numbers behind the latest published release -->
         <section class="page" data-view="dashboard">
@@ -947,6 +920,34 @@
     </aside>
   </div>
 
+
+  <!-- sign-in is a page of its own, shown on #/login without the sidebar or the top bar -->
+  <div id="login-page" class="login-page" hidden>
+    <section class="login-brand">
+      <svg class="login-nodes" focusable="false" viewBox="0 0 640 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><line x1="80" y1="120" x2="210" y2="70" stroke="#244a70" stroke-width="2"/><line x1="210" y1="70" x2="330" y2="170" stroke="#244a70" stroke-width="2"/><line x1="330" y1="170" x2="470" y2="100" stroke="#244a70" stroke-width="2"/><line x1="470" y1="100" x2="560" y2="250" stroke="#244a70" stroke-width="2"/><line x1="330" y1="170" x2="410" y2="330" stroke="#244a70" stroke-width="2"/><line x1="410" y1="330" x2="560" y2="250" stroke="#244a70" stroke-width="2"/><line x1="330" y1="170" x2="250" y2="290" stroke="#244a70" stroke-width="2"/><line x1="250" y1="290" x2="110" y2="380" stroke="#244a70" stroke-width="2"/><line x1="250" y1="290" x2="300" y2="470" stroke="#244a70" stroke-width="2"/><line x1="410" y1="330" x2="300" y2="470" stroke="#244a70" stroke-width="2"/><line x1="300" y1="470" x2="490" y2="480" stroke="#244a70" stroke-width="2"/><line x1="410" y1="330" x2="490" y2="480" stroke="#244a70" stroke-width="2"/><line x1="300" y1="470" x2="150" y2="580" stroke="#244a70" stroke-width="2"/><line x1="300" y1="470" x2="370" y2="620" stroke="#244a70" stroke-width="2"/><line x1="370" y1="620" x2="540" y2="690" stroke="#244a70" stroke-width="2"/><line x1="490" y1="480" x2="540" y2="690" stroke="#244a70" stroke-width="2"/><line x1="150" y1="580" x2="230" y2="740" stroke="#244a70" stroke-width="2"/><line x1="370" y1="620" x2="230" y2="740" stroke="#244a70" stroke-width="2"/><circle cx="80" cy="120" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="80" cy="120" r="9" fill="#2d5b86"/><circle cx="210" cy="70" r="5" fill="#2d5b86"/><circle cx="330" cy="170" r="5" fill="#2d5b86"/><circle cx="470" cy="100" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="470" cy="100" r="9" fill="#2d5b86"/><circle cx="560" cy="250" r="5" fill="#2d5b86"/><circle cx="410" cy="330" r="5" fill="#2d5b86"/><circle cx="250" cy="290" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="250" cy="290" r="9" fill="#2d5b86"/><circle cx="110" cy="380" r="5" fill="#2d5b86"/><circle cx="300" cy="470" r="5" fill="#2d5b86"/><circle cx="490" cy="480" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="490" cy="480" r="9" fill="#2d5b86"/><circle cx="150" cy="580" r="5" fill="#2d5b86"/><circle cx="370" cy="620" r="5" fill="#2d5b86"/><circle cx="540" cy="690" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="540" cy="690" r="9" fill="#2d5b86"/><circle cx="230" cy="740" r="5" fill="#2d5b86"/></svg>
+      <div class="login-glass">
+        <img class="login-logo" src="/logo_dark.png" alt="AMRTrace Studio">
+        <h2>Track, re-evaluate, verify.</h2>
+        <p>Follow how antimicrobial resistance interpretations change from one release to the next.</p>
+      </div>
+    </section>
+    <section class="login-side">
+      <svg class="login-nodes" focusable="false" viewBox="0 0 640 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><line x1="470" y1="70" x2="590" y2="150" stroke="#b9d3db" stroke-width="2"/><line x1="590" y1="150" x2="560" y2="260" stroke="#b9d3db" stroke-width="2"/><line x1="70" y1="560" x2="150" y2="650" stroke="#b9d3db" stroke-width="2"/><line x1="150" y1="650" x2="260" y2="620" stroke="#b9d3db" stroke-width="2"/><circle cx="470" cy="70" r="15" fill="none" stroke="#9cc3cf" stroke-width="2"/><circle cx="470" cy="70" r="9" fill="#9cc3cf"/><circle cx="590" cy="150" r="5" fill="#9cc3cf"/><circle cx="560" cy="260" r="5" fill="#9cc3cf"/><circle cx="70" cy="560" r="5" fill="#9cc3cf"/><circle cx="150" cy="650" r="15" fill="none" stroke="#9cc3cf" stroke-width="2"/><circle cx="150" cy="650" r="9" fill="#9cc3cf"/><circle cx="260" cy="620" r="5" fill="#9cc3cf"/></svg>
+      <div class="login-card" aria-labelledby="login-title">
+        <h1 id="login-title">Welcome back</h1>
+        <p class="muted">Accounts are created by an administrator.</p>
+        <form id="auth-login-form" class="auth-login-form">
+          <label for="auth-username">Username</label>
+          <input id="auth-username" autocomplete="username" required>
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" autocomplete="current-password" required>
+          <button type="submit" class="button button-primary" id="auth-login-submit">Sign in</button>
+        </form>
+        <div id="auth-status" role="status" class="status" aria-live="polite" hidden></div>
+        <a class="login-skip" href="#/dashboard">Continue as a read-only visitor</a>
+      </div>
+    </section>
+  </div>
 
   <!-- Ask AMRTrace (I-32): a launcher on every page and one panel that floats or docks beside the page -->
   <button id="assistant-launcher" class="assistant-launcher" type="button" aria-label="Open Ask AMRTrace"

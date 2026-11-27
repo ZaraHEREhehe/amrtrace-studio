@@ -118,12 +118,24 @@ test("dossier keeps API-derived values text-only", () => {
 });
 
 
+test("sign-in is a page of its own with the same form fields the auth module uses", () => {
+  assert.match(index, /id="login-page"/);
+  assert.match(index, /id="auth-login-form"/);
+  assert.match(index, /id="auth-username"/);
+  assert.match(index, /id="auth-password"/);
+  assert.match(index, /class="login-brand"/);
+  assert.match(index, /class="login-glass"/);
+  assert.doesNotMatch(index, /id="auth-login-panel"/);
+});
+
+
 test("the shell has the prototype's dashboard and case explorer pages", () => {
   assert.match(index, /data-nav="dashboard"/);
   assert.match(index, /data-nav="explorer"/);
   assert.match(index, /id="dashboard-kpis"/);
   assert.match(index, /id="explorer-form"/);
-  assert.match(index, /id="topbar-search"/);
+  // the top bar no longer has its own case search; the explorer and the dossier keep theirs
+  assert.doesNotMatch(index, /id="topbar-search"/);
 
   assert.match(app, /getSummary/);
   assert.match(app, /listCases/);

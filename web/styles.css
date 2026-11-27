@@ -248,17 +248,6 @@ a {
   flex: 1;
 }
 
-.topbar-search {
-  display: flex;
-  gap: 6px;
-}
-
-.topbar-search input {
-  width: 260px;
-  padding: 4px 10px;
-  font-size: 12px;
-}
-
 .main {
   flex: 1;
   min-width: 0;
@@ -1576,10 +1565,6 @@ tr.clickable {
     flex-wrap: wrap;
   }
 
-  .topbar-search input {
-    width: 100%;
-  }
-
   .kpi-grid,
   .metric-grid,
   .form-grid,
@@ -2434,11 +2419,10 @@ tr.clickable {
 /* Z-18: identity controls are additive; existing page layout stays intact. */
 .auth-topbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .auth-topbar #auth-identity { font-size: 0.85rem; opacity: 0.85; }
-.auth-panel { margin: 12px 22px; }
 .auth-login-form { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .auth-login-form input { min-width: 160px; }
 #admin-users table { width: 100%; }
-#auth-login-panel[hidden], #admin-nav[hidden] { display: none; }
+#admin-nav[hidden] { display: none; }
 @media (max-width: 700px) { .auth-topbar { justify-content: flex-end; } }
 
 /* Z-18: role-gated controls must stay hidden even when button/layout rules set display.
@@ -3234,4 +3218,164 @@ tr.clickable:focus-within .row-action {
 
 .filter-panel[hidden] {
   display: none;
+}
+
+
+/* sign-in as a page of its own: brand panel on the left, form on the right, a glass panel on each */
+.login-page {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 100vh;
+}
+
+.login-brand,
+.login-side {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  overflow: hidden;
+}
+
+.login-brand {
+  background: var(--navy);
+}
+
+.login-side {
+  background: #e4eef1;
+}
+
+.login-nodes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.login-glass,
+.login-card {
+  position: relative;
+  z-index: 1;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  max-width: 440px;
+  height: 420px;
+  border-radius: 16px;
+}
+
+.login-glass {
+  align-items: center;
+  padding: 0 32px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(10px);
+  color: #ffffff;
+  text-align: center;
+}
+
+.login-logo {
+  width: 340px;
+  max-width: 100%;
+  height: auto;
+  margin-bottom: 34px;
+}
+
+.login-glass h2 {
+  margin: 0 0 10px;
+  color: #ffffff;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.login-glass p {
+  max-width: 380px;
+  margin: 0;
+  color: #b8c9d6;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.login-card {
+  padding: 0 50px;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px);
+}
+
+.login-card h1 {
+  margin: 0 0 4px;
+  color: var(--navy);
+  font-size: 24px;
+}
+
+.login-card .muted {
+  margin: 0 0 14px;
+}
+
+.login-card .auth-login-form {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.login-card .auth-login-form label {
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.login-card .auth-login-form input {
+  width: 100%;
+  min-width: 0;
+}
+
+.login-card .auth-login-form .button {
+  margin-top: 8px;
+}
+
+.login-card .status {
+  margin-top: 12px;
+}
+
+.login-skip {
+  margin-top: 18px;
+  color: var(--teal);
+  font-size: 12px;
+  text-align: center;
+}
+
+body.login-mode .app-shell,
+body.login-mode .assistant-launcher {
+  display: none;
+}
+
+/* on a narrow window the two halves stack and the brand panel gets shorter */
+@media (max-width: 860px) {
+  .login-page {
+    grid-template-columns: 1fr;
+  }
+
+  .login-glass {
+    height: auto;
+    padding: 28px 24px;
+  }
+
+  .login-logo {
+    width: 240px;
+    margin-bottom: 20px;
+  }
+
+  .login-glass p {
+    display: none;
+  }
+
+  .login-card {
+    height: auto;
+    padding: 28px 24px;
+  }
 }

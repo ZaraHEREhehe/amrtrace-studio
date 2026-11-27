@@ -3039,6 +3039,9 @@ function bindNavigation() {
 
 // shows the page the address names and loads the id in it, so a link opens the case or run directly
 async function applyRoute() {
+  // the sign-in page belongs to the sign-in module, so no page behind it is loaded
+  if (window.location.hash === "#/login") return;
+
   const { view, id } = parseRoute(window.location.hash);
   activateView(view);
 
@@ -3854,20 +3857,6 @@ function submitReviewQueueFilters(event) {
   }));
 }
 
-// the top bar search opens the dossier of whatever case was typed
-async function submitTopbarSearch(event) {
-  event.preventDefault();
-  const input = byId("topbar-case");
-  const caseId = await resolveTypedCase(input.value.trim(), byId("topbar-status"));
-
-  if (caseId) {
-    hideStatus(byId("topbar-status"));
-    input.value = "";
-    navigate("dossier", caseId);
-  }
-}
-
-
 // the register form stays folded away until someone asks for it, as in the prototype
 function toggleChangeForm() {
   const card = byId("change-form-card");
@@ -3965,7 +3954,6 @@ function boot() {
   });
   byId("review-queue-action").addEventListener("change", syncQueueCorrection);
   byId("review-queue-review-form").addEventListener("submit", submitQueueReview);
-  byId("topbar-search").addEventListener("submit", submitTopbarSearch);
   byId("exports-form").addEventListener("submit", submitExportSnapshot);
   byId("exports-download-hash").addEventListener("click", downloadExportHash);
   byId("exports-release").addEventListener("change", () => {
@@ -3983,7 +3971,6 @@ function boot() {
   renderGraphLegends();
   bindCaseSuggestions(byId("case-id"));
   bindCaseSuggestions(byId("dossier-case-id"));
-  bindCaseSuggestions(byId("topbar-case"));
 
   void loadReleaseChips();
   void applyRoute();
