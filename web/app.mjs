@@ -122,6 +122,8 @@ import {
 } from "./interpretation.mjs";
 
 import { loadReleaseTransitionPanel } from "./release_transitions.mjs";
+import { hoverTip, shortDrugName } from "./dashboard_tips.mjs";
+import { drugLabel } from "./drug_label.mjs";
 
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -1009,7 +1011,7 @@ function renderRuleSpace(rows) {
     for (const [, field] of columns) {
       row.append(
         make("td", {
-          text: rowData[field] ?? "—",
+          text: drugLabel(rowData[field] ?? "—"),
         }),
       );
     }
@@ -1733,7 +1735,7 @@ function renderDossierOverview(dossier, history = []) {
   title.append(
     make("span", { className: "accession", text: dossier.target_acc }),
     make("span", { className: "plus", text: "+" }),
-    make("h2", { text: dossier.antibiotic }),
+    make("h2", { text: drugLabel(dossier.antibiotic) }),
     stateBadge(current?.state_code),
   );
 
@@ -3262,7 +3264,7 @@ function renderDashboard(summary, runs) {
 
   const legend = make("div", { className: "state-legend" });
   for (const part of distribution) {
-    const row = make("div", { className: "state-legend-row" });
+    const row = make("div", { className: "state-legend-row", attributes: { tabindex: "0" } });
     const dot = make("span", { className: "legend-dot" });
     dot.style.background = part.fill;
     dot.style.borderColor = part.line;
@@ -3272,7 +3274,7 @@ function renderDashboard(summary, runs) {
       attributes: { href: `#/explorer/${encodeURIComponent(`state=${part.code}`)}` },
     });
 
-    row.append(dot, link, make("span", { className: "num", text: formatCount(part.count) }), make("span", { className: "num muted", text: formatShare(part.count, summary.cases_with_state) }));
+    row.append(dot, link, make("span", { className: "num muted", text: formatShare(part.count, summary.cases_with_state) }), hoverTip(part.label, [["Cases", formatCount(part.count)]]));
     legend.append(row);
   }
   states.append(bar, legend);
@@ -3285,16 +3287,16 @@ function renderDashboard(summary, runs) {
 
   for (const drug of summary.drugs) {
     const rate = drug.total ? drug.discordant / drug.total : 0;
-    const row = make("div", { className: "bar-row" });
+    const row = make("div", { className: "bar-row", attributes: { tabindex: "0" } });
     const track = make("div", { className: "bar-track" });
     const fill = make("div", { className: "bar-fill" });
     fill.style.width = `${(rate / maxRate) * 100}%`;
     track.append(fill);
 
     row.append(
-      make("span", { className: "bar-label", text: drug.antibiotic }),
+      make("span", { className: "bar-label", text: shortDrugName(drug.antibiotic), attributes: { title: drug.antibiotic } }),
       track,
-      make("span", { className: "bar-value", text: `${formatShare(drug.discordant, drug.total)} discordant · ${formatCount(drug.unresolved)} unresolved` }),
+      make("span", { className: "bar-value", text: formatShare(drug.discordant, drug.total) }), hoverTip(drug.antibiotic, [["Discordant", `${formatCount(drug.discordant)} of ${formatCount(drug.total)}`], ["Unresolved", formatCount(drug.unresolved)]]),
     );
     chart.append(row);
   }
@@ -3399,7 +3401,7 @@ async function fillDrugFilter() {
 
   try {
     const summary = await getSummary();
-    fillSelect(byId("explorer-drug"), "All antibiotics", summary.drugs, (drug) => drug.antibiotic, (drug) => drug.antibiotic);
+    fillSelect(byId("explorer-drug"), "All antibiotics", summary.drugs, (drug) => drug.antibiotic, (drug) => drugLabel(drug.antibiotic));
     drugsFilled = true;
   } catch {
     // without the list the filter still works as "all antibiotics"
@@ -3515,7 +3517,7 @@ async function fillReviewQueueDrugs() {
       "All antibiotics",
       summary.drugs ?? [],
       (item) => item.antibiotic,
-      (item) => item.antibiotic,
+      (item) => drugLabel(item.antibiotic),
     );
     reviewQueueDrugsLoaded = true;
   } catch {
@@ -3587,7 +3589,7 @@ async function loadReviewQueue(filters, offset = 0) {
         ["Priority", (item) => triageBadge(item)],
         ["Case", (item) => caseLink(item.case_id)],
         ["Isolate", (item) => make("code", { text: item.target_acc })],
-        ["Antibiotic", "antibiotic"],
+        ["Antibiotic", (row) => drugLabel(row.antibiotic)],
         ["State", (item) => stateBadge(item.state_code)],
         ["Release", "release_id"],
         ["Changed labels", "labels_changed"],
@@ -3669,7 +3671,7 @@ async function openReviewQueueCase(item) {
     summary.append(definitionList({
       Case: caseLink(item.case_id),
       Isolate: item.target_acc,
-      Antibiotic: item.antibiotic,
+      Antibiotic: drugLabel(item.antibiotic),
       "Current state": current.state_code,
       "Published release": current.release_id,
       "Changed labels": current.labels_changed,

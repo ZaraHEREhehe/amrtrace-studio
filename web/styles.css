@@ -2705,3 +2705,195 @@ tr.clickable {
   }
 }
 
+/* dashboard: sentence-case headings, calmer rows, steadier chart labels */
+.section-heading h3 {
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.kpi-label {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.state-legend-row {
+  grid-template-columns: 12px minmax(0, 1fr) 56px;
+  margin: 0 -8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.state-legend-row:hover {
+  background: var(--row-hover);
+}
+
+.state-legend-row a {
+  color: var(--navy);
+  text-decoration: none;
+}
+
+.state-legend-row a:hover {
+  color: var(--teal);
+  text-decoration: underline;
+}
+
+.bar-row {
+  grid-template-columns: 96px minmax(40px, 1fr) 48px;
+}
+
+.bar-label {
+  white-space: nowrap;
+}
+
+.bar-value {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.sankey-controls {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.sankey-field {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sankey-checkbox {
+  font-size: 12px;
+}
+
+.sankey-expand-button {
+  margin-left: auto;
+}
+
+/* numbers move to a hover card with a pointer, so the charts stay clean */
+.bar-row,
+.state-legend-row {
+  position: relative;
+}
+
+.chart-tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  z-index: 5;
+  min-width: 190px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--navy);
+  font-size: 11px;
+  box-shadow: 0 6px 18px rgba(22, 50, 79, 0.16);
+  opacity: 0;
+  transform: translateY(3px);
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.chart-tip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 22px;
+  width: 10px;
+  height: 10px;
+  margin-top: -6px;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: #ffffff;
+  transform: rotate(45deg);
+}
+
+.chart-tip strong {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.chart-tip div {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 1px 0;
+  color: var(--text-2);
+}
+
+.chart-tip div span:last-child {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.bar-row .chart-tip {
+  left: 100px;
+}
+
+.state-legend-row .chart-tip {
+  left: 28px;
+}
+
+.bar-row:hover .chart-tip,
+.bar-row:focus-visible .chart-tip,
+.state-legend-row:hover .chart-tip,
+.state-legend-row:focus-visible .chart-tip {
+  opacity: 1;
+  transform: none;
+}
+
+.bar-row:focus-visible,
+.state-legend-row:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+}
+
+/* the route details are already in the hover tooltip; screen readers still hear them */
+.sankey-feedback {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* case list opened from a route: readable accession and drug, long ID on hover */
+.sankey-case-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.sankey-case-list li:hover {
+  background: var(--row-hover);
+}
+
+.sankey-case-list a {
+  font-family: var(--mono);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.sankey-case-list a:hover {
+  text-decoration: underline;
+}
+
+.sankey-case-drug {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.sankey-case-details .sankey-summary {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+}
+
+

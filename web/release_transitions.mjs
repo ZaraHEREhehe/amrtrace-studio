@@ -3,6 +3,7 @@ import {
   getReleaseTransitions, getReleaseTransitionCases, listPublishedReleases,
 } from './api.mjs';
 import { routeHash } from './ids.mjs';
+import { drugLabel } from './drug_label.mjs';
 import { STATE_ORDER, stateMeta, formatCount, formatShare } from './view_meta.mjs';
 import { sankeyModel, countChanged } from './sankey_model.mjs';
 
@@ -217,9 +218,7 @@ function renderFlowChart(parent, response, changedOnly, onSelect, message, expan
   }
   scroller.append(chart);
   parent.append(scroller);
-  const notes = el('p','sankey-usage-hint sankey-hint',expanded
-    ? 'Darker fine lines mark changed routes; the filled ribbon widths encode case counts. Hover or select a route. On narrow screens, scroll horizontally.'
-    : 'Dark fine lines mark changed routes; ribbon area remains proportional. Use Changed only to magnify rare routes.');
+  const notes = el('p','sankey-usage-hint sankey-hint','Hover a route to see its case count; select it to list the cases. Thin dark lines mark routes that changed.');
   parent.append(notes);
   const tableDetails = el('details', 'sankey-table-details');
   tableDetails.append(el('summary',null,'View accessible transition counts'));
@@ -269,7 +268,7 @@ export async function loadReleaseTransitionPanel(latest, drugs) {
       antibiotic: '', changedOnly: false, expanded: false };
     const releaseItems = releases.map(r => ({ value:r.release_id, label:r.release_id }));
     const drugItems = [{value:'',label:'All antibiotics'},
-      ...(drugs || []).map(d => ({value:d.antibiotic,label:d.antibiotic}))];
+      ...(drugs || []).map(d => ({value:d.antibiotic,label:drugLabel(d.antibiotic)}))];
 
     const selection = el('label','sankey-checkbox');
     const toggle = el('input'); toggle.type = 'checkbox';
@@ -323,7 +322,9 @@ export async function loadReleaseTransitionPanel(latest, drugs) {
           `From: ${result.before_release} (${result.before_interpretation || 'as reported'}; ${result.before_verification || 'not recorded'})`,
           `To: ${result.after_release} (${result.after_interpretation || 'as reported'}; ${result.after_verification || 'not recorded'})`,
         ];
-        status.textContent = descriptions.join('  ·  ');
+        status.textContent = `${result.before_release} → ${result.after_release}`;
+        status.title = descriptions.join('  ·  ');
+        status.setAttribute('aria-label', descriptions.join('. '));
         renderCurrent();
       } catch (error) {
         if (generation === currentLoad && token === request) status.textContent = `Could not load transition chart: ${error.message}`;
@@ -359,9 +360,11 @@ export async function loadReleaseTransitionPanel(latest, drugs) {
           const list = el('ul','sankey-case-list');
           for (const item of data.items) {
             const li = el('li');
-            const link = el('a',null,`${item.target_acc} · ${item.antibiotic} · ${item.case_id}`);
+            // readable name first; the long technical case ID stays in the tooltip
+            const link = el('a',null,item.target_acc);
             link.href = routeHash('dossier',item.case_id);
-            li.append(link); list.append(li);
+            link.title = item.case_id;
+            li.append(link, el('span','sankey-case-drug',drugLabel(item.antibiotic))); list.append(li);
           }
           content.append(list);
           const prev = el('button','button','Previous'); prev.type='button';prev.disabled=offset===0;

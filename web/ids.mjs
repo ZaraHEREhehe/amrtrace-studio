@@ -1,5 +1,7 @@
 // how long ids are shown and how pages are addressed, kept free of the DOM so it can be tested
 
+import { drugLabel } from "./drug_label.mjs";
+
 const CASE_PREFIX = "CASE_";
 // twelve hex characters, like a git short hash, are unique across the whole cohort
 const SHORT_HASH = 12;
@@ -38,7 +40,7 @@ export function caseName(targetAcc, antibiotic) {
     return "";
   }
 
-  return [targetAcc, antibiotic].filter(Boolean).join(" · ");
+  return [targetAcc, drugLabel(antibiotic)].filter(Boolean).join(" · ");
 }
 
 
