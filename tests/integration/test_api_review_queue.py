@@ -87,6 +87,39 @@ def test_the_case_list_and_dossier_carry_the_status(client):
     assert client.get("/cases/CASE_U1").json()["review_status"] == "UNVERIFIED"
 
 
+# the explorer filters: release, review status and changed labels narrow the whole list, not just one page
+def test_the_case_list_filters_by_review_status_labels_and_release(client):
+    def ids(**params):
+        return [row["case_id"] for row in client.get("/cases", params=params).json()]
+
+    assert ids(review_status="UNVERIFIED") == ["CASE_U1", "CASE_U2"]
+    assert ids(review_status="NOT_REQUIRED") == ["CASE_OK"]
+    assert ids(review_status="CONFIRMED") == []
+    assert ids(labels_changed="changed") == ["CASE_U1", "CASE_U2"]
+    assert ids(labels_changed="unchanged") == ["CASE_OK"]
+    assert ids(release="R1") == ["CASE_OK", "CASE_U1", "CASE_U2"]
+    assert ids(release="R9") == []
+    assert ids(labels_changed="changed", state="UNRESOLVED") == ["CASE_U1"]
+    assert client.get("/cases", params={"review_status": "SOMETHING"}).status_code == 422
+    assert client.get("/cases", params={"labels_changed": "maybe"}).status_code == 422
+
+
+def test_the_review_status_filter_follows_the_reviews_and_agrees_with_the_listed_status(client):
+    response = client.post("/cases/CASE_U1/review", json={"reviewer": "rev1", "action": "CONFIRM", "reason": "checked"})
+    assert response.status_code == 201
+
+    assert [r["case_id"] for r in client.get("/cases", params={"review_status": "CONFIRMED"}).json()] == ["CASE_U1"]
+    assert [r["case_id"] for r in client.get("/cases", params={"review_status": "UNVERIFIED"}).json()] == ["CASE_U2"]
+    # a review does not change how many labels changed
+    assert [r["case_id"] for r in client.get("/cases", params={"labels_changed": "changed"}).json()] == ["CASE_U1", "CASE_U2"]
+
+    # whatever the list shows for a case is what the filter finds it under
+    listed = client.get("/cases").json()
+    for status in ("UNVERIFIED", "CONFIRMED", "CORRECTED", "MARKED_UNRESOLVED", "NOT_REQUIRED"):
+        found = [row["case_id"] for row in client.get("/cases", params={"review_status": status}).json()]
+        assert found == [row["case_id"] for row in listed if row["review_status"] == status]
+
+
 def test_confirming_through_the_api_appends_a_review_and_never_edits_a_state(client, review_database):
     before = _states(review_database)
     response = client.post("/cases/CASE_U1/review",
