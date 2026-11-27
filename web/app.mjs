@@ -122,6 +122,7 @@ import {
 } from "./interpretation.mjs";
 
 import { loadReleaseTransitionPanel } from "./release_transitions.mjs";
+import { renderInline, renderValue } from "./value_view.mjs";
 import { hoverTip, shortDrugName } from "./dashboard_tips.mjs";
 import { drugLabel } from "./drug_label.mjs";
 
@@ -172,15 +173,10 @@ function definitionList(values) {
       continue;
     }
 
-    list.append(
-      make("dt", { text: label }),
-      make("dd", {
-        text:
-          typeof value === "object" && value !== null
-            ? JSON.stringify(value)
-            : value ?? "—",
-      }),
-    );
+    // stored JSON is opened into readable fields, chips and short ids
+    const cell = make("dd");
+    cell.append(renderValue(value));
+    list.append(make("dt", { text: label }), cell);
   }
 
   return list;
@@ -417,9 +413,7 @@ function renderChangedEntities(entities) {
 
     if (entity.changed_region) {
       item.append(
-        make("code", {
-          text: JSON.stringify(entity.changed_region),
-        }),
+        renderValue(entity.changed_region),
       );
     }
 
@@ -1651,11 +1645,7 @@ function renderDataTable(
         typeof value === "object" &&
         value !== null
       ) {
-        cell.append(
-          make("code", {
-            text: displayValue(value),
-          }),
-        );
+        cell.append(renderInline(value));
       } else {
         cell.textContent = displayValue(value);
       }

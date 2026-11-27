@@ -2662,6 +2662,119 @@ tr.clickable {
   }
 }
 
+/* stored JSON shown as readable fields, chips and short ids */
+.value-fields {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.value-fields > dt {
+  color: var(--text-2);
+  font-size: 12px;
+}
+
+.value-fields > dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.value-fields .value-fields {
+  padding-left: 12px;
+  border-left: 2px solid var(--border);
+}
+
+.value-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.value-chip {
+  padding: 1px 8px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.value-chip-key {
+  color: var(--text-2);
+  font-family: Inter, sans-serif;
+}
+
+.value-id {
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: help;
+}
+
+.value-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.value-list > li > .value-fields {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.value-empty {
+  color: var(--muted);
+}
+
+.value-code {
+  word-break: break-all;
+}
+
+
+
+/* nested fields sit quietly inside a definition list instead of inheriting its row borders */
+.definition-list .value-fields {
+  grid-template-columns: minmax(96px, max-content) minmax(0, 1fr);
+  gap: 6px 14px;
+}
+
+.definition-list .value-fields > dt,
+.definition-list .value-fields > dd {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.definition-list .value-fields > dt {
+  padding-right: 0;
+  font-size: 11px;
+}
+
+.value-fields .value-fields {
+  padding-left: 10px;
+}
+
+.value-list:has(> li:only-child) {
+  padding-left: 0;
+  list-style: none;
+}
+
+.value-list > li > .value-fields {
+  padding: 8px 12px;
+}
+
+.value-id {
+  white-space: nowrap;
+}
+
+.value-text {
+  overflow-wrap: anywhere;
+}
+
+
 /* poster logo on the dark sidebar; the mark alone when collapsed */
 .brand {
   display: flex;
