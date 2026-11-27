@@ -316,6 +316,8 @@
                 <span class="muted">/</span>
                 <span>Case Dossier</span>
               </div>
+              <h2>Case Dossier</h2>
+              <p class="muted">Current published state, history, review and dependencies for one case.</p>
             </div>
 
             <form id="dossier-form" class="inline-form">
@@ -337,15 +339,26 @@
 
           <div id="dossier-status" class="status" aria-live="polite" hidden></div>
 
+          <div class="tab-bar" id="dossier-tabs" role="tablist" aria-label="Case dossier sections">
+            <button class="tab-button" type="button" role="tab" id="dossier-tab-overview" data-dossier-tab="overview" aria-controls="dossier-panel-overview" aria-selected="true">Overview</button>
+            <button class="tab-button" type="button" role="tab" id="dossier-tab-history" data-dossier-tab="history" aria-controls="dossier-panel-history" aria-selected="false">History</button>
+            <button class="tab-button" type="button" role="tab" id="dossier-tab-compare" data-dossier-tab="compare" aria-controls="dossier-panel-compare" aria-selected="false">Compare</button>
+            <button class="tab-button" type="button" role="tab" id="dossier-tab-dependencies" data-dossier-tab="dependencies" aria-controls="dossier-panel-dependencies" aria-selected="false">Dependencies</button>
+            <button class="tab-button" type="button" role="tab" id="dossier-tab-review" data-dossier-tab="review" aria-controls="dossier-panel-review" aria-selected="false">Review</button>
+            <button class="tab-button" type="button" role="tab" id="dossier-tab-copilot" data-dossier-tab="copilot" aria-controls="dossier-panel-copilot" aria-selected="false">Summary</button>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-overview" aria-labelledby="dossier-tab-overview" data-dossier-panel="overview">
           <div id="dossier-overview">
             <div class="empty-state">
               Open a case from the Case Explorer, or type one above, to see its current published state,
               evidence and version vector.
             </div>
           </div>
+          </div>
 
-          <div class="dossier-grid stack">
-            <section class="card">
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-history" aria-labelledby="dossier-tab-history" data-dossier-panel="history" hidden>
+          <section class="card">
               <div class="section-heading compact">
                 <h3>State history</h3>
               </div>
@@ -354,8 +367,63 @@
               </p>
               <div id="dossier-history"></div>
             </section>
+          </div>
 
-            <section class="card">
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-compare" aria-labelledby="dossier-tab-compare" data-dossier-panel="compare" hidden>
+          <section class="card">
+            <div class="section-heading compact">
+              <h3>Before / after</h3>
+            </div>
+
+            <form id="dossier-diff-form" class="comparison-form">
+              <div class="field">
+                <label for="dossier-before-release">Before release</label>
+                <input
+                  id="dossier-before-release"
+                  name="before_release"
+                  autocomplete="off"
+                  placeholder="Default: previous published state"
+                >
+              </div>
+
+              <div class="field">
+                <label for="dossier-after-release">After release</label>
+                <input
+                  id="dossier-after-release"
+                  name="after_release"
+                  autocomplete="off"
+                  placeholder="Default: current published state"
+                >
+              </div>
+
+              <button class="button" type="submit">Compare releases</button>
+            </form>
+
+            <div id="dossier-diff-status" class="status" aria-live="polite" hidden></div>
+            <div id="dossier-diff"></div>
+          </section>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-dependencies" aria-labelledby="dossier-tab-dependencies" data-dossier-panel="dependencies" hidden>
+          <section class="card" data-record-kind="dependency">
+            <div class="section-heading compact">
+              <h3>Dependency path</h3>
+            </div>
+
+            <div id="dossier-dependency-summary"></div>
+
+            <div class="graph-layout">
+              <div id="dossier-graph" class="graph-canvas"></div>
+              <aside class="graph-side">
+                <div class="graph-legend" data-graph-legend></div>
+                <div id="dossier-node-inspector" class="node-inspector" aria-live="polite"></div>
+              </aside>
+            </div>
+          </section>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-review" aria-labelledby="dossier-tab-review" data-dossier-panel="review" hidden>
+          <section class="card">
               <div class="section-heading compact">
                 <h3>Review actions</h3>
               </div>
@@ -415,43 +483,11 @@
             </section>
           </div>
 
-          <section class="card">
-            <div class="section-heading compact">
-              <h3>Before / after</h3>
-            </div>
-
-            <form id="dossier-diff-form" class="comparison-form">
-              <div class="field">
-                <label for="dossier-before-release">Before release</label>
-                <input
-                  id="dossier-before-release"
-                  name="before_release"
-                  autocomplete="off"
-                  placeholder="Default: previous published state"
-                >
-              </div>
-
-              <div class="field">
-                <label for="dossier-after-release">After release</label>
-                <input
-                  id="dossier-after-release"
-                  name="after_release"
-                  autocomplete="off"
-                  placeholder="Default: current published state"
-                >
-              </div>
-
-              <button class="button" type="submit">Compare releases</button>
-            </form>
-
-            <div id="dossier-diff-status" class="status" aria-live="polite" hidden></div>
-            <div id="dossier-diff"></div>
-          </section>
-
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-copilot" aria-labelledby="dossier-tab-copilot" data-dossier-panel="copilot" hidden>
           <section class="card copilot-card" aria-labelledby="dossier-copilot-title">
             <div class="copilot-head">
               <span class="copilot-mark" aria-hidden="true">✦</span>
-              <h3 id="dossier-copilot-title">Review Copilot</h3>
+              <h3 id="dossier-copilot-title">Summary</h3>
               <span id="dossier-copilot-tag" class="ai-tag">AI generated</span>
               <div class="copilot-head-actions">
                 <button id="dossier-copilot-pin" class="button" type="button"
@@ -476,25 +512,11 @@
             </div>
 
           </section>
-
-          <section class="card" data-record-kind="dependency">
-            <div class="section-heading compact">
-              <h3>Dependency path</h3>
-            </div>
-
-            <div id="dossier-dependency-summary"></div>
-
-            <div class="graph-layout">
-              <div id="dossier-graph" class="graph-canvas"></div>
-              <aside class="graph-side">
-                <div class="graph-legend" data-graph-legend></div>
-                <div id="dossier-node-inspector" class="node-inspector" aria-live="polite"></div>
-              </aside>
-            </div>
-          </section>
+          </div>
         </section>
 
         <!-- dependency view -->
+
         <section class="page" data-view="dependencies" hidden>
           <header class="page-header">
             <div>
@@ -906,6 +928,7 @@
 
   <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>
+  <script type="module" src="/dossier_tabs.mjs"></script>
   <script type="module" src="/sidebar.mjs"></script>
   <script type="module" src="/auth_ui.mjs"></script>
     <div id="cite-popover" class="cite-popover" role="dialog" aria-label="Cited record" hidden></div>

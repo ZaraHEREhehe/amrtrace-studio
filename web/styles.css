@@ -2571,6 +2571,97 @@ tr.clickable {
 @media (prefers-reduced-motion: reduce) {
   .sankey-ribbon, .sankey-change-trace { transition: none !important; }
 }
+
+/* dossier tabs: one section at a time */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 16px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.tab-button {
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: -1px;
+}
+
+.tab-button:hover {
+  color: var(--navy);
+}
+
+.tab-button[aria-selected="true"] {
+  border-bottom-color: var(--teal);
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.tab-button:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: -2px;
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+.tab-panel > .card + .card {
+  margin-top: 16px;
+}
+/* dossier header on one row, so there is no empty gap above the tabs */
+[data-view="dossier"] .page-header {
+  align-items: flex-end;
+  margin-bottom: 12px;
+}
+[data-view="dossier"] .inline-form {
+  flex: 1 1 auto;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+[data-view="dossier"] .inline-form .field {
+  flex: 1 1 320px;
+  max-width: 560px;
+}
+[data-view="dossier"] .inline-form .button {
+  white-space: nowrap;
+}
+/* dossier tabs as a clear bar with a filled active tab */
+.tab-bar {
+  gap: 4px;
+  margin: 8px 0 18px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(22, 50, 79, 0.06);
+}
+.tab-button {
+  margin-bottom: 0;
+  padding: 10px 20px;
+  border-bottom: 0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.tab-button:not([aria-selected="true"]):hover {
+  background: var(--row-hover);
+}
+.tab-button[aria-selected="true"] {
+  background: var(--navy);
+  color: #ffffff;
+}
+@media (max-width: 900px) {
+  [data-view="dossier"] .inline-form {
+    flex-wrap: wrap;
+  }
+}
+
 /* poster logo on the dark sidebar; the mark alone when collapsed */
 .brand {
   display: flex;
