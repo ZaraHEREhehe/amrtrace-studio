@@ -92,3 +92,10 @@ export function formatWhen(value) {
 
   return when.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
+
+
+// a stored role code such as ADMIN reads as a plain word
+export function roleLabel(role) {
+  const text = String(role ?? "").toLowerCase();
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
+}

@@ -1,5 +1,5 @@
 // Z-18 identity view; deliberately isolated from dossier, change, and evaluator logic.
-import { formatWhen } from "./ids.mjs";
+import { formatWhen, roleLabel } from "./ids.mjs";
 import { can, currentAccount, listAdminUsers, login, logout, restoreSession, subscribeSession } from "./auth_client.mjs";
 
 const $ = (id) => document.getElementById(id);
@@ -33,7 +33,7 @@ function showMessage(message, error = false) {
 function setVisibility() {
   ++adminRequestRevision;
   const actor = currentAccount();
-  $("auth-identity").textContent = actor ? `${actor.username} · ${actor.role}` : "Read-only visitor";
+  $("auth-identity").textContent = actor ? `${actor.username} · ${roleLabel(actor.role)}` : "Read-only visitor";
   $("auth-show-login").hidden = Boolean(actor);
   $("auth-signout").hidden = !actor;
   $("admin-nav").hidden = !can("manage_users");
@@ -98,7 +98,7 @@ async function loadAdminPage() {
     const tbody = document.createElement("tbody");
     for (const user of rows) {
       const tr = document.createElement("tr");
-      for (const value of [user.username, user.role, user.active ? "Active" : "Disabled",
+      for (const value of [user.username, roleLabel(user.role), user.active ? "Active" : "Disabled",
         formatWhen(user.last_login_at) || "Never"]) {
         const td = document.createElement("td");
         td.textContent = String(value); // never turn API text into HTML

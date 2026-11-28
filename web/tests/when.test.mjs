@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { formatWhen } from "../ids.mjs";
+import { formatWhen, roleLabel } from "../ids.mjs";
 
 
 test("a stored timestamp reads as a plain date and time", () => {
@@ -9,4 +9,10 @@ test("a stored timestamp reads as a plain date and time", () => {
   assert.match(formatWhen("2026-11-28T13:03:22.718858Z"), /^28 Nov 2026, \d\d:\d\d$/);
   assert.equal(formatWhen(null), "");
   assert.equal(formatWhen("not a date"), "");
+});
+
+
+test("a role code reads as a plain word", () => {
+  assert.equal(roleLabel("ADMIN"), "Admin");
+  assert.equal(roleLabel(null), "");
 });

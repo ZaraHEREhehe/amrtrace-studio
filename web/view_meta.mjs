@@ -10,8 +10,8 @@ export const STATE_ORDER = [
 ];
 
 const STATE_META = {
-  CONCORDANT_RESISTANT: { label: "Concordant Resistant", cls: "state-concordant", fill: "#bbf7d0", line: "#86efac" },
-  CONCORDANT_SUSCEPTIBLE: { label: "Concordant Susceptible", cls: "state-concordant", fill: "#dcfce7", line: "#bbf7d0" },
+  CONCORDANT_RESISTANT: { label: "Concordant resistant", cls: "state-concordant", fill: "#bbf7d0", line: "#86efac" },
+  CONCORDANT_SUSCEPTIBLE: { label: "Concordant susceptible", cls: "state-concordant", fill: "#dcfce7", line: "#bbf7d0" },
   DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S: { label: "Discordant: Gene+/Pheno-S", cls: "state-discordant-gp", fill: "#fef3c7", line: "#fde68a" },
   DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE: { label: "Discordant: Pheno-R/No Gene", cls: "state-discordant-pr", fill: "#fee2e2", line: "#fecaca" },
   UNRESOLVED: { label: "Unresolved", cls: "state-unresolved", fill: "#eef2ff", line: "#c7d2fe" },

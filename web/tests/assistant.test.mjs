@@ -97,7 +97,7 @@ test("blocks are laid out from the server's records", () => {
     data: { before: { release_id: "R2", state_code: "CONCORDANT_SUSCEPTIBLE" },
             after: { release_id: "R3", state_code: "UNRESOLVED" }, case_id: CASE },
   });
-  assert.equal(transition.before.label, "Concordant Susceptible");
+  assert.equal(transition.before.label, "Concordant susceptible");
   assert.equal(transition.after.release, "R3");
   assert.equal(transition.link, `#/dossier/${CASE}`);
   const table = blockView({ type: "table", title: "How CHG-A moved cases",

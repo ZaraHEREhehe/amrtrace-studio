@@ -28,26 +28,26 @@
         <div class="nav-group">
           <div class="nav-group-label">Data</div>
           <button class="nav-button" type="button" data-nav="explorer">
-            <span class="nav-icon" aria-hidden="true">⊞</span><span class="nav-label">Case Explorer</span>
+            <span class="nav-icon" aria-hidden="true">⊞</span><span class="nav-label">Case explorer</span>
           </button>
           <button class="nav-button" type="button" data-nav="dossier">
-            <span class="nav-icon" aria-hidden="true">◧</span><span class="nav-label">Case Dossier</span>
+            <span class="nav-icon" aria-hidden="true">◧</span><span class="nav-label">Case dossier</span>
           </button>
           <button class="nav-button" type="button" data-nav="dependencies">
-            <span class="nav-icon" aria-hidden="true">◈</span><span class="nav-label">Dependency View</span>
+            <span class="nav-icon" aria-hidden="true">◈</span><span class="nav-label">Dependency view</span>
           </button>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">Workflow</div>
           <button class="nav-button" type="button" data-nav="changes">
-            <span class="nav-icon" aria-hidden="true">⊛</span><span class="nav-label">Change Events</span>
+            <span class="nav-icon" aria-hidden="true">⊛</span><span class="nav-label">Change events</span>
           </button>
           <button class="nav-button" type="button" data-nav="review-queue">
-            <span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Review Queue</span>
+            <span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Review queue</span>
           </button>
           <button class="nav-button" type="button" data-nav="runs">
-            <span class="nav-icon" aria-hidden="true">↺</span><span class="nav-label">Runs &amp; Equivalence</span>
+            <span class="nav-icon" aria-hidden="true">↺</span><span class="nav-label">Runs &amp; equivalence</span>
           </button>
         </div>
         <div class="nav-group">
@@ -148,7 +148,7 @@
         <section class="page" data-view="explorer" hidden>
           <header class="page-header">
             <div>
-              <h2>Case Explorer</h2>
+              <h2>Case explorer</h2>
               <p class="muted">Every isolate-antibiotic case and its current published state.</p>
             </div>
           </header>
@@ -175,8 +175,8 @@
                   <label for="explorer-state">Current state</label>
                   <select id="explorer-state" name="state">
                     <option value="">All states</option>
-                    <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
-                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                    <option value="CONCORDANT_RESISTANT">Concordant resistant</option>
+                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant susceptible</option>
                     <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
                     <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
                     <option value="UNRESOLVED">Unresolved</option>
@@ -218,10 +218,10 @@
         <section class="page" data-view="review-queue" hidden>
           <header class="page-header">
             <div>
-              <h2>Review Queue</h2>
+              <h2>Review queue</h2>
               <p class="muted">Interpretation labels awaiting a reviewer. Reviews are appended, never applied over a stored case state.</p>
             </div>
-            <a class="button" href="#/explorer">Open Case Explorer</a>
+            <a class="button" href="#/explorer">Open Case explorer</a>
           </header>
           <section class="card card-flush">
             <form id="review-queue-filters" class="filter-bar">
@@ -235,8 +235,8 @@
                 <label for="review-queue-state">Current state</label>
                 <select id="review-queue-state" name="state">
                   <option value="">All states</option>
-                  <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
-                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                  <option value="CONCORDANT_RESISTANT">Concordant resistant</option>
+                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant susceptible</option>
                   <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
                   <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
                   <option value="UNRESOLVED">Unresolved</option>
@@ -296,8 +296,8 @@
                   <label for="review-queue-corrected-state">Corrected state</label>
                   <select id="review-queue-corrected-state" name="corrected_state_code" disabled>
                     <option value="">Choose corrected state</option>
-                    <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
-                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                    <option value="CONCORDANT_RESISTANT">Concordant resistant</option>
+                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant susceptible</option>
                     <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
                     <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
                     <option value="UNRESOLVED">Unresolved</option>
@@ -319,11 +319,11 @@
           <header class="page-header">
             <div>
               <div class="breadcrumb">
-                <a href="#/explorer">← Case Explorer</a>
+                <a href="#/explorer">← Case explorer</a>
                 <span class="muted">/</span>
-                <span>Case Dossier</span>
+                <span>Case dossier</span>
               </div>
-              <h2>Case Dossier</h2>
+              <h2>Case dossier</h2>
               <p class="muted">Current published state, history, review and dependencies for one case.</p>
             </div>
 
@@ -360,7 +360,7 @@
           <div class="tab-panel" role="tabpanel" id="dossier-panel-overview" aria-labelledby="dossier-tab-overview" data-dossier-panel="overview">
           <div id="dossier-overview">
             <div class="empty-state">
-              Open a case from the Case Explorer, or type one above, to see its current published state,
+              Open a case from the Case explorer, or type one above, to see its current published state,
               evidence and version vector.
             </div>
           </div>
@@ -515,7 +515,7 @@
         <section class="page" data-view="dependencies" hidden>
           <header class="page-header">
             <div>
-              <h2>Dependency View</h2>
+              <h2>Dependency view</h2>
               <p class="muted">The stored dependency subgraph behind a case's current published state.</p>
             </div>
 
@@ -564,7 +564,7 @@
         <section class="page" data-view="changes" hidden>
           <header class="page-header">
             <div>
-              <h2>Change Events</h2>
+              <h2>Change events</h2>
               <p class="muted">Typed changes to the evidence base and the impact set stored for each.</p>
             </div>
 
@@ -670,7 +670,7 @@
         <section class="page" data-view="runs" hidden>
           <header class="page-header">
             <div>
-              <h2>Runs &amp; Equivalence</h2>
+              <h2>Runs &amp; equivalence</h2>
               <p class="muted">
                 Re-evaluate a change's stored impact set and publish it as selectively verified, or (Admin only)
                 compare it with an exhaustive run first and see the release gate decision.
@@ -888,7 +888,7 @@
         </section>
         <section class="page" data-view="admin" hidden>
           <header class="page-header"><div>
-            <h2>Admin — User Accounts</h2>
+            <h2>User accounts</h2>
             <p class="muted">Read-only account directory. Create/disable accounts using the privileged administrator script.</p>
           </div></header>
           <section class="card"><div class="table-wrap" id="admin-users">Admin sign-in required.</div></section>
