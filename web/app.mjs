@@ -50,6 +50,7 @@ import {
   caseName,
   parseRoute,
   routeHash,
+  runGroupLabel,
   runOptionLabel,
   shortCaseId,
   shortId,
@@ -101,6 +102,8 @@ import {
   decisionLabel,
   formatPercent,
   gateLabel,
+  edgeText,
+  mismatchGist,
   mismatchValue,
   orderedAxes,
   assertRunReportIdentity,
@@ -1214,34 +1217,33 @@ function renderRunDetail(run) {
     className: "section-heading compact",
   });
 
+  const mode = String(run.mode ?? "").toLowerCase();
   const headingText = make("div");
 
   headingText.append(
-    make("p", {
-      className: "eyebrow",
-      text: "Persisted run",
-    }),
     make("h3", {
+      text: `${mode.charAt(0).toUpperCase()}${mode.slice(1)} run`,
+    }),
+    make("code", {
+      className: "run-id",
       text: run.run_id,
     }),
   );
 
   heading.append(headingText, badge);
 
-  container.append(
-    heading,
-    definitionList({
-      "Change ID": pageLink("changes", run.change_id),
-      Mode: run.mode,
-      Status: run.status,
-      Release: run.release_id,
-      Selected: run.selected_count,
-      Reevaluated: run.reevaluated_count,
-      Started: humanDate(run.started_at),
-      Finished: humanDate(run.finished_at),
-      Error: run.error,
-    }),
-  );
+  const facts = {
+    Change: pageLink("changes", run.change_id),
+    Release: run.release_id ?? "—",
+    Selected: formatCount(run.selected_count),
+    Reevaluated: formatCount(run.reevaluated_count),
+    Started: humanDate(run.started_at),
+    Finished: humanDate(run.finished_at),
+  };
+  // an error line only appears when there is something to say
+  if (run.error) facts.Error = run.error;
+
+  container.append(heading, factGrid(facts));
 }
 
 
@@ -1296,93 +1298,101 @@ function renderAxisReport(axis) {
         : "axis-result axis-mismatch",
     text:
       axis.mismatched === 0
-        ? "MATCH"
-        : `${axis.mismatched} MISMATCH`,
+        ? "Match"
+        : `${formatCount(axis.mismatched)} mismatched`,
   });
 
   heading.append(title, result);
 
   card.append(
     heading,
-    definitionList({
-      Compared: axis.compared,
-      Mismatched: axis.mismatched,
+    make("p", {
+      className: "muted axis-counts",
+      text: `${formatCount(axis.compared)} compared · ${formatCount(axis.mismatched)} mismatched`,
     }),
   );
 
-  if (!axis.examples.length) {
-    card.append(
-      make("div", {
-        className: "empty-state compact-empty",
-        text: "No mismatch examples.",
-      }),
-    );
+  // an axis that matches has nothing more to show
+  if (!axis.examples.length) return card;
 
-    return card;
-  }
-
-  const wrap = make("div", {
-    className: "table-wrap",
-  });
-
-  const table = make("table", {
-    className: "mismatch-table",
-  });
-
-  const thead = make("thead");
-  const header = make("tr");
-
-  for (const label of [
-    "Case",
-    "Selective",
-    "Exhaustive",
-  ]) {
-    header.append(
-      make("th", {
-        text: label,
-      }),
-    );
-  }
-
-  thead.append(header);
-  table.append(thead);
-
-  const tbody = make("tbody");
-
+  // the examples stay closed until asked for, and each one opens on its own
+  const list = make("div", { className: "mismatch-list" });
   for (const example of axis.examples) {
-    const row = make("tr");
-
-    const selective = make("code", {
-      text: mismatchValue(example.selective),
-    });
-
-    const exhaustive = make("code", {
-      text: mismatchValue(example.exhaustive),
-    });
-
-    const selectiveCell = make("td");
-    const exhaustiveCell = make("td");
-
-    selectiveCell.append(selective);
-    exhaustiveCell.append(exhaustive);
-
-    const caseCell = make("td");
-    caseCell.append(caseLink(example.case_id));
-
-    row.append(
-      caseCell,
-      selectiveCell,
-      exhaustiveCell,
-    );
-
-    tbody.append(row);
+    list.append(renderMismatchExample(axis.axis, example));
   }
 
-  table.append(tbody);
-  wrap.append(table);
-  card.append(wrap);
+  const more = make("details", { className: "reason-more mismatch-more" });
+  more.append(
+    make("summary", {
+      text: `Show ${formatCount(axis.examples.length)} example${axis.examples.length === 1 ? "" : "s"} of ${formatCount(axis.mismatched)}`,
+    }),
+    list,
+  );
+  card.append(more);
 
   return card;
+}
+
+
+function renderMismatchExample(axisName, example) {
+  const row = make("details", { className: "mismatch-example" });
+  const summary = make("summary");
+  summary.append(
+    make("span", { className: "mismatch-case", text: shortCaseId(example.case_id) }),
+    make("span", { className: "mismatch-gist", text: mismatchGist(axisName, example.selective, example.exhaustive) }),
+  );
+
+  const sides = make("div", { className: "mismatch-sides" });
+  for (const [label, value] of [["Selective run", example.selective], ["Exhaustive run", example.exhaustive]]) {
+    const side = make("div", { className: "mismatch-side" });
+    side.append(make("h5", { text: label }), renderMismatchSide(axisName, value));
+    sides.append(side);
+  }
+
+  const links = make("div", { className: "mismatch-links" });
+  links.append(caseLink(example.case_id));
+  row.append(summary, sides, links);
+
+  return row;
+}
+
+
+function renderMismatchSide(axisName, value) {
+  if (value === null || value === undefined) {
+    return make("p", { className: "muted", text: axisName === "uncertainty" ? "None" : "Not present" });
+  }
+
+  if (axisName === "state" && Array.isArray(value)) {
+    return factGrid({ State: value[0], Phenotype: value[1], Genotype: value[2] });
+  }
+
+  if (axisName !== "dependency") {
+    return make("p", { text: mismatchValue(value) });
+  }
+
+  const box = make("div");
+  const edges = value.only_here ?? [];
+
+  if (edges.length) {
+    box.append(make("p", { className: "muted", text: `Dependencies only in this run${edges.length >= 5 ? " (first 5)" : ""}` }));
+    const items = make("ul", { className: "edge-list" });
+    for (const edge of edges) {
+      const text = edgeText(edge);
+      const item = make("li");
+      item.append(make("span", { text: text.main }));
+      if (text.note) item.append(make("span", { className: "muted", text: text.note }));
+      items.append(item);
+    }
+    box.append(items);
+  } else {
+    box.append(make("p", { className: "muted", text: "No dependencies that the other run lacks" }));
+  }
+
+  if (value.explanation) {
+    box.append(make("p", { className: "muted", text: "Explanation" }), renderValue(value.explanation));
+  }
+
+  return box;
 }
 
 
@@ -1393,21 +1403,19 @@ function renderEquivalence(report) {
   const decision = decisionLabel(report);
   const gate = gateLabel(report);
 
+  // the colour follows the result itself, so an audit that passed is green as well
   const banner = make("div", {
-    className:
-      decision === "PASS"
-        ? "decision decision-pass"
-        : "decision decision-blocked",
+    className: report.passed ? "decision decision-pass" : "decision decision-blocked",
   });
 
   banner.append(
     make("span", {
       className: "decision-label",
-      text: decision,
+      text: `${decision.charAt(0)}${decision.slice(1).toLowerCase()}`,
     }),
     make("span", {
       className: "decision-detail",
-      text: `Release gate: ${gate}`,
+      text: `Release gate: ${gate.toLowerCase()}`,
     }),
   );
 
@@ -1419,60 +1427,57 @@ function renderEquivalence(report) {
     metricCard(
       "Recall",
       formatPercent(report.recall),
-      `${report.selected_and_affected} of ${report.affected} affected selected`,
+      `${formatCount(report.selected_and_affected)} of ${formatCount(report.affected)} affected selected`,
     ),
     metricCard(
       "Precision",
       formatPercent(report.precision),
-      `${report.selected_and_affected} of ${report.selected} selected were affected`,
+      `${formatCount(report.selected_and_affected)} of ${formatCount(report.selected)} selected were affected`,
     ),
     metricCard(
       "Reprocessing ratio",
       formatPercent(report.reprocessing_ratio),
-      `${report.selected} of ${report.total_cases} total cases`,
+      `${formatCount(report.selected)} of ${formatCount(report.total_cases)} total cases`,
     ),
     metricCard(
       "Missed cases",
-      String(report.missed),
+      formatCount(report.missed),
       "Must remain zero for 100% recall",
     ),
   );
 
-  const summary = definitionList({
-    "Change ID": pageLink("changes", report.change_id),
+  const summary = factGrid({
+    Change: pageLink("changes", report.change_id),
     "Selective run": pageLink("runs", report.selective_run_id),
-    "Exhaustive run": report.exhaustive_run_id,
-    Release: report.release_id,
-    "Gate status": gate,
-    "Total cases": report.total_cases,
-    Selected: report.selected,
-    Affected: report.affected,
-    "State changed": report.state_changed,
-    "Selected and affected":
-      report.selected_and_affected,
-    Missed: report.missed,
+    "Exhaustive run": report.exhaustive_run_id ?? "—",
+    Release: report.release_id ?? "—",
+    "Gate status": gate.toLowerCase(),
+    "Total cases": formatCount(report.total_cases),
+    Selected: formatCount(report.selected),
+    Affected: formatCount(report.affected),
+    "State changed": formatCount(report.state_changed),
+    "Selected and affected": formatCount(report.selected_and_affected),
+    Missed: formatCount(report.missed),
   });
 
   const axes = make("div", {
     className: "axis-grid",
   });
 
-  for (const axis of orderedAxes(report)) {
+  const ordered = orderedAxes(report);
+  for (const axis of ordered) {
     axes.append(renderAxisReport(axis));
   }
+  const matching = ordered.filter((axis) => axis.mismatched === 0).length;
 
-  container.append(
-    banner,
-    metrics,
-    make("h4", {
-      text: "Comparison summary",
-    }),
-    summary,
-    make("h4", {
-      text: "Three-axis equivalence",
-    }),
-    axes,
+  // the numbers stay in view; the full comparison opens on request
+  const sections = make("div", { className: "card accordion" });
+  sections.append(
+    foldSection("Comparison summary", `${formatCount(report.selected)} selected · ${formatCount(report.missed)} missed`, false, [summary]),
+    foldSection("Three-axis equivalence", `${matching} of ${ordered.length} match`, false, [axes]),
   );
+
+  container.append(banner, metrics, sections);
 }
 
 
@@ -1635,19 +1640,31 @@ async function submitRunLookup(event) {
 
 
 // fills a select with options, keeping the current choice when it is still there
-function fillSelect(select, placeholder, items, valueOf, labelOf) {
+function fillSelect(select, placeholder, items, valueOf, labelOf, titleOf = null, groupOf = null) {
   const current = select.value;
   clear(select);
   select.append(make("option", { text: placeholder, attributes: { value: "" } }));
 
+  // groups keep the order they first appear in, so the newest stays on top
+  const groups = new Map();
+
   for (const item of items) {
-    select.append(
-      make("option", {
-        text: labelOf(item),
-        attributes: { value: valueOf(item) },
-      }),
-    );
+    const attributes = { value: valueOf(item) };
+    // the full technical detail stays one hover away
+    if (titleOf) attributes.title = titleOf(item);
+    const option = make("option", { text: labelOf(item), attributes });
+
+    if (!groupOf) {
+      select.append(option);
+      continue;
+    }
+
+    const name = groupOf(item);
+    if (!groups.has(name)) groups.set(name, make("optgroup", { attributes: { label: name } }));
+    groups.get(name).append(option);
   }
+
+  for (const group of groups.values()) select.append(group);
 
   if ([...select.options].some((option) => option.value === current)) {
     select.value = current;
@@ -1661,9 +1678,10 @@ async function loadRunPickers() {
     const [runs, changes] = await Promise.all([listRuns(null, 100), listChanges(100)]);
 
     fillSelect(byId("run-id"), "Choose a stored run", runs, (run) => run.run_id,
-      (run) => `${run.run_id} · ${runOptionLabel(run)}`);
+      (run) => runOptionLabel(run), (run) => run.run_id, (run) => runGroupLabel(run));
     fillSelect(byId("run-change-id"), "Choose a registered change", changes, (change) => change.change_id,
-      (change) => `${change.change_id} · ${change.old_version ?? "∅"} → ${change.new_version ?? "∅"}`);
+      (change) => `${change.change_id} · ${changeTypeMeta(change.type).label}`,
+      (change) => `${change.old_version ?? "∅"} → ${change.new_version ?? "∅"}`);
   } catch (error) {
     setStatus(byId("run-lookup-status"), "error", errorText(error));
   }

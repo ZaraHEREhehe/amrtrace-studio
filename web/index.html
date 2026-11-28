@@ -711,15 +711,18 @@
                     <span>Publish when the selective run completes (marked selectively verified)</span>
                   </label>
 
-                  <label class="check-row">
-                    <input id="run-exhaustive" type="checkbox">
-                    <span>Admin: run the optional exhaustive comparator after the selective run</span>
-                  </label>
+                  <details class="more-options">
+                    <summary>Admin options</summary>
+                    <label class="check-row">
+                      <input id="run-exhaustive" type="checkbox">
+                      <span>Admin: run the optional exhaustive comparator after the selective run</span>
+                    </label>
 
-                  <label class="check-row">
-                    <input id="run-gate" type="checkbox">
-                    <span>Admin: apply the PASS/BLOCKED release gate (publishes as exhaustively verified)</span>
-                  </label>
+                    <label class="check-row">
+                      <input id="run-gate" type="checkbox">
+                      <span>Admin: apply the PASS/BLOCKED release gate (publishes as exhaustively verified)</span>
+                    </label>
+                  </details>
                 </div>
 
                 <div class="form-actions">

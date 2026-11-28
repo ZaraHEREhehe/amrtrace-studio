@@ -1203,7 +1203,7 @@ tr.clickable {
 
 .axis-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -3725,4 +3725,137 @@ body.login-mode .assistant-launcher {
 
 #review-queue-results td {
   vertical-align: middle;
+}
+
+
+/* runs and equivalence: sentence-case labels, the run id as quiet text, and the admin options folded away */
+.metric-label {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.axis-heading h4 {
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.metric-grid + .accordion {
+  margin-top: 16px;
+}
+
+.run-id {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.more-options {
+  margin: 4px 0 12px;
+}
+
+.more-options > summary {
+  display: inline-block;
+  color: var(--teal);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.more-options > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more-options > summary::before {
+  content: "+ ";
+}
+
+.more-options[open] > summary::before {
+  content: "− ";
+}
+
+
+/* mismatch examples: one line each while closed, two readable columns once opened */
+.axis-counts {
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.mismatch-more > summary {
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.mismatch-list {
+  margin-top: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.mismatch-example + .mismatch-example {
+  border-top: 1px solid var(--border);
+}
+
+.mismatch-example > summary {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.mismatch-case {
+  font-family: var(--mono, monospace);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mismatch-gist {
+  color: var(--text-2);
+  font-size: 13px;
+}
+
+.mismatch-sides {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  padding: 4px 12px 12px;
+}
+
+.mismatch-side h5 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mismatch-side p {
+  margin: 4px 0;
+}
+
+.edge-list {
+  margin: 4px 0 0;
+  padding-left: 16px;
+}
+
+.edge-list li {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+}
+
+.edge-list li .muted {
+  display: block;
+  font-size: 12px;
+}
+
+.mismatch-links {
+  padding: 0 12px 10px;
+}
+
+@media (max-width: 900px) {
+  .mismatch-sides {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

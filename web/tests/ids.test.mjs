@@ -5,6 +5,7 @@ import {
   caseName,
   parseRoute,
   routeHash,
+  runGroupLabel,
   runOptionLabel,
   shortCaseId,
   shortId,
@@ -55,12 +56,20 @@ test("routes round-trip and unknown routes open the dashboard", () => {
 });
 
 
-test("a run is labelled by change, mode, status, release and start time", () => {
-  assert.equal(
-    runOptionLabel({
-      change_id: "CHG-VET01S-ED7", mode: "SELECTIVE", status: "COMPLETE",
-      release_id: "R3", started_at: "2026-10-18T18:55:00Z",
-    }),
-    "CHG-VET01S-ED7 · SELECTIVE · COMPLETE · R3 · 2026-10-18 18:55",
-  );
+test("a run is labelled by mode, change, status and start time", () => {
+  const label = runOptionLabel({
+    change_id: "CHG-VET01S-ED7", mode: "SELECTIVE", status: "COMPLETE",
+    release_id: "R3", started_at: "2026-10-18T18:55:00Z",
+  });
+
+  // the time shown follows the viewer's time zone, so only its shape is checked
+  assert.match(label, /^Selective · CHG-VET01S-ED7 · 18 Oct, \d\d:\d\d$/);
+  assert.match(runOptionLabel({ change_id: "CHG-A", mode: "EXHAUSTIVE", status: "FAILED", started_at: null }),
+    /^Exhaustive · CHG-A · failed · not started$/);
+});
+
+
+test("runs are grouped under their release", () => {
+  assert.equal(runGroupLabel({ release_id: "R3" }), "Release R3");
+  assert.equal(runGroupLabel({ release_id: null }), "No release");
 });
