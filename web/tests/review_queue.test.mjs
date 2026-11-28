@@ -15,10 +15,10 @@ test("all five I-18 statuses have distinct labels", () => {
 });
 
 test("review filters round-trip through the shareable route", () => {
-  const data = { drug: "gentamicin", state: "UNRESOLVED", sort: "" };
+  const data = { drug: "gentamicin", state: "UNRESOLVED", tier: "", sort: "" };
   assert.deepEqual(reviewQueueFilters(reviewQueueRouteId(data)), data);
   assert.equal(reviewQueueRouteId({ drug: "", state: "" }), null);
-  assert.deepEqual(reviewQueueFilters(null), { drug: "", state: "", sort: "" });
+  assert.deepEqual(reviewQueueFilters(null), { drug: "", state: "", tier: "", sort: "" });
 });
 
 test("review queue query uses I-18's drug, state and bounded paging contract", () => {
@@ -96,7 +96,7 @@ test("invalid inputs never reach the API", () => {
 
 
 test("the triage order round-trips through the shareable route and reaches the API", () => {
-  const data = { drug: "", state: "UNRESOLVED", sort: "triage" };
+  const data = { drug: "", state: "UNRESOLVED", tier: "", sort: "triage" };
   const routeId = reviewQueueRouteId(data);
   assert.equal(routeId, "state=UNRESOLVED&sort=triage");
   assert.deepEqual(reviewQueueFilters(routeId), data);
@@ -126,4 +126,14 @@ test("a triage reason reads with state names instead of codes", () => {
   );
   assert.equal(readableTriageReason(null, label), "");
   assert.equal(readableTriageReason("re-verified", label), "re-verified");
+});
+
+test("the priority filter round-trips through the shareable route and reaches the API", () => {
+  const data = { drug: "", state: "", tier: "STATE_CHANGED", sort: "" };
+  const routeId = reviewQueueRouteId(data);
+  assert.equal(routeId, "tier=STATE_CHANGED");
+  assert.equal(reviewQueueFilters(routeId).tier, "STATE_CHANGED");
+  const url = new URL(reviewQueuePath(reviewQueueFilters(routeId)), "http://x");
+  assert.equal(url.searchParams.get("tier"), "STATE_CHANGED");
+  assert.equal(reviewQueueFilters("tier=NOPE").tier, "");
 });

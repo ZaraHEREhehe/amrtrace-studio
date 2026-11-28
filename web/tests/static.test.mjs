@@ -99,14 +99,17 @@ test("case dossier exposes the complete Z-11 workflow", () => {
   assert.match(index, /id="dossier-overview"/);
   assert.match(index, /id="dossier-history"/);
   assert.match(index, /id="dossier-diff-form"/);
-  assert.match(index, /id="dossier-graph"/);
+  // the dependency graph lives on its own page; the dossier only links to it from the tab bar
+  assert.match(index, /id="dossier-view-dependencies"/);
+  assert.doesNotMatch(index, /id="dossier-tab-dependencies"/);
   assert.match(index, /id="dossier-review-form"/);
   assert.match(index, /id="dossier-reviews"/);
   assert.match(index, /id="dossier-export"/);
 
   assert.match(app, /getCaseDiff/);
   assert.match(app, /createReview/);
-  assert.match(app, /renderDossierDependencies/);
+  assert.doesNotMatch(app, /renderDossierDependencies/);
+  assert.match(app, /dossier-view-dependencies/);
   assert.match(app, /routeHash\("exports", current\.release_id\)/);
 });
 
@@ -118,12 +121,24 @@ test("dossier keeps API-derived values text-only", () => {
 });
 
 
+test("sign-in is a page of its own with the same form fields the auth module uses", () => {
+  assert.match(index, /id="login-page"/);
+  assert.match(index, /id="auth-login-form"/);
+  assert.match(index, /id="auth-username"/);
+  assert.match(index, /id="auth-password"/);
+  assert.match(index, /class="login-brand"/);
+  assert.match(index, /class="login-glass"/);
+  assert.doesNotMatch(index, /id="auth-login-panel"/);
+});
+
+
 test("the shell has the prototype's dashboard and case explorer pages", () => {
   assert.match(index, /data-nav="dashboard"/);
   assert.match(index, /data-nav="explorer"/);
   assert.match(index, /id="dashboard-kpis"/);
   assert.match(index, /id="explorer-form"/);
-  assert.match(index, /id="topbar-search"/);
+  // the top bar no longer has its own case search; the explorer and the dossier keep theirs
+  assert.doesNotMatch(index, /id="topbar-search"/);
 
   assert.match(app, /getSummary/);
   assert.match(app, /listCases/);
@@ -136,7 +151,7 @@ test("Z-17 review queue has filters, state-bound review actions, and a dossier l
   assert.match(html, /data-nav="review-queue"/);
   assert.match(html, /data-view="review-queue"/);
   for (const id of [
-    "review-queue-filters", "review-queue-drug", "review-queue-state", "review-queue-sort",
+    "review-queue-filters", "review-queue-drug", "review-queue-state", "review-queue-tier", "review-queue-sort",
     "review-queue-results", "review-queue-pager",
     "review-queue-review-form", "review-queue-action",
     "review-queue-reason", "review-queue-corrected-state",

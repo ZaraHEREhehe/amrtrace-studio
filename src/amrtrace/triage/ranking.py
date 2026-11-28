@@ -117,18 +117,30 @@ def _check_page(limit: int, offset: int) -> None:
         raise ValueError("offset must be a non-negative integer")
 
 
-# the I-18 review queue in triage order; the queue itself (who is unverified) is decided by the ledger, not here
+# the I-18 review queue, optionally narrowed to one tier; the queue itself (who is unverified) is decided by the ledger, not here
+# the default order is triage order; by_case_id keeps the plain case order, so a tier filter can be paged either way
 def rank_review_queue(
-    conn, *, drug: Optional[str] = None, state: Optional[str] = None, limit: int = 100, offset: int = 0
+    conn,
+    *,
+    drug: Optional[str] = None,
+    state: Optional[str] = None,
+    tier: Optional[str] = None,
+    by_case_id: bool = False,
+    limit: int = 100,
+    offset: int = 0,
 ) -> RankedQueuePage:
     _check_page(limit, offset)
+    if tier is not None and tier not in TIERS:
+        raise ValueError(f"tier must be one of {', '.join(TIERS)}")
     queue = list_review_queue(conn, drug=drug, state=state, limit=_ALL, offset=0)
     triaged = triage_states(conn, (item.state_id for item in queue.items))
-    ordered = sorted(queue.items, key=lambda item: (triaged[item.state_id].triage.rank, item.case_id))
+    items = [item for item in queue.items if tier is None or triaged[item.state_id].triage.tier == tier]
+    if by_case_id:
+        ordered = sorted(items, key=lambda item: item.case_id)
+    else:
+        ordered = sorted(items, key=lambda item: (triaged[item.state_id].triage.rank, item.case_id))
     page = ordered[offset : offset + limit]
-    return RankedQueuePage(
-        total=queue.total, items=tuple((item, triaged[item.state_id].triage) for item in page)
-    )
+    return RankedQueuePage(total=len(items), items=tuple((item, triaged[item.state_id].triage) for item in page))
 
 
 @dataclass(frozen=True)

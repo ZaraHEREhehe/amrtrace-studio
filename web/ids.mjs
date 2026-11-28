@@ -1,5 +1,7 @@
 // how long ids are shown and how pages are addressed, kept free of the DOM so it can be tested
 
+import { drugLabel } from "./drug_label.mjs";
+
 const CASE_PREFIX = "CASE_";
 // twelve hex characters, like a git short hash, are unique across the whole cohort
 const SHORT_HASH = 12;
@@ -38,7 +40,7 @@ export function caseName(targetAcc, antibiotic) {
     return "";
   }
 
-  return [targetAcc, antibiotic].filter(Boolean).join(" · ");
+  return [targetAcc, drugLabel(antibiotic)].filter(Boolean).join(" · ");
 }
 
 
@@ -61,13 +63,39 @@ export function routeHash(view, id = null) {
 }
 
 
-// one line per run in the run picker, newest first, so the right one is easy to spot
+// one line per run in the run picker: the release it wrote, how it ran, the change and when, with the run id left to the tooltip
 export function runOptionLabel(run) {
   const when = run.started_at ? new Date(run.started_at) : null;
   const stamp =
     when && !Number.isNaN(when.getTime())
-      ? when.toISOString().slice(0, 16).replace("T", " ")
+      ? when.toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
       : "not started";
+  const mode = String(run.mode ?? "").toLowerCase();
+  const status = run.status && run.status !== "COMPLETE" ? ` · ${String(run.status).toLowerCase()}` : "";
 
-  return `${run.change_id} · ${run.mode} · ${run.status} · ${run.release_id ?? "no release"} · ${stamp}`;
+  const label = mode ? `${mode.charAt(0).toUpperCase()}${mode.slice(1)}` : "Run";
+
+  return `${label} · ${run.change_id}${status} · ${stamp}`;
+}
+
+
+// runs are listed under the release they belong to, so the release is not repeated on every line
+export function runGroupLabel(run) {
+  return run.release_id ? `Release ${run.release_id}` : "No release";
+}
+
+
+// a stored timestamp shown as a plain date and time in the viewer's own time zone
+export function formatWhen(value) {
+  const when = value ? new Date(value) : null;
+  if (!when || Number.isNaN(when.getTime())) return "";
+
+  return when.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+
+// a stored role code such as ADMIN reads as a plain word
+export function roleLabel(role) {
+  const text = String(role ?? "").toLowerCase();
+  return `${text.charAt(0).toUpperCase()}${text.slice(1)}`;
 }

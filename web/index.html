@@ -12,57 +12,58 @@
   <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="brand-mark" aria-hidden="true">A</div>
-        <div>
-          <h1>AMRTrace Studio</h1>
-          <p>Research workbench</p>
-        </div>
+        <img class="brand-logo" src="/logo_dark.png" alt="AMRTrace Studio. Track, re-evaluate, verify.">
+        <img class="brand-mark-only" src="/logo_mark_dark.png" alt="AMRTrace Studio">
+        <button class="sidebar-toggle sidebar-expand" type="button" aria-expanded="true" aria-label="Collapse sidebar"><span class="toggle-bars" aria-hidden="true"></span></button>
       </div>
 
       <nav class="nav-stack" aria-label="Primary">
         <div class="nav-group">
           <div class="nav-group-label">Overview</div>
           <button class="nav-button" type="button" data-nav="dashboard">
-            <span class="nav-icon" aria-hidden="true">⬡</span>Dashboard
+            <span class="nav-icon" aria-hidden="true">⬡</span><span class="nav-label">Dashboard</span>
           </button>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">Data</div>
           <button class="nav-button" type="button" data-nav="explorer">
-            <span class="nav-icon" aria-hidden="true">⊞</span>Case Explorer
+            <span class="nav-icon" aria-hidden="true">⊞</span><span class="nav-label">Case explorer</span>
           </button>
           <button class="nav-button" type="button" data-nav="dossier">
-            <span class="nav-icon" aria-hidden="true">◧</span>Case Dossier
+            <span class="nav-icon" aria-hidden="true">◧</span><span class="nav-label">Case dossier</span>
           </button>
           <button class="nav-button" type="button" data-nav="dependencies">
-            <span class="nav-icon" aria-hidden="true">◈</span>Dependency View
+            <span class="nav-icon" aria-hidden="true">◈</span><span class="nav-label">Dependency view</span>
           </button>
         </div>
 
         <div class="nav-group">
           <div class="nav-group-label">Workflow</div>
           <button class="nav-button" type="button" data-nav="changes">
-            <span class="nav-icon" aria-hidden="true">⊛</span>Change Events
+            <span class="nav-icon" aria-hidden="true">⊛</span><span class="nav-label">Change events</span>
           </button>
           <button class="nav-button" type="button" data-nav="review-queue">
-            <span class="nav-icon" aria-hidden="true">✓</span>Review Queue
+            <span class="nav-icon" aria-hidden="true">✓</span><span class="nav-label">Review queue</span>
           </button>
           <button class="nav-button" type="button" data-nav="runs">
-            <span class="nav-icon" aria-hidden="true">↺</span>Runs &amp; Equivalence
+            <span class="nav-icon" aria-hidden="true">↺</span><span class="nav-label">Runs &amp; equivalence</span>
           </button>
         </div>
         <div class="nav-group">
           <div class="nav-group-label">Tools</div>
           <button class="nav-button" type="button" data-nav="exports">
-            <span class="nav-icon" aria-hidden="true">↓</span>Exports
+            <span class="nav-icon" aria-hidden="true">↓</span><span class="nav-label">Exports</span>
           </button>
         </div>
       </nav>
 
       <div class="nav-group" id="admin-nav" hidden>
         <div class="nav-group-label">Administration</div>
-        <button class="nav-button" type="button" data-nav="admin">User accounts</button>
+        <button class="nav-button" type="button" data-nav="admin"><span class="nav-icon" aria-hidden="true">&#9881;</span><span class="nav-label">User accounts</span></button>
+      </div>
+      <div class="sidebar-collapse-row">
+        <button class="sidebar-toggle" type="button" aria-expanded="true" aria-label="Collapse sidebar"><span class="toggle-chevron" aria-hidden="true"></span></button>
       </div>
       <div class="sidebar-foot">FYP F26-118 · research prototype</div>
     </aside>
@@ -80,36 +81,9 @@
           <button type="button" class="button" id="auth-show-login">Sign in</button>
           <button type="button" class="button" id="auth-signout" hidden>Sign out</button>
         </div>
-
-        <form id="topbar-search" class="topbar-search" role="search">
-          <input
-            id="topbar-case"
-            name="case_id"
-            autocomplete="off"
-            list="case-suggestions"
-            aria-label="Find a case"
-            placeholder="Find a case: short ID, or accession and drug"
-          >
-          <button class="button" type="submit">Open</button>
-        </form>
       </header>
 
-      <section id="auth-login-panel" class="card auth-panel" hidden>
-        <h2>Sign in</h2>
-        <p class="muted">Accounts are provisioned by an administrator. There is no public sign-up.</p>
-        <form id="auth-login-form" class="auth-login-form">
-          <label for="auth-username">Username</label>
-          <input id="auth-username" autocomplete="username" required>
-          <label for="auth-password">Password</label>
-          <input id="auth-password" type="password" autocomplete="current-password" required>
-          <button type="submit" class="button button-primary" id="auth-login-submit">Sign in</button>
-          <button type="button" class="button" id="auth-cancel-login">Cancel</button>
-        </form>
-        <div id="auth-status" role="status" class="status" aria-live="polite" hidden></div>
-      </section>
-
       <main class="main">
-        <div id="topbar-status" class="status" aria-live="polite" hidden></div>
 
         <!-- dashboard: the numbers behind the latest published release -->
         <section class="page" data-view="dashboard">
@@ -174,7 +148,7 @@
         <section class="page" data-view="explorer" hidden>
           <header class="page-header">
             <div>
-              <h2>Case Explorer</h2>
+              <h2>Case explorer</h2>
               <p class="muted">Every isolate-antibiotic case and its current published state.</p>
             </div>
           </header>
@@ -183,29 +157,55 @@
             <form id="explorer-form" class="filter-bar">
               <div class="field field-grow">
                 <label for="explorer-q">Search</label>
-                <input id="explorer-q" name="q" autocomplete="off" placeholder="Case ID start or accession">
+                <input id="explorer-q" name="q" autocomplete="off" placeholder="Search by accession or case ID">
               </div>
 
-              <div class="field">
-                <label for="explorer-drug">Antibiotic</label>
-                <select id="explorer-drug" name="drug">
-                  <option value="">All antibiotics</option>
-                </select>
-              </div>
+              <button id="explorer-filters-toggle" class="filter-toggle" type="button" aria-expanded="false" aria-controls="explorer-filter-panel">Filters <span id="explorer-filter-count" class="filter-count" hidden>0</span><span class="filter-caret" aria-hidden="true">&#9662;</span></button>
+              <button id="explorer-clear" class="filter-clear" type="button" hidden>Clear filters</button>
 
-              <div class="field">
-                <label for="explorer-state">Current state</label>
-                <select id="explorer-state" name="state">
-                  <option value="">All states</option>
-                  <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
-                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
-                  <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
-                  <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
-                  <option value="UNRESOLVED">Unresolved</option>
-                </select>
-              </div>
+              <div id="explorer-filter-panel" class="filter-panel" hidden>
+                <div class="field">
+                  <label for="explorer-drug">Antibiotic</label>
+                  <select id="explorer-drug" name="drug">
+                    <option value="">All antibiotics</option>
+                  </select>
+                </div>
 
-              <button class="button button-primary" type="submit">Apply</button>
+                <div class="field">
+                  <label for="explorer-state">Current state</label>
+                  <select id="explorer-state" name="state">
+                    <option value="">All states</option>
+                    <option value="CONCORDANT_RESISTANT">Concordant resistant</option>
+                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant susceptible</option>
+                    <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
+                    <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
+                    <option value="UNRESOLVED">Unresolved</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="explorer-release">Release</label>
+                  <select id="explorer-release" name="release">
+                    <option value="">All releases</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="explorer-review">Review status</label>
+                  <select id="explorer-review" name="review_status">
+                    <option value="">All statuses</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="explorer-labels">Labels changed</label>
+                  <select id="explorer-labels" name="labels_changed">
+                    <option value="">Any</option>
+                    <option value="changed">Changed (1 or more)</option>
+                    <option value="unchanged">Not changed</option>
+                  </select>
+                </div>
+              </div>
             </form>
 
             <div id="explorer-status" class="status" aria-live="polite" hidden></div>
@@ -218,10 +218,10 @@
         <section class="page" data-view="review-queue" hidden>
           <header class="page-header">
             <div>
-              <h2>Review Queue</h2>
+              <h2>Review queue</h2>
               <p class="muted">Interpretation labels awaiting a reviewer. Reviews are appended, never applied over a stored case state.</p>
             </div>
-            <a class="button" href="#/explorer">Open Case Explorer</a>
+            <a class="button" href="#/explorer">Open Case explorer</a>
           </header>
           <section class="card card-flush">
             <form id="review-queue-filters" class="filter-bar">
@@ -235,11 +235,21 @@
                 <label for="review-queue-state">Current state</label>
                 <select id="review-queue-state" name="state">
                   <option value="">All states</option>
-                  <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
-                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                  <option value="CONCORDANT_RESISTANT">Concordant resistant</option>
+                  <option value="CONCORDANT_SUSCEPTIBLE">Concordant susceptible</option>
                   <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
                   <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
                   <option value="UNRESOLVED">Unresolved</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="review-queue-tier">Priority</label>
+                <select id="review-queue-tier" name="tier">
+                  <option value="">All priorities</option>
+                  <option value="NEWLY_DISCORDANT">1 · Newly discordant</option>
+                  <option value="STATE_CHANGED">2 · State changed</option>
+                  <option value="LABEL_CHANGED">3 · Label changed</option>
+                  <option value="RE_VERIFIED">4 · Re-verified</option>
                 </select>
               </div>
               <div class="field">
@@ -249,8 +259,6 @@
                   <option value="triage">Priority (triage)</option>
                 </select>
               </div>
-              <button class="button button-primary" type="submit">Apply filters</button>
-              <button id="review-queue-refresh" class="button" type="button">Refresh</button>
             </form>
             <div id="review-queue-status" class="status" aria-live="polite" hidden></div>
             <div id="review-queue-failed-audits"></div>
@@ -288,8 +296,8 @@
                   <label for="review-queue-corrected-state">Corrected state</label>
                   <select id="review-queue-corrected-state" name="corrected_state_code" disabled>
                     <option value="">Choose corrected state</option>
-                    <option value="CONCORDANT_RESISTANT">Concordant Resistant</option>
-                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant Susceptible</option>
+                    <option value="CONCORDANT_RESISTANT">Concordant resistant</option>
+                    <option value="CONCORDANT_SUSCEPTIBLE">Concordant susceptible</option>
                     <option value="DISCORDANT_GENOTYPE_POSITIVE_PHENOTYPE_S">Discordant: Gene+/Pheno-S</option>
                     <option value="DISCORDANT_PHENOTYPE_R_NO_MAPPED_GENOTYPE">Discordant: Pheno-R/No Gene</option>
                     <option value="UNRESOLVED">Unresolved</option>
@@ -311,10 +319,12 @@
           <header class="page-header">
             <div>
               <div class="breadcrumb">
-                <a href="#/explorer">← Case Explorer</a>
+                <a href="#/explorer">← Case explorer</a>
                 <span class="muted">/</span>
-                <span>Case Dossier</span>
+                <span>Case dossier</span>
               </div>
+              <h2>Case dossier</h2>
+              <p class="muted">Current published state, history, review and dependencies for one case.</p>
             </div>
 
             <form id="dossier-form" class="inline-form">
@@ -336,15 +346,28 @@
 
           <div id="dossier-status" class="status" aria-live="polite" hidden></div>
 
+          <div class="tab-bar">
+            <div class="tab-list" id="dossier-tabs" role="tablist" aria-label="Case dossier sections">
+              <button class="tab-button" type="button" role="tab" id="dossier-tab-overview" data-dossier-tab="overview" aria-controls="dossier-panel-overview" aria-selected="true">Overview</button>
+              <button class="tab-button" type="button" role="tab" id="dossier-tab-history" data-dossier-tab="history" aria-controls="dossier-panel-history" aria-selected="false">History</button>
+              <button class="tab-button" type="button" role="tab" id="dossier-tab-compare" data-dossier-tab="compare" aria-controls="dossier-panel-compare" aria-selected="false">Compare</button>
+              <button class="tab-button" type="button" role="tab" id="dossier-tab-review" data-dossier-tab="review" aria-controls="dossier-panel-review" aria-selected="false">Review</button>
+              <button class="tab-button" type="button" role="tab" id="dossier-tab-copilot" data-dossier-tab="copilot" aria-controls="dossier-panel-copilot" aria-selected="false">Summary</button>
+            </div>
+            <a class="button tab-bar-action" id="dossier-view-dependencies" href="#/dependencies" hidden>◈ View dependencies</a>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-overview" aria-labelledby="dossier-tab-overview" data-dossier-panel="overview">
           <div id="dossier-overview">
             <div class="empty-state">
-              Open a case from the Case Explorer, or type one above, to see its current published state,
+              Open a case from the Case explorer, or type one above, to see its current published state,
               evidence and version vector.
             </div>
           </div>
+          </div>
 
-          <div class="dossier-grid stack">
-            <section class="card">
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-history" aria-labelledby="dossier-tab-history" data-dossier-panel="history" hidden>
+          <section class="card">
               <div class="section-heading compact">
                 <h3>State history</h3>
               </div>
@@ -353,8 +376,45 @@
               </p>
               <div id="dossier-history"></div>
             </section>
+          </div>
 
-            <section class="card">
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-compare" aria-labelledby="dossier-tab-compare" data-dossier-panel="compare" hidden>
+          <section class="card">
+            <div class="section-heading compact">
+              <h3>Compare releases</h3>
+            </div>
+
+            <form id="dossier-diff-form" class="comparison-form">
+              <div class="field">
+                <label for="dossier-before-release">Before release</label>
+                <input
+                  id="dossier-before-release"
+                  name="before_release"
+                  autocomplete="off"
+                  placeholder="Default: previous published state"
+                >
+              </div>
+
+              <div class="field">
+                <label for="dossier-after-release">After release</label>
+                <input
+                  id="dossier-after-release"
+                  name="after_release"
+                  autocomplete="off"
+                  placeholder="Default: current published state"
+                >
+              </div>
+
+              <button class="button" type="submit">Compare releases</button>
+            </form>
+
+            <div id="dossier-diff-status" class="status" aria-live="polite" hidden></div>
+          </section>
+          <div id="dossier-diff"></div>
+          </div>
+
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-review" aria-labelledby="dossier-tab-review" data-dossier-panel="review" hidden>
+          <section class="card">
               <div class="section-heading compact">
                 <h3>Review actions</h3>
               </div>
@@ -414,43 +474,11 @@
             </section>
           </div>
 
-          <section class="card">
-            <div class="section-heading compact">
-              <h3>Before / after</h3>
-            </div>
-
-            <form id="dossier-diff-form" class="comparison-form">
-              <div class="field">
-                <label for="dossier-before-release">Before release</label>
-                <input
-                  id="dossier-before-release"
-                  name="before_release"
-                  autocomplete="off"
-                  placeholder="Default: previous published state"
-                >
-              </div>
-
-              <div class="field">
-                <label for="dossier-after-release">After release</label>
-                <input
-                  id="dossier-after-release"
-                  name="after_release"
-                  autocomplete="off"
-                  placeholder="Default: current published state"
-                >
-              </div>
-
-              <button class="button" type="submit">Compare releases</button>
-            </form>
-
-            <div id="dossier-diff-status" class="status" aria-live="polite" hidden></div>
-            <div id="dossier-diff"></div>
-          </section>
-
+          <div class="tab-panel" role="tabpanel" id="dossier-panel-copilot" aria-labelledby="dossier-tab-copilot" data-dossier-panel="copilot" hidden>
           <section class="card copilot-card" aria-labelledby="dossier-copilot-title">
             <div class="copilot-head">
               <span class="copilot-mark" aria-hidden="true">✦</span>
-              <h3 id="dossier-copilot-title">Review Copilot</h3>
+              <h3 id="dossier-copilot-title">Summary</h3>
               <span id="dossier-copilot-tag" class="ai-tag">AI generated</span>
               <div class="copilot-head-actions">
                 <button id="dossier-copilot-pin" class="button" type="button"
@@ -459,13 +487,17 @@
             </div>
 
             <div id="dossier-copilot-status" class="status" aria-live="polite" hidden></div>
-            <p id="dossier-copilot-headline" class="copilot-headline"></p>
-            <p id="dossier-copilot-story" class="copilot-story"></p>
-            <div id="dossier-copilot-checks" class="copilot-checks" hidden>
-              <strong>Worth a look before you review</strong>
-              <ul id="dossier-copilot-check-list"></ul>
+            <div id="dossier-copilot-body" class="copilot-body">
+              <div class="copilot-main">
+                <p id="dossier-copilot-headline" class="copilot-headline"></p>
+                <p id="dossier-copilot-story" class="copilot-story"></p>
+                <div id="dossier-copilot-followups" class="copilot-followups" aria-label="Follow-up questions"></div>
+              </div>
+              <div id="dossier-copilot-checks" class="copilot-checks" hidden>
+                <strong>Worth a look before you review</strong>
+                <ul id="dossier-copilot-check-list"></ul>
+              </div>
             </div>
-            <div id="dossier-copilot-followups" class="copilot-followups" aria-label="Follow-up questions"></div>
             <button id="dossier-copilot-toggle" class="copilot-expander" type="button" aria-expanded="false"
                     aria-controls="dossier-copilot">Show the full trace</button>
             <div id="dossier-copilot" class="copilot-trace" hidden></div>
@@ -475,29 +507,15 @@
             </div>
 
           </section>
-
-          <section class="card" data-record-kind="dependency">
-            <div class="section-heading compact">
-              <h3>Dependency path</h3>
-            </div>
-
-            <div id="dossier-dependency-summary"></div>
-
-            <div class="graph-layout">
-              <div id="dossier-graph" class="graph-canvas"></div>
-              <aside class="graph-side">
-                <div class="graph-legend" data-graph-legend></div>
-                <div id="dossier-node-inspector" class="node-inspector" aria-live="polite"></div>
-              </aside>
-            </div>
-          </section>
+          </div>
         </section>
 
         <!-- dependency view -->
+
         <section class="page" data-view="dependencies" hidden>
           <header class="page-header">
             <div>
-              <h2>Dependency View</h2>
+              <h2>Dependency view</h2>
               <p class="muted">The stored dependency subgraph behind a case's current published state.</p>
             </div>
 
@@ -546,7 +564,7 @@
         <section class="page" data-view="changes" hidden>
           <header class="page-header">
             <div>
-              <h2>Change Events</h2>
+              <h2>Change events</h2>
               <p class="muted">Typed changes to the evidence base and the impact set stored for each.</p>
             </div>
 
@@ -652,7 +670,7 @@
         <section class="page" data-view="runs" hidden>
           <header class="page-header">
             <div>
-              <h2>Runs &amp; Equivalence</h2>
+              <h2>Runs &amp; equivalence</h2>
               <p class="muted">
                 Re-evaluate a change's stored impact set and publish it as selectively verified, or (Admin only)
                 compare it with an exhaustive run first and see the release gate decision.
@@ -693,15 +711,18 @@
                     <span>Publish when the selective run completes (marked selectively verified)</span>
                   </label>
 
-                  <label class="check-row">
-                    <input id="run-exhaustive" type="checkbox">
-                    <span>Admin: run the optional exhaustive comparator after the selective run</span>
-                  </label>
+                  <details class="more-options">
+                    <summary>Admin options</summary>
+                    <label class="check-row">
+                      <input id="run-exhaustive" type="checkbox">
+                      <span>Admin: run the optional exhaustive comparator after the selective run</span>
+                    </label>
 
-                  <label class="check-row">
-                    <input id="run-gate" type="checkbox">
-                    <span>Admin: apply the PASS/BLOCKED release gate (publishes as exhaustively verified)</span>
-                  </label>
+                    <label class="check-row">
+                      <input id="run-gate" type="checkbox">
+                      <span>Admin: apply the PASS/BLOCKED release gate (publishes as exhaustively verified)</span>
+                    </label>
+                  </details>
                 </div>
 
                 <div class="form-actions">
@@ -867,7 +888,7 @@
         </section>
         <section class="page" data-view="admin" hidden>
           <header class="page-header"><div>
-            <h2>Admin — User Accounts</h2>
+            <h2>User accounts</h2>
             <p class="muted">Read-only account directory. Create/disable accounts using the privileged administrator script.</p>
           </div></header>
           <section class="card"><div class="table-wrap" id="admin-users">Admin sign-in required.</div></section>
@@ -899,12 +920,42 @@
   </div>
 
 
+  <!-- sign-in is a page of its own, shown on #/login without the sidebar or the top bar -->
+  <div id="login-page" class="login-page" hidden>
+    <section class="login-brand">
+      <svg class="login-nodes" focusable="false" viewBox="0 0 640 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><line x1="80" y1="120" x2="210" y2="70" stroke="#244a70" stroke-width="2"/><line x1="210" y1="70" x2="330" y2="170" stroke="#244a70" stroke-width="2"/><line x1="330" y1="170" x2="470" y2="100" stroke="#244a70" stroke-width="2"/><line x1="470" y1="100" x2="560" y2="250" stroke="#244a70" stroke-width="2"/><line x1="330" y1="170" x2="410" y2="330" stroke="#244a70" stroke-width="2"/><line x1="410" y1="330" x2="560" y2="250" stroke="#244a70" stroke-width="2"/><line x1="330" y1="170" x2="250" y2="290" stroke="#244a70" stroke-width="2"/><line x1="250" y1="290" x2="110" y2="380" stroke="#244a70" stroke-width="2"/><line x1="250" y1="290" x2="300" y2="470" stroke="#244a70" stroke-width="2"/><line x1="410" y1="330" x2="300" y2="470" stroke="#244a70" stroke-width="2"/><line x1="300" y1="470" x2="490" y2="480" stroke="#244a70" stroke-width="2"/><line x1="410" y1="330" x2="490" y2="480" stroke="#244a70" stroke-width="2"/><line x1="300" y1="470" x2="150" y2="580" stroke="#244a70" stroke-width="2"/><line x1="300" y1="470" x2="370" y2="620" stroke="#244a70" stroke-width="2"/><line x1="370" y1="620" x2="540" y2="690" stroke="#244a70" stroke-width="2"/><line x1="490" y1="480" x2="540" y2="690" stroke="#244a70" stroke-width="2"/><line x1="150" y1="580" x2="230" y2="740" stroke="#244a70" stroke-width="2"/><line x1="370" y1="620" x2="230" y2="740" stroke="#244a70" stroke-width="2"/><circle cx="80" cy="120" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="80" cy="120" r="9" fill="#2d5b86"/><circle cx="210" cy="70" r="5" fill="#2d5b86"/><circle cx="330" cy="170" r="5" fill="#2d5b86"/><circle cx="470" cy="100" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="470" cy="100" r="9" fill="#2d5b86"/><circle cx="560" cy="250" r="5" fill="#2d5b86"/><circle cx="410" cy="330" r="5" fill="#2d5b86"/><circle cx="250" cy="290" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="250" cy="290" r="9" fill="#2d5b86"/><circle cx="110" cy="380" r="5" fill="#2d5b86"/><circle cx="300" cy="470" r="5" fill="#2d5b86"/><circle cx="490" cy="480" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="490" cy="480" r="9" fill="#2d5b86"/><circle cx="150" cy="580" r="5" fill="#2d5b86"/><circle cx="370" cy="620" r="5" fill="#2d5b86"/><circle cx="540" cy="690" r="15" fill="none" stroke="#2d5b86" stroke-width="2"/><circle cx="540" cy="690" r="9" fill="#2d5b86"/><circle cx="230" cy="740" r="5" fill="#2d5b86"/></svg>
+      <div class="login-glass">
+        <img class="login-logo" src="/logo_dark.png" alt="AMRTrace Studio">
+        <h2>Track, re-evaluate, verify.</h2>
+        <p>Follow how antimicrobial resistance interpretations change from one release to the next.</p>
+      </div>
+    </section>
+    <section class="login-side">
+      <svg class="login-nodes" focusable="false" viewBox="0 0 640 720" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><line x1="470" y1="70" x2="590" y2="150" stroke="#b9d3db" stroke-width="2"/><line x1="590" y1="150" x2="560" y2="260" stroke="#b9d3db" stroke-width="2"/><line x1="70" y1="560" x2="150" y2="650" stroke="#b9d3db" stroke-width="2"/><line x1="150" y1="650" x2="260" y2="620" stroke="#b9d3db" stroke-width="2"/><circle cx="470" cy="70" r="15" fill="none" stroke="#9cc3cf" stroke-width="2"/><circle cx="470" cy="70" r="9" fill="#9cc3cf"/><circle cx="590" cy="150" r="5" fill="#9cc3cf"/><circle cx="560" cy="260" r="5" fill="#9cc3cf"/><circle cx="70" cy="560" r="5" fill="#9cc3cf"/><circle cx="150" cy="650" r="15" fill="none" stroke="#9cc3cf" stroke-width="2"/><circle cx="150" cy="650" r="9" fill="#9cc3cf"/><circle cx="260" cy="620" r="5" fill="#9cc3cf"/></svg>
+      <div class="login-card" aria-labelledby="login-title">
+        <h1 id="login-title">Welcome back</h1>
+        <p class="muted">Accounts are created by an administrator.</p>
+        <form id="auth-login-form" class="auth-login-form">
+          <label for="auth-username">Username</label>
+          <input id="auth-username" autocomplete="username" required>
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" autocomplete="current-password" required>
+          <button type="submit" class="button button-primary" id="auth-login-submit">Sign in</button>
+        </form>
+        <div id="auth-status" role="status" class="status" aria-live="polite" hidden></div>
+        <a class="login-skip" href="#/dashboard">Continue as a read-only visitor</a>
+      </div>
+    </section>
+  </div>
+
   <!-- Ask AMRTrace (I-32): a launcher on every page and one panel that floats or docks beside the page -->
   <button id="assistant-launcher" class="assistant-launcher" type="button" aria-label="Open Ask AMRTrace"
           aria-controls="assistant" aria-expanded="false" title="Ask AMRTrace about this page">✦</button>
 
   <datalist id="case-suggestions"></datalist>
   <script type="module" src="/app.mjs"></script>
+  <script type="module" src="/dossier_tabs.mjs"></script>
+  <script type="module" src="/sidebar.mjs"></script>
   <script type="module" src="/auth_ui.mjs"></script>
     <div id="cite-popover" class="cite-popover" role="dialog" aria-label="Cited record" hidden></div>
 </body>

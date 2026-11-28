@@ -314,11 +314,18 @@ function visible(element) {
   return element && element.offsetParent !== null;
 }
 
+// a cited row can sit inside a folded section, so the folds around it are opened first
+function openFolds(element) {
+  for (let fold = element.closest("details"); fold; fold = fold.parentElement?.closest("details")) fold.open = true;
+}
+
 function reveal(row) {
-  const exact = [...document.querySelectorAll("[data-record]")].find((el) => el.dataset.record === row.id && visible(el));
+  const records = [...document.querySelectorAll("[data-record]")].filter((el) => el.dataset.record === row.id);
+  records.forEach(openFolds);
+  const exact = records.find(visible);
   const kind = KIND_PLACES[row.recordKind] ?? row.recordKind;
-  const place = exact ?? [...document.querySelectorAll("[data-record-kind]")]
-    .find((el) => el.dataset.recordKind === kind && visible(el));
+  const kindPlaces = [...document.querySelectorAll("[data-record-kind]")].filter((el) => el.dataset.recordKind === kind);
+  const place = exact ?? kindPlaces.find((el) => visible(el) || (openFolds(el), visible(el)));
   if (!place) return;
   place.scrollIntoView({ behavior: "smooth", block: "center" });
   place.classList.remove("record-flash");

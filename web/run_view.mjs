@@ -100,6 +100,63 @@ export function mismatchValue(value) {
 }
 
 
+const plain = (text) => String(text ?? "").replace(/_/g, " ");
+const sentence = (text) => {
+  const spaced = plain(text);
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
+
+// one stored dependency record read as a short line, with the technical detail kept as a quieter note
+export function edgeText(record) {
+  if (!Array.isArray(record)) {
+    return { main: mismatchValue(record), note: "" };
+  }
+
+  const [dependency, , nodeType, nodeId, version, context] = record;
+  const contextText =
+    context && typeof context === "object"
+      ? Object.entries(context).map(([key, value]) => `${key} ${value}`).join(", ")
+      : "";
+
+  return {
+    main: `${sentence(nodeType)}: ${String(nodeId ?? "").split("|").join(" · ")}`,
+    note: [sentence(dependency), version, contextText].filter(Boolean).join(" · "),
+  };
+}
+
+
+// the one line shown for a closed mismatch example, so nobody has to open it to know what differs
+export function mismatchGist(axis, selective, exhaustive) {
+  if (selective === null || selective === undefined) return "Missing from the selective run";
+  if (exhaustive === null || exhaustive === undefined) return "Missing from the exhaustive run";
+
+  if (axis === "state" && Array.isArray(selective) && Array.isArray(exhaustive)) {
+    const parts = ["State", "Phenotype", "Genotype"]
+      .map((label, index) =>
+        selective[index] === exhaustive[index] ? null : `${label} ${plain(selective[index])} → ${plain(exhaustive[index])}`)
+      .filter(Boolean);
+    return parts.join(" · ") || "State differs";
+  }
+
+  if (axis === "uncertainty") {
+    return `${selective ?? "none"} → ${exhaustive ?? "none"}`;
+  }
+
+  if (axis === "dependency") {
+    const parts = [];
+    const own = (selective.only_here ?? []).length;
+    const other = (exhaustive.only_here ?? []).length;
+    if (own) parts.push(`${own}${own >= 5 ? "+" : ""} only in selective`);
+    if (other) parts.push(`${other}${other >= 5 ? "+" : ""} only in exhaustive`);
+    if (selective.explanation || exhaustive.explanation) parts.push("explanation differs");
+    return parts.join(" · ") || "Dependencies differ";
+  }
+
+  return "Values differ";
+}
+
+
 export function assertRunReportIdentity(run, report) {
   const matched = run?.run_id === report?.selective_run_id ||
     run?.run_id === report?.exhaustive_run_id;

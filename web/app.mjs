@@ -50,6 +50,7 @@ import {
   caseName,
   parseRoute,
   routeHash,
+  runGroupLabel,
   runOptionLabel,
   shortCaseId,
   shortId,
@@ -101,6 +102,8 @@ import {
   decisionLabel,
   formatPercent,
   gateLabel,
+  edgeText,
+  mismatchGist,
   mismatchValue,
   orderedAxes,
   assertRunReportIdentity,
@@ -122,6 +125,9 @@ import {
 } from "./interpretation.mjs";
 
 import { loadReleaseTransitionPanel } from "./release_transitions.mjs";
+import { renderInline, renderValue } from "./value_view.mjs";
+import { hoverTip, shortDrugName } from "./dashboard_tips.mjs";
+import { drugLabel } from "./drug_label.mjs";
 
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -170,15 +176,10 @@ function definitionList(values) {
       continue;
     }
 
-    list.append(
-      make("dt", { text: label }),
-      make("dd", {
-        text:
-          typeof value === "object" && value !== null
-            ? JSON.stringify(value)
-            : value ?? "—",
-      }),
-    );
+    // stored JSON is opened into readable fields, chips and short ids
+    const cell = make("dd");
+    cell.append(renderValue(value));
+    list.append(make("dt", { text: label }), cell);
   }
 
   return list;
@@ -269,6 +270,39 @@ function caseLink(caseId) {
 }
 
 
+// the graph link shows when the row is hovered or focused
+function explorerGraphLink(caseId) {
+  return make("a", {
+    className: "row-action",
+    text: "Graph",
+    attributes: {
+      href: routeHash("dependencies", caseId),
+      title: "Open dependency graph",
+    },
+  });
+}
+
+
+// the explorer's case cell: the drug as the readable name, the accession quietly underneath
+function explorerCase(row) {
+  const cell = make("span", { className: "case-two" });
+
+  cell.append(
+    make("a", {
+      className: "case-drug-main",
+      text: drugLabel(row.antibiotic) ?? "—",
+      attributes: {
+        href: routeHash("dossier", row.case_id),
+        title: `${row.case_id} (open dossier)`,
+      },
+    }),
+    make("span", { className: "case-ref", text: row.target_acc ?? "" }),
+  );
+
+  return cell;
+}
+
+
 // a link to another page for ids that are already short, such as change and run ids
 function pageLink(view, id) {
   if (!id) {
@@ -286,25 +320,46 @@ function pageLink(view, id) {
 
 
 // copies the full id so it can still be pasted elsewhere when needed
+// two small drawings for the copy button: a pair of sheets, and a tick once the id is on the clipboard
+function copyIcon(done) {
+  const svg = svgElement("svg", { viewBox: "0 0 16 16", width: "14", height: "14", "aria-hidden": "true" });
+  svg.classList.add("copy-icon");
+  if (done) {
+    svg.append(svgElement("path", { d: "M3 8.5l3.2 3L13 4.5", fill: "none", stroke: "currentColor", "stroke-width": "1.8", "stroke-linecap": "round", "stroke-linejoin": "round" }));
+  } else {
+    svg.append(
+      svgElement("rect", { x: "5.5", y: "5.5", width: "8", height: "8", rx: "1.5", fill: "none", stroke: "currentColor", "stroke-width": "1.5" }),
+      svgElement("path", { d: "M10.5 3.5v-.5a1.5 1.5 0 0 0-1.5-1.5H3.5A1.5 1.5 0 0 0 2 3v5.5A1.5 1.5 0 0 0 3.5 10H4", fill: "none", stroke: "currentColor", "stroke-width": "1.5", "stroke-linecap": "round" }),
+    );
+  }
+  return svg;
+}
+
+// an icon-only button that copies the full id; the tooltip and the label say what it does
 function copyButton(value) {
   const button = make("button", {
-    className: "copy-button",
-    text: "Copy full ID",
+    className: "copy-button icon-only",
     attributes: {
       type: "button",
-      title: value,
+      title: "Copy full case ID",
+      "aria-label": "Copy full case ID",
     },
   });
+  button.append(copyIcon(false));
 
   button.addEventListener("click", async () => {
+    let copied = false;
     try {
       await navigator.clipboard.writeText(value);
-      button.textContent = "Copied";
+      copied = true;
     } catch {
-      button.textContent = "Copy failed";
+      copied = false;
     }
+    button.replaceChildren(copyIcon(copied));
+    button.title = copied ? "Copied" : "Copy failed";
     window.setTimeout(() => {
-      button.textContent = "Copy full ID";
+      button.replaceChildren(copyIcon(false));
+      button.title = "Copy full case ID";
     }, 1500);
   });
 
@@ -382,90 +437,157 @@ function renderChangeRows(changes) {
 }
 
 
-function renderChangedEntities(entities) {
-  const wrapper = make("div", {
-    className: "entity-list",
-  });
+// long lists start with a short batch and grow on request, inside a box that scrolls on its own
+const LIST_STEP = 25;
 
-  if (!entities.length) {
-    wrapper.append(
-      make("p", {
-        className: "muted",
-        text: "No changed entities were stored.",
-      }),
-    );
-    return wrapper;
-  }
+function pagedBlock(items, render, word) {
+  if (!items.length) return render([]);
 
-  for (const entity of entities) {
-    const item = make("article", {
-      className: "entity-card",
+  const wrap = make("div");
+  const box = make("div", { className: "scroll-limited" });
+  const footer = make("div", { className: "list-footer" });
+  let shown = Math.min(LIST_STEP, items.length);
+
+  const draw = (refocus = false) => {
+    const top = box.scrollTop;
+    box.replaceChildren(render(items.slice(0, shown)));
+    box.scrollTop = top;
+
+    clear(footer);
+    footer.hidden = items.length <= LIST_STEP;
+    footer.append(make("span", { className: "muted", text: `Showing ${formatCount(shown)} of ${formatCount(items.length)} ${word}` }));
+    if (shown >= items.length) return;
+
+    const left = items.length - shown;
+    const more = make("button", { className: "button", text: `Show ${formatCount(Math.min(LIST_STEP, left))} more`, attributes: { type: "button" } });
+    more.addEventListener("click", () => {
+      shown = Math.min(shown + LIST_STEP, items.length);
+      draw(true);
     });
+    footer.append(more);
 
-    item.append(
-      make("strong", {
-        text: `${entity.node_type} / ${entity.node_id}`,
-      }),
-      make("span", {
-        text:
-          `${entity.old_version ?? "∅"} → ` +
-          `${entity.new_version ?? "∅"}`,
-      }),
-    );
-
-    if (entity.changed_region) {
-      item.append(
-        make("code", {
-          text: JSON.stringify(entity.changed_region),
-        }),
-      );
+    if (left > LIST_STEP) {
+      const all = make("button", { className: "button", text: "Show all", attributes: { type: "button" } });
+      all.addEventListener("click", () => {
+        shown = items.length;
+        draw();
+      });
+      footer.append(all);
     }
 
-    wrapper.append(item);
-  }
+    if (refocus) more.focus();
+  };
 
-  return wrapper;
+  draw();
+  wrap.append(box, footer);
+  return wrap;
 }
 
 
-// the stored impact set; long sets show their first rows, since every case is also one click away in its dossier
-const IMPACT_ROWS_SHOWN = 50;
+// small label-over-value pairs that sit side by side and wrap on narrow screens
+function factGrid(values) {
+  const grid = make("div", { className: "fact-grid" });
 
-function renderImpact(impact) {
-  const wrapper = make("div");
-
-  wrapper.append(
-    definitionList({
-      Release: impact.release_id,
-      "Level 1 candidates": formatCount(impact.level1_size),
-      "Level 2 selected": formatCount(impact.level2_size),
-    }),
-  );
-
-  const shown = impact.items.slice(0, IMPACT_ROWS_SHOWN);
-
-  wrapper.append(
-    renderDataTable(
-      [
-        ["Case", (item) => caseLink(item.case_id)],
-        ["Mechanism", "mechanism"],
-        ["Reason", "reason"],
-      ],
-      shown,
-      "The stored impact set is empty.",
-    ),
-  );
-
-  if (impact.items.length > shown.length) {
-    wrapper.append(
-      make("p", {
-        className: "muted",
-        text: `Showing the first ${shown.length} of ${formatCount(impact.items.length)} selected cases.`,
-      }),
-    );
+  for (const [label, value] of Object.entries(values)) {
+    const fact = make("div", { className: "fact" });
+    const body = make("div", { className: "fact-value" });
+    const isNode = value instanceof Node;
+    body.append(isNode ? value : renderValue(value));
+    // a stored object opens into several fields, so it gets the whole row
+    if (value && typeof value === "object" && !isNode) fact.classList.add("fact-wide");
+    fact.append(make("span", { className: "fact-label", text: label }), body);
+    grid.append(fact);
   }
 
-  return wrapper;
+  return grid;
+}
+
+
+// a sentence that names long evidence ids is shown with each id cut short, and the full text on hover
+function shortenIds(text) {
+  const value = String(text ?? "");
+  const short = value.replace(/\b[A-Za-z0-9]+_[0-9a-f]{16,}\b/g, (id) => shortId(id));
+  return make("span", { text: short, attributes: short === value ? {} : { title: value } });
+}
+
+
+// a reason that joins many findings with semicolons shows the first one, and the rest wait in a folded list
+function renderReason(text) {
+  const value = String(text ?? "");
+  const parts = value.split("; ").filter(Boolean);
+  if (parts.length < 2) return shortenIds(value);
+
+  const wrap = make("div", { className: "reason" });
+  wrap.append(shortenIds(parts[0]));
+
+  const more = make("details", { className: "reason-more" });
+  more.append(make("summary", { text: `${formatCount(parts.length - 1)} more` }));
+  const list = make("ul");
+  for (const part of parts.slice(1)) {
+    const item = make("li");
+    item.append(shortenIds(part));
+    list.append(item);
+  }
+  more.append(list);
+  wrap.append(more);
+  return wrap;
+}
+
+
+// one row per changed entity: what kind, which one (short, full on hover) and how its version moved
+function renderChangedEntities(entities) {
+  return pagedBlock(
+    entities,
+    (batch) => {
+      if (!batch.length) {
+        return make("p", { className: "muted", text: "No changed entities were stored." });
+      }
+
+      return renderDataTable(
+        [
+          ["Kind", (entity) => make("span", { text: entity.node_type })],
+          [
+            "Entity",
+            (entity) => {
+              const cell = make("div", { className: "entity-name" });
+              cell.append(shortIdCell(entity.node_id));
+              if (entity.changed_region) cell.append(renderValue(entity.changed_region));
+              return cell;
+            },
+          ],
+          ["Version change", (entity) => make("span", { className: "muted", text: `${entity.old_version ?? "∅"} → ${entity.new_version ?? "∅"}` })],
+        ],
+        batch,
+        "No changed entities were stored.",
+      );
+    },
+    "entities",
+  );
+}
+
+
+// the stored impact set as a table that grows on request; every case is also one click away in its dossier
+function renderImpact(impact) {
+  return pagedBlock(
+    impact.items,
+    (batch) =>
+      renderDataTable(
+        [
+          ["Case", (item) => caseLink(item.case_id)],
+          ["Mechanism", "mechanism"],
+          ["Reason", (item) => renderReason(item.reason)],
+        ],
+        batch,
+        "The stored impact set is empty.",
+      ),
+    "cases",
+  );
+}
+
+
+// the one-line summary beside the impact heading
+function impactHint(impact) {
+  return `${impact.release_id} · ${formatCount(impact.level2_size)} of ${formatCount(impact.level1_size)} candidates selected`;
 }
 
 
@@ -512,30 +634,30 @@ async function loadChangeDetail(changeId) {
         .catch((error) => ({ impact: null, error })),
     ]);
 
-    const columns = make("div", { className: "grid-two" });
-    const left = make("div");
-    const right = make("div");
+    const facts = factGrid({
+      Type: event.type,
+      Initiator: event.initiator,
+      Created: humanDate(event.created_at),
+      From: make("code", { text: event.old_version ?? "∅" }),
+      To: make("code", { text: event.new_version ?? "∅" }),
+      Scope: event.declared_scope,
+    });
 
-    left.append(
-      make("h4", { text: "Event" }),
-      definitionList({
-        Type: event.type,
-        From: event.old_version,
-        To: event.new_version,
-        Initiator: event.initiator,
-        Created: humanDate(event.created_at),
-        Scope: event.declared_scope,
-      }),
-      make("h4", { text: `Changed entities (${event.changed_entities.length})` }),
-      renderChangedEntities(event.changed_entities),
+    const sections = make("div", { className: "card accordion" });
+    sections.append(
+      foldSection("Changed entities", `${formatCount(event.changed_entities.length)} ${event.changed_entities.length === 1 ? "entity" : "entities"}`, false, [
+        renderChangedEntities(event.changed_entities),
+      ]),
     );
 
-    right.append(make("h4", { text: "Stored impact" }));
-
     if (impactResult.impact) {
-      right.append(renderImpact(impactResult.impact));
+      sections.append(foldSection("Stored impact", impactHint(impactResult.impact), false, [renderImpact(impactResult.impact)]));
     } else if (impactResult.error instanceof ApiError && impactResult.error.errorCode === "impact_not_found") {
-      right.append(make("div", { className: "empty-state", text: "This event does not have a stored impact set." }));
+      sections.append(
+        foldSection("Stored impact", "none stored", false, [
+          make("div", { className: "empty-state", text: "This event does not have a stored impact set." }),
+        ]),
+      );
     } else {
       throw impactResult.error;
     }
@@ -548,11 +670,10 @@ async function loadChangeDetail(changeId) {
         attributes: { href: routeHash("runs") },
       }),
     );
-    right.append(make("div", { className: "form-actions" }));
-    right.lastChild.append(actions);
+    const footerActions = make("div", { className: "form-actions" });
+    footerActions.append(actions);
 
-    columns.append(left, right);
-    panel.append(columns);
+    panel.append(facts, sections, footerActions);
     hideStatus(status);
   } catch (error) {
     setStatus(status, "error", errorText(error));
@@ -1009,7 +1130,7 @@ function renderRuleSpace(rows) {
     for (const [, field] of columns) {
       row.append(
         make("td", {
-          text: rowData[field] ?? "—",
+          text: drugLabel(rowData[field] ?? "—"),
         }),
       );
     }
@@ -1096,34 +1217,33 @@ function renderRunDetail(run) {
     className: "section-heading compact",
   });
 
+  const mode = String(run.mode ?? "").toLowerCase();
   const headingText = make("div");
 
   headingText.append(
-    make("p", {
-      className: "eyebrow",
-      text: "Persisted run",
-    }),
     make("h3", {
+      text: `${mode.charAt(0).toUpperCase()}${mode.slice(1)} run`,
+    }),
+    make("code", {
+      className: "run-id",
       text: run.run_id,
     }),
   );
 
   heading.append(headingText, badge);
 
-  container.append(
-    heading,
-    definitionList({
-      "Change ID": pageLink("changes", run.change_id),
-      Mode: run.mode,
-      Status: run.status,
-      Release: run.release_id,
-      Selected: run.selected_count,
-      Reevaluated: run.reevaluated_count,
-      Started: humanDate(run.started_at),
-      Finished: humanDate(run.finished_at),
-      Error: run.error,
-    }),
-  );
+  const facts = {
+    Change: pageLink("changes", run.change_id),
+    Release: run.release_id ?? "—",
+    Selected: formatCount(run.selected_count),
+    Reevaluated: formatCount(run.reevaluated_count),
+    Started: humanDate(run.started_at),
+    Finished: humanDate(run.finished_at),
+  };
+  // an error line only appears when there is something to say
+  if (run.error) facts.Error = run.error;
+
+  container.append(heading, factGrid(facts));
 }
 
 
@@ -1178,93 +1298,101 @@ function renderAxisReport(axis) {
         : "axis-result axis-mismatch",
     text:
       axis.mismatched === 0
-        ? "MATCH"
-        : `${axis.mismatched} MISMATCH`,
+        ? "Match"
+        : `${formatCount(axis.mismatched)} mismatched`,
   });
 
   heading.append(title, result);
 
   card.append(
     heading,
-    definitionList({
-      Compared: axis.compared,
-      Mismatched: axis.mismatched,
+    make("p", {
+      className: "muted axis-counts",
+      text: `${formatCount(axis.compared)} compared · ${formatCount(axis.mismatched)} mismatched`,
     }),
   );
 
-  if (!axis.examples.length) {
-    card.append(
-      make("div", {
-        className: "empty-state compact-empty",
-        text: "No mismatch examples.",
-      }),
-    );
+  // an axis that matches has nothing more to show
+  if (!axis.examples.length) return card;
 
-    return card;
-  }
-
-  const wrap = make("div", {
-    className: "table-wrap",
-  });
-
-  const table = make("table", {
-    className: "mismatch-table",
-  });
-
-  const thead = make("thead");
-  const header = make("tr");
-
-  for (const label of [
-    "Case",
-    "Selective",
-    "Exhaustive",
-  ]) {
-    header.append(
-      make("th", {
-        text: label,
-      }),
-    );
-  }
-
-  thead.append(header);
-  table.append(thead);
-
-  const tbody = make("tbody");
-
+  // the examples stay closed until asked for, and each one opens on its own
+  const list = make("div", { className: "mismatch-list" });
   for (const example of axis.examples) {
-    const row = make("tr");
-
-    const selective = make("code", {
-      text: mismatchValue(example.selective),
-    });
-
-    const exhaustive = make("code", {
-      text: mismatchValue(example.exhaustive),
-    });
-
-    const selectiveCell = make("td");
-    const exhaustiveCell = make("td");
-
-    selectiveCell.append(selective);
-    exhaustiveCell.append(exhaustive);
-
-    const caseCell = make("td");
-    caseCell.append(caseLink(example.case_id));
-
-    row.append(
-      caseCell,
-      selectiveCell,
-      exhaustiveCell,
-    );
-
-    tbody.append(row);
+    list.append(renderMismatchExample(axis.axis, example));
   }
 
-  table.append(tbody);
-  wrap.append(table);
-  card.append(wrap);
+  const more = make("details", { className: "reason-more mismatch-more" });
+  more.append(
+    make("summary", {
+      text: `Show ${formatCount(axis.examples.length)} example${axis.examples.length === 1 ? "" : "s"} of ${formatCount(axis.mismatched)}`,
+    }),
+    list,
+  );
+  card.append(more);
 
   return card;
+}
+
+
+function renderMismatchExample(axisName, example) {
+  const row = make("details", { className: "mismatch-example" });
+  const summary = make("summary");
+  summary.append(
+    make("span", { className: "mismatch-case", text: shortCaseId(example.case_id) }),
+    make("span", { className: "mismatch-gist", text: mismatchGist(axisName, example.selective, example.exhaustive) }),
+  );
+
+  const sides = make("div", { className: "mismatch-sides" });
+  for (const [label, value] of [["Selective run", example.selective], ["Exhaustive run", example.exhaustive]]) {
+    const side = make("div", { className: "mismatch-side" });
+    side.append(make("h5", { text: label }), renderMismatchSide(axisName, value));
+    sides.append(side);
+  }
+
+  const links = make("div", { className: "mismatch-links" });
+  links.append(caseLink(example.case_id));
+  row.append(summary, sides, links);
+
+  return row;
+}
+
+
+function renderMismatchSide(axisName, value) {
+  if (value === null || value === undefined) {
+    return make("p", { className: "muted", text: axisName === "uncertainty" ? "None" : "Not present" });
+  }
+
+  if (axisName === "state" && Array.isArray(value)) {
+    return factGrid({ State: value[0], Phenotype: value[1], Genotype: value[2] });
+  }
+
+  if (axisName !== "dependency") {
+    return make("p", { text: mismatchValue(value) });
+  }
+
+  const box = make("div");
+  const edges = value.only_here ?? [];
+
+  if (edges.length) {
+    box.append(make("p", { className: "muted", text: `Dependencies only in this run${edges.length >= 5 ? " (first 5)" : ""}` }));
+    const items = make("ul", { className: "edge-list" });
+    for (const edge of edges) {
+      const text = edgeText(edge);
+      const item = make("li");
+      item.append(make("span", { text: text.main }));
+      if (text.note) item.append(make("span", { className: "muted", text: text.note }));
+      items.append(item);
+    }
+    box.append(items);
+  } else {
+    box.append(make("p", { className: "muted", text: "No dependencies that the other run lacks" }));
+  }
+
+  if (value.explanation) {
+    box.append(make("p", { className: "muted", text: "Explanation" }), renderValue(value.explanation));
+  }
+
+  return box;
 }
 
 
@@ -1275,21 +1403,19 @@ function renderEquivalence(report) {
   const decision = decisionLabel(report);
   const gate = gateLabel(report);
 
+  // the colour follows the result itself, so an audit that passed is green as well
   const banner = make("div", {
-    className:
-      decision === "PASS"
-        ? "decision decision-pass"
-        : "decision decision-blocked",
+    className: report.passed ? "decision decision-pass" : "decision decision-blocked",
   });
 
   banner.append(
     make("span", {
       className: "decision-label",
-      text: decision,
+      text: `${decision.charAt(0)}${decision.slice(1).toLowerCase()}`,
     }),
     make("span", {
       className: "decision-detail",
-      text: `Release gate: ${gate}`,
+      text: `Release gate: ${gate.toLowerCase()}`,
     }),
   );
 
@@ -1301,60 +1427,57 @@ function renderEquivalence(report) {
     metricCard(
       "Recall",
       formatPercent(report.recall),
-      `${report.selected_and_affected} of ${report.affected} affected selected`,
+      `${formatCount(report.selected_and_affected)} of ${formatCount(report.affected)} affected selected`,
     ),
     metricCard(
       "Precision",
       formatPercent(report.precision),
-      `${report.selected_and_affected} of ${report.selected} selected were affected`,
+      `${formatCount(report.selected_and_affected)} of ${formatCount(report.selected)} selected were affected`,
     ),
     metricCard(
       "Reprocessing ratio",
       formatPercent(report.reprocessing_ratio),
-      `${report.selected} of ${report.total_cases} total cases`,
+      `${formatCount(report.selected)} of ${formatCount(report.total_cases)} total cases`,
     ),
     metricCard(
       "Missed cases",
-      String(report.missed),
+      formatCount(report.missed),
       "Must remain zero for 100% recall",
     ),
   );
 
-  const summary = definitionList({
-    "Change ID": pageLink("changes", report.change_id),
+  const summary = factGrid({
+    Change: pageLink("changes", report.change_id),
     "Selective run": pageLink("runs", report.selective_run_id),
-    "Exhaustive run": report.exhaustive_run_id,
-    Release: report.release_id,
-    "Gate status": gate,
-    "Total cases": report.total_cases,
-    Selected: report.selected,
-    Affected: report.affected,
-    "State changed": report.state_changed,
-    "Selected and affected":
-      report.selected_and_affected,
-    Missed: report.missed,
+    "Exhaustive run": report.exhaustive_run_id ?? "—",
+    Release: report.release_id ?? "—",
+    "Gate status": gate.toLowerCase(),
+    "Total cases": formatCount(report.total_cases),
+    Selected: formatCount(report.selected),
+    Affected: formatCount(report.affected),
+    "State changed": formatCount(report.state_changed),
+    "Selected and affected": formatCount(report.selected_and_affected),
+    Missed: formatCount(report.missed),
   });
 
   const axes = make("div", {
     className: "axis-grid",
   });
 
-  for (const axis of orderedAxes(report)) {
+  const ordered = orderedAxes(report);
+  for (const axis of ordered) {
     axes.append(renderAxisReport(axis));
   }
+  const matching = ordered.filter((axis) => axis.mismatched === 0).length;
 
-  container.append(
-    banner,
-    metrics,
-    make("h4", {
-      text: "Comparison summary",
-    }),
-    summary,
-    make("h4", {
-      text: "Three-axis equivalence",
-    }),
-    axes,
+  // the numbers stay in view; the full comparison opens on request
+  const sections = make("div", { className: "card accordion" });
+  sections.append(
+    foldSection("Comparison summary", `${formatCount(report.selected)} selected · ${formatCount(report.missed)} missed`, false, [summary]),
+    foldSection("Three-axis equivalence", `${matching} of ${ordered.length} match`, false, [axes]),
   );
+
+  container.append(banner, metrics, sections);
 }
 
 
@@ -1517,19 +1640,31 @@ async function submitRunLookup(event) {
 
 
 // fills a select with options, keeping the current choice when it is still there
-function fillSelect(select, placeholder, items, valueOf, labelOf) {
+function fillSelect(select, placeholder, items, valueOf, labelOf, titleOf = null, groupOf = null) {
   const current = select.value;
   clear(select);
   select.append(make("option", { text: placeholder, attributes: { value: "" } }));
 
+  // groups keep the order they first appear in, so the newest stays on top
+  const groups = new Map();
+
   for (const item of items) {
-    select.append(
-      make("option", {
-        text: labelOf(item),
-        attributes: { value: valueOf(item) },
-      }),
-    );
+    const attributes = { value: valueOf(item) };
+    // the full technical detail stays one hover away
+    if (titleOf) attributes.title = titleOf(item);
+    const option = make("option", { text: labelOf(item), attributes });
+
+    if (!groupOf) {
+      select.append(option);
+      continue;
+    }
+
+    const name = groupOf(item);
+    if (!groups.has(name)) groups.set(name, make("optgroup", { attributes: { label: name } }));
+    groups.get(name).append(option);
   }
+
+  for (const group of groups.values()) select.append(group);
 
   if ([...select.options].some((option) => option.value === current)) {
     select.value = current;
@@ -1543,9 +1678,10 @@ async function loadRunPickers() {
     const [runs, changes] = await Promise.all([listRuns(null, 100), listChanges(100)]);
 
     fillSelect(byId("run-id"), "Choose a stored run", runs, (run) => run.run_id,
-      (run) => `${run.run_id} · ${runOptionLabel(run)}`);
+      (run) => runOptionLabel(run), (run) => run.run_id, (run) => runGroupLabel(run));
     fillSelect(byId("run-change-id"), "Choose a registered change", changes, (change) => change.change_id,
-      (change) => `${change.change_id} · ${change.old_version ?? "∅"} → ${change.new_version ?? "∅"}`);
+      (change) => `${change.change_id} · ${changeTypeMeta(change.type).label}`,
+      (change) => `${change.old_version ?? "∅"} → ${change.new_version ?? "∅"}`);
   } catch (error) {
     setStatus(byId("run-lookup-status"), "error", errorText(error));
   }
@@ -1599,6 +1735,7 @@ function renderDataTable(
   columns,
   rows,
   emptyMessage,
+  options = {},
 ) {
   if (!rows.length) {
     return make("div", {
@@ -1634,6 +1771,17 @@ function renderDataTable(
     if (item.ast_evidence_id) row.dataset.record = `ast_evidence:${item.ast_evidence_id}`;
     if (item.genotype_evidence_id) row.dataset.record = `genotype_evidence:${item.genotype_evidence_id}`;
 
+    // a whole row can open a page, while links and buttons inside it keep their own behaviour
+    if (options.rowHref) {
+      const href = options.rowHref(item);
+      row.classList.add("clickable");
+      row.addEventListener("click", (event) => {
+        if (!event.target.closest("a, button")) {
+          window.location.hash = href;
+        }
+      });
+    }
+
     for (const [, getter] of columns) {
       const value =
         typeof getter === "function"
@@ -1649,11 +1797,7 @@ function renderDataTable(
         typeof value === "object" &&
         value !== null
       ) {
-        cell.append(
-          make("code", {
-            text: displayValue(value),
-          }),
-        );
+        cell.append(renderInline(value));
       } else {
         cell.textContent = displayValue(value);
       }
@@ -1733,7 +1877,7 @@ function renderDossierOverview(dossier, history = []) {
   title.append(
     make("span", { className: "accession", text: dossier.target_acc }),
     make("span", { className: "plus", text: "+" }),
-    make("h2", { text: dossier.antibiotic }),
+    make("h2", { text: drugLabel(dossier.antibiotic) }),
     stateBadge(current?.state_code),
   );
 
@@ -1749,22 +1893,37 @@ function renderDossierOverview(dossier, history = []) {
     copyButton(dossier.case_id),
   );
 
-  titleBlock.append(title, idLine);
+  // the review status sits on the same line as the id; the full wording stays as a tooltip
   const currentReviewBadge = make("span", { attributes: { id: "dossier-current-review-status" } });
   currentReviewBadge.append(reviewBadge(dossier.review_status));
-  titleBlock.append(
-    make("p", { className: "muted", text: "Label review status (current published state)" }),
-    currentReviewBadge,
-  );
-
-  const actions = make("div", { className: "page-actions" });
-  actions.append(
-    make("a", {
-      className: "button",
-      text: "◈ View dependencies",
-      attributes: { href: routeHash("dependencies", dossier.case_id) },
+  idLine.append(
+    make("span", {
+      className: "id-line-review",
+      attributes: { title: "Label review status of the current published state" },
     }),
   );
+  idLine.lastElementChild.append(make("span", { className: "muted", text: "Label review" }), currentReviewBadge);
+
+  titleBlock.append(title, idLine);
+
+  const actions = make("div", { className: "page-actions" });
+  const foldAll = make("button", {
+    className: "button",
+    text: "Expand all",
+    attributes: { type: "button", id: "dossier-fold-all" },
+  });
+  foldAll.addEventListener("click", () => {
+    const cards = [...container.querySelectorAll("details.fold")];
+    const anyOpen = cards.some((card) => card.open);
+    cards.forEach((card) => { card.open = !anyOpen; });
+    syncFoldButton();
+  });
+  actions.append(foldAll);
+
+  // the dependencies page is one click away from the tab bar, whichever tab is open
+  const dependenciesLink = byId("dossier-view-dependencies");
+  dependenciesLink.href = routeHash("dependencies", dossier.case_id);
+  dependenciesLink.hidden = false;
 
   header.append(titleBlock, actions);
   container.append(header);
@@ -1772,7 +1931,9 @@ function renderDossierOverview(dossier, history = []) {
   // state transition: the last earlier published state that differs, the change that moved it, and the state now
   const transition = make("div", { className: "transition" });
   const previousBox = make("div", { className: "transition-box transition-previous" });
-  const currentBox = make("div", { className: "transition-box transition-current" });
+  const currentBox = make("div", {
+    className: timeline.changed ? "transition-box transition-current is-changed" : "transition-box transition-current",
+  });
 
   if (timeline.previous) {
     previousBox.append(
@@ -1803,14 +1964,22 @@ function renderDossierOverview(dossier, history = []) {
     current?.triggered_by_change_id
       ? pageLink("changes", current.triggered_by_change_id)
       : make("span", { className: "muted", text: "Baseline evaluation (no change event)" }),
-    make("div", { className: "muted", text: `Verification: ${displayValue(current?.verification_status)}` }),
-    make("div", { className: "muted", text: `Uncertainty: ${displayValue(current?.uncertainty_reason)}` }),
   );
+  const triggerFacts = make("dl", { className: "transition-facts" });
+  triggerFacts.append(
+    make("dt", { text: "Verification" }),
+    make("dd", { text: displayValue(current?.verification_status) }),
+    make("dt", { text: "Uncertainty" }),
+    make("dd", { text: displayValue(current?.uncertainty_reason) }),
+  );
+  trigger.append(triggerFacts);
 
   transition.append(previousBox, arrow, currentBox, trigger);
-  const transitionCard = cardWith("State transition", transition);
-  transitionCard.dataset.recordKind = "case_state";
-  container.append(transitionCard);
+  // one list of folding sections; every row has a short hint, so a folded row still says what is inside
+  const sections = make("div", { className: "card accordion" });
+
+  const transitionSection = cardWith("State transition", timeline.previous ? `${timeline.previous.release_id} → ${current?.release_id ?? "none"}` : "first published state", transition);
+  transitionSection.dataset.recordKind = "case_state";
 
   // release timeline: one dot per published state, the current one filled in teal
   const steps = make("div", { className: "timeline" });
@@ -1831,58 +2000,48 @@ function renderDossierOverview(dossier, history = []) {
   if (!timeline.steps.length) {
     steps.append(make("div", { className: "muted", text: "This case has no published state yet." }));
   }
-  container.append(cardWith("Version history", steps));
 
-  // evidence cards: what the lab measured, what genes were found, and how each result was interpreted
-  const evidence = make("div", { className: "evidence-grid stack" });
-
-  evidence.append(
-    cardWith(
-      "Phenotype evidence",
-      renderDataTable(
-        [
-          ["Label", (row) => row.phenotype_normalized ?? row.phenotype],
-          ["MIC", (row) => micText(row)],
-          ["Standard", "standard"],
-          ["Evidence", (row) => shortIdCell(row.ast_evidence_id)],
-        ],
-        dossier.evidence.ast,
-        "No AST evidence is referenced by the current published state.",
-      ),
-    ),
-    cardWith(
-      "Genotype evidence",
-      renderDataTable(
-        [
-          ["Element", "element_raw"],
-          ["Subclass", "subclass_raw"],
-          ["Type", "subtype_raw"],
-          ["Ref. DB", "refgene_db_version"],
-        ],
-        dossier.evidence.genotype,
-        "No genotype evidence is referenced by the current published state.",
-      ),
-    ),
-    cardWith(
-      "Interpretation",
-      renderDataTable(
-        [
-          ["Host", "host"],
-          ["Lab → used", (row) => `${row.labLabel} → ${row.shownLabel}`],
-          ["Origin", "origin"],
-          ["Breakpoint from", "breakpoint"],
-        ],
-        interpretationRows(dossier.interpretation),
-        "This state was not interpreted from measurements, so every label is the lab's own.",
-      ),
-    ),
+  // what the lab measured, what genes were found, and how each result was interpreted
+  const phenotypeTable = renderDataTable(
+    [
+      ["Label", (row) => row.phenotype_normalized ?? row.phenotype],
+      ["MIC", (row) => micText(row)],
+      ["Standard", "standard"],
+      ["Evidence", (row) => shortIdCell(row.ast_evidence_id)],
+    ],
+    dossier.evidence.ast,
+    "No AST evidence is referenced by the current published state.",
   );
 
-  container.append(evidence);
+  // a long gene list scrolls inside its own box so it does not push everything else down
+  const genotypeTable = renderDataTable(
+    [
+      ["Element", "element_raw"],
+      ["Subclass", "subclass_raw"],
+      ["Type", "subtype_raw"],
+      ["Ref. DB", "refgene_db_version"],
+    ],
+    dossier.evidence.genotype,
+    "No genotype evidence is referenced by the current published state.",
+  );
+  genotypeTable.classList.add("scroll-limited");
+
+  const interpretation = interpretationRows(dossier.interpretation);
+  const interpretationTable = renderDataTable(
+    [
+      ["Host", "host"],
+      ["Lab → used", (row) => `${row.labLabel} → ${row.shownLabel}`],
+      ["Origin", "origin"],
+      ["Breakpoint from", "breakpoint"],
+    ],
+    interpretation,
+    "This state was not interpreted from measurements, so every label is the lab's own.",
+  );
 
   // the versions this state was evaluated under, as labelled values instead of raw JSON
+  const vectorEntries = versionVectorEntries(dossier.version_vector);
   const vector = make("div", { className: "vector-grid" });
-  for (const entry of versionVectorEntries(dossier.version_vector)) {
+  for (const entry of vectorEntries) {
     const item = make("div", { className: "vector-item" });
     item.append(make("span", { text: entry.label }), make("code", { text: entry.value }));
     vector.append(item);
@@ -1895,9 +2054,20 @@ function renderDossierOverview(dossier, history = []) {
     Panel: displayValue(dossier.panel_id),
   });
 
-  const lower = make("div", { className: "grid-wide-narrow stack" });
-  lower.append(cardWith("Version vector", vector), cardWith("Evaluation", details));
-  container.append(lower);
+  sections.append(
+    transitionSection,
+    cardWith("Version history", countHint(timeline.steps.length, "release"), steps),
+    cardWith("Phenotype evidence", countHint(dossier.evidence.ast.length, "result"), phenotypeTable),
+    cardWith("Genotype evidence", countHint(dossier.evidence.genotype.length, "finding"), genotypeTable),
+    cardWith("Interpretation", countHint(interpretation.length, "row"), interpretationTable),
+    cardWith("Version vector", countHint(vectorEntries.length, "field"), vector),
+    cardWith("Evaluation", "", details),
+  );
+  container.append(sections);
+
+  // the same listener function added again is ignored, so re-rendering does not stack listeners
+  container.addEventListener("toggle", syncFoldButton, true);
+  syncFoldButton();
 
   activeDossierStateId = current?.state_id ?? null;
   byId("dossier-review-fieldset").disabled = activeDossierStateId === null || !can("review_case");
@@ -2002,56 +2172,63 @@ function renderDossierDiff(diff) {
     })),
   ];
 
-  container.append(
-    heading,
-    states,
-    make("h4", {
-      text: "State-field changes",
-    }),
-    renderDataTable(
-      [
-        ["Field", "field"],
-        ["Before", "before"],
-        ["After", "after"],
-      ],
-      diff.state_changes,
-      "No conclusion fields changed.",
-    ),
-    make("h4", {
-      text: "Version changes",
-    }),
-    renderDataTable(
-      [
-        ["Version", "name"],
-        ["Before", "before"],
-        ["After", "after"],
-      ],
-      diff.version_changes,
-      "No version labels changed.",
-    ),
-    make("h4", {
-      text: "Dependency-record changes",
-    }),
-    renderDataTable(
-      [
-        ["Delta", "delta"],
-        ["Dependency type", "dep_type"],
-        ["Edge type", "edge_type"],
-        ["Node type", "node_type"],
-        ["Node ID", "node_id"],
-        ["Node version", "node_version"],
-        ["Context", "node_context"],
-      ],
-      dependencyRows,
-      "No dependency records were added or removed.",
-    ),
-    definitionList({
-      "Explanation changed":
-        diff.explanation_changed ? "Yes" : "No",
-      "Unchanged dependency records":
-        diff.dependencies_unchanged,
-    }),
+  // the same folding sections as the overview, all closed until opened
+  const section = (title, rows, children) =>
+    foldSection(title, countHint(rows.length, "change"), false, children);
+
+  const sections = make("div", { className: "card accordion" });
+  sections.append(
+    foldSection("Before and after", `${diff.before?.release_id ?? "none"} → ${diff.after?.release_id ?? "none"}`, false, [
+      heading,
+      states,
+      definitionList({
+        "Explanation changed":
+          diff.explanation_changed ? "Yes" : "No",
+      }),
+    ]),
+    section("State-field changes", diff.state_changes, [
+      renderDataTable(
+        [
+          ["Field", "field"],
+          ["Before", "before"],
+          ["After", "after"],
+        ],
+        diff.state_changes,
+        "No conclusion fields changed.",
+      ),
+    ]),
+    section("Version changes", diff.version_changes, [
+      renderDataTable(
+        [
+          ["Version", "name"],
+          ["Before", "before"],
+          ["After", "after"],
+        ],
+        diff.version_changes,
+        "No version labels changed.",
+      ),
+    ]),
+    section("Dependency-record changes", dependencyRows, [
+      renderDataTable(
+        [
+          ["Delta", "delta"],
+          ["Dependency type", "dep_type"],
+          ["Edge type", "edge_type"],
+          ["Node type", "node_type"],
+          ["Node ID", "node_id"],
+          ["Node version", "node_version"],
+          ["Context", "node_context"],
+        ],
+        dependencyRows,
+        "No dependency records were added or removed.",
+      ),
+      definitionList({
+        "Unchanged dependency records":
+          diff.dependencies_unchanged,
+      }),
+    ]),
   );
+  container.append(sections);
 }
 
 
@@ -2135,20 +2312,26 @@ function renderCopilotTrace(summary) {
     const rows = make("div", { className: "copilot-trace-rows" });
     for (const row of group.rows) {
       const item = make("div", { className: "copilot-trace-row", attributes: { "data-trace": String(row.number) } });
-      const body = make("div", { className: "copilot-trace-body" });
-      body.append(
-        make("span", { text: row.text }),
-        make("span", { className: "copilot-trace-sources", text: row.sources.join("; ") }),
-      );
+      // the stored records behind a row sit in its tooltip and in the citation popover, not under every line
+      if (row.sources.length) item.title = row.sources.join("; ");
       item.append(
         make("span", { className: "cite-chip cite-chip-static", text: String(row.number) }),
-        body,
-        make("a", { className: "copilot-trace-link", text: `${row.link.text} →`, attributes: { href: row.link.href } }),
+        make("span", { className: "copilot-trace-body", text: row.text }),
       );
       rows.append(item);
     }
+
+    // one link per place a group opens, instead of the same link on every row
+    const links = make("div", { className: "copilot-trace-links" });
+    const seen = new Set();
+    for (const row of group.rows) {
+      if (seen.has(row.link.href)) continue;
+      seen.add(row.link.href);
+      links.append(make("a", { className: "copilot-trace-link", text: `${row.link.text} →`, attributes: { href: row.link.href } }));
+    }
+
     const section = make("div", { className: "copilot-trace-group" });
-    section.append(make("span", { className: "copilot-trace-label", text: group.label }), rows);
+    section.append(make("span", { className: "copilot-trace-label", text: group.label }), rows, links);
     trace.append(section);
   }
 }
@@ -2174,6 +2357,8 @@ function renderDossierCopilot(summary) {
     checks.append(item);
   }
   byId("dossier-copilot-checks").hidden = !narrative?.checks?.length;
+  // no checks means the story takes the whole row
+  byId("dossier-copilot-body").classList.toggle("is-solo", !narrative?.checks?.length);
   for (const question of narrative?.followups ?? []) {
     const chip = make("button", { className: "copilot-followup", text: question, attributes: { type: "button" } });
     chip.addEventListener("click", () => askFollowUp(question));
@@ -2269,51 +2454,6 @@ async function pinDossierCopilot() {
 }
 
 
-function renderDossierDependencies(subgraph) {
-  const summary = byId(
-    "dossier-dependency-summary",
-  );
-
-  const graph = byId("dossier-graph");
-  const inspector = byId(
-    "dossier-node-inspector",
-  );
-
-  clear(summary);
-  clear(graph);
-  clear(inspector);
-
-  if (!subgraph) {
-    graph.append(
-      make("div", {
-        className: "empty-state",
-        text:
-          "No dependency graph exists for the case's " +
-          "current published state.",
-      }),
-    );
-
-    return;
-  }
-
-  summary.append(
-    definitionList({
-      Release: subgraph.release_id,
-      Nodes: subgraph.nodes.length,
-      Edges: subgraph.edges.length,
-      "Rule-space rows": subgraph.rule_space.length,
-    }),
-  );
-
-  renderGraph(
-    subgraph,
-    graph,
-    inspector,
-    "dossier-arrow",
-  );
-}
-
-
 let dossierLoadToken = 0;
 
 async function loadDossier(caseId) {
@@ -2332,12 +2472,10 @@ async function loadDossier(caseId) {
     "dossier-reviews",
     "dossier-diff",
     "dossier-copilot",
-    "dossier-dependency-summary",
-    "dossier-graph",
-    "dossier-node-inspector",
   ]) {
     clear(byId(id));
   }
+  byId("dossier-view-dependencies").hidden = true;
 
   setStatus(
     status,
@@ -2348,29 +2486,13 @@ async function loadDossier(caseId) {
   try {
     const dossier = await getCase(caseId);
     if (token !== dossierLoadToken) return;
-    const dependencyPromise =
-      getCaseDependencies(caseId)
-        .then((value) => value)
-        .catch((error) => {
-          if (
-            error instanceof ApiError &&
-            error.errorCode ===
-              "dependencies_not_found"
-          ) {
-            return null;
-          }
-
-          throw error;
-        });
-
-    const [history, reviews, diff, dependencies] = await Promise.all([
+    const [history, reviews, diff] = await Promise.all([
       getCaseHistory(caseId),
       getCaseReviews(caseId),
       getCaseDiff(caseId, { afterRelease: dossier.current_state?.release_id ?? null }),
-      dependencyPromise,
     ]);
     if (token !== dossierLoadToken) return;
-    assertDossierIdentity(dossier, history, diff, dependencies, reviews);
+    assertDossierIdentity(dossier, history, diff, null, reviews);
 
     activeDossierCaseId = caseId;
 
@@ -2378,7 +2500,6 @@ async function loadDossier(caseId) {
     renderDossierHistory(history);
     renderDossierReviews(reviews);
     renderDossierDiff(diff);
-    renderDossierDependencies(dependencies);
     // generated text loads on its own, so a copilot problem never hides the evidence panels
     void loadDossierCopilot(caseId);
 
@@ -3002,6 +3123,9 @@ function bindNavigation() {
 
 // shows the page the address names and loads the id in it, so a link opens the case or run directly
 async function applyRoute() {
+  // the sign-in page belongs to the sign-in module, so no page behind it is loaded
+  if (window.location.hash === "#/login") return;
+
   const { view, id } = parseRoute(window.location.hash);
   activateView(view);
 
@@ -3062,18 +3186,22 @@ function badge(text, className = "") {
 
 
 // A-14: the triage tier as a badge, with the reason written underneath so a reviewer sees why it ranks there
-function triageBadge(item) {
+function triageBadge(item, compact = false) {
   const meta = triageMeta(item.triage_tier);
-  const cell = make("div", { className: "triage-cell" });
-  cell.append(make("span", {
+  const reason = item.triage_reason
+    ? readableTriageReason(item.triage_reason, (code) => stateMeta(code).label)
+    : "";
+  const badge = make("span", {
     className: `badge ${meta.cls}`.trim(),
     text: meta.label,
-    attributes: { title: item.triage_reason ?? "" },
-  }));
-  if (item.triage_reason) {
-    const reason = readableTriageReason(item.triage_reason, (code) => stateMeta(code).label);
-    cell.append(make("div", { className: "triage-reason muted", text: reason }));
-  }
+    attributes: { title: reason },
+  });
+  // the compact form keeps the badge alone and leaves the reason on hover
+  if (compact) return badge;
+
+  const cell = make("div", { className: "triage-cell" });
+  cell.append(badge);
+  if (reason) cell.append(make("div", { className: "triage-reason muted", text: reason }));
   return cell;
 }
 
@@ -3195,12 +3323,40 @@ function renderGraphLegends() {
 
 
 // a card with a small uppercase title, holding whatever is passed in
-function cardWith(title, ...children) {
-  const card = make("section", { className: "card" });
-  const heading = make("div", { className: "section-heading compact" });
-  heading.append(make("h3", { text: title }));
+// every section starts folded; the ones the person opens stay open while they move between cases and tabs
+const openCards = new Set();
+
+// "3 findings", "1 result": the hint beside a section heading
+function countHint(count, word) {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
+}
+
+// a section that folds away under its heading, built on details so the keyboard works without extra code
+function foldSection(title, hint, open, children) {
+  const card = make("details", { className: "fold" });
+  card.open = open;
+  const heading = make("summary", { className: "section-heading compact" });
+  heading.append(make("h3", { text: title }), make("span", { className: "fold-hint", text: hint }));
   card.append(heading, ...children);
   return card;
+}
+
+// an overview section: the person's own folding is remembered while the page stays open
+function cardWith(title, hint, ...children) {
+  const card = foldSection(title, hint, openCards.has(title), children);
+  card.addEventListener("toggle", () => {
+    if (card.open) openCards.add(title);
+    else openCards.delete(title);
+  });
+  return card;
+}
+
+// one button folds or opens every card on the overview, and its label follows what is open
+function syncFoldButton() {
+  const button = byId("dossier-overview").querySelector("#dossier-fold-all");
+  if (!button) return;
+  const anyOpen = [...byId("dossier-overview").querySelectorAll("details.fold")].some((card) => card.open);
+  button.textContent = anyOpen ? "Collapse all" : "Expand all";
 }
 
 
@@ -3262,7 +3418,7 @@ function renderDashboard(summary, runs) {
 
   const legend = make("div", { className: "state-legend" });
   for (const part of distribution) {
-    const row = make("div", { className: "state-legend-row" });
+    const row = make("div", { className: "state-legend-row", attributes: { tabindex: "0" } });
     const dot = make("span", { className: "legend-dot" });
     dot.style.background = part.fill;
     dot.style.borderColor = part.line;
@@ -3272,7 +3428,7 @@ function renderDashboard(summary, runs) {
       attributes: { href: `#/explorer/${encodeURIComponent(`state=${part.code}`)}` },
     });
 
-    row.append(dot, link, make("span", { className: "num", text: formatCount(part.count) }), make("span", { className: "num muted", text: formatShare(part.count, summary.cases_with_state) }));
+    row.append(dot, link, make("span", { className: "num muted", text: formatShare(part.count, summary.cases_with_state) }), hoverTip(part.label, [["Cases", formatCount(part.count)]]));
     legend.append(row);
   }
   states.append(bar, legend);
@@ -3285,16 +3441,16 @@ function renderDashboard(summary, runs) {
 
   for (const drug of summary.drugs) {
     const rate = drug.total ? drug.discordant / drug.total : 0;
-    const row = make("div", { className: "bar-row" });
+    const row = make("div", { className: "bar-row", attributes: { tabindex: "0" } });
     const track = make("div", { className: "bar-track" });
     const fill = make("div", { className: "bar-fill" });
     fill.style.width = `${(rate / maxRate) * 100}%`;
     track.append(fill);
 
     row.append(
-      make("span", { className: "bar-label", text: drug.antibiotic }),
+      make("span", { className: "bar-label", text: shortDrugName(drug.antibiotic), attributes: { title: drug.antibiotic } }),
       track,
-      make("span", { className: "bar-value", text: `${formatShare(drug.discordant, drug.total)} discordant · ${formatCount(drug.unresolved)} unresolved` }),
+      make("span", { className: "bar-value", text: formatShare(drug.discordant, drug.total) }), hoverTip(drug.antibiotic, [["Discordant", `${formatCount(drug.discordant)} of ${formatCount(drug.total)}`], ["Unresolved", formatCount(drug.unresolved)]]),
     );
     chart.append(row);
   }
@@ -3382,12 +3538,24 @@ async function loadReleaseChips() {
 const EXPLORER_PAGE = 50;
 let explorerOffset = 0;
 let drugsFilled = false;
+let releasesFilled = false;
+// once the person opens or closes the filter box, it stays as they left it
+let filterPanelTouched = false;
+// the review statuses a case can show, in the order the filter lists them
+const REVIEW_STATUS_CODES = ["UNVERIFIED", "CONFIRMED", "CORRECTED", "MARKED_UNRESOLVED", "NOT_REQUIRED"];
 
 
 // "state=UNRESOLVED&drug=gentamicin" in the address becomes the explorer's filters, so dashboard links land filtered
 function explorerFiltersFromRoute(id) {
   const params = new URLSearchParams(id ?? "");
-  return { q: params.get("q") ?? "", drug: params.get("drug") ?? "", state: params.get("state") ?? "" };
+  return {
+    q: params.get("q") ?? "",
+    drug: params.get("drug") ?? "",
+    state: params.get("state") ?? "",
+    release: params.get("release") ?? "",
+    review_status: params.get("review_status") ?? "",
+    labels_changed: params.get("labels_changed") ?? "",
+  };
 }
 
 
@@ -3399,10 +3567,47 @@ async function fillDrugFilter() {
 
   try {
     const summary = await getSummary();
-    fillSelect(byId("explorer-drug"), "All antibiotics", summary.drugs, (drug) => drug.antibiotic, (drug) => drug.antibiotic);
+    fillSelect(byId("explorer-drug"), "All antibiotics", summary.drugs, (drug) => drug.antibiotic, (drug) => drugLabel(drug.antibiotic));
     drugsFilled = true;
   } catch {
     // without the list the filter still works as "all antibiotics"
+  }
+}
+
+
+// the release filter lists the published releases, newest first
+async function fillReleaseFilter() {
+  if (releasesFilled) {
+    return;
+  }
+
+  try {
+    const releases = await listPublishedReleases();
+    const newestFirst = [...releases].sort((a, b) => b.release_seq - a.release_seq);
+    fillSelect(byId("explorer-release"), "All releases", newestFirst, (release) => release.release_id, (release) => release.release_id);
+    releasesFilled = true;
+  } catch {
+    // without the list the filter still works as "all releases"
+  }
+}
+
+
+// the filter box opens by itself when a link arrives with filters set, and then follows the person
+function setFilterPanel(open) {
+  byId("explorer-filter-panel").hidden = !open;
+  byId("explorer-filters-toggle").setAttribute("aria-expanded", String(open));
+}
+
+
+// the number on the Filters button counts the filters inside the box, not the search text
+function showFilterCount(filters) {
+  const active = [filters.drug, filters.state, filters.release, filters.review_status, filters.labels_changed].filter(Boolean).length;
+  const badge = byId("explorer-filter-count");
+  badge.textContent = String(active);
+  badge.hidden = active === 0;
+
+  if (active > 0 && !filterPanelTouched) {
+    setFilterPanel(true);
   }
 }
 
@@ -3412,10 +3617,19 @@ async function loadExplorer(filters, offset = 0) {
   const results = byId("explorer-results");
   const pager = byId("explorer-pager");
 
-  await fillDrugFilter();
-  byId("explorer-q").value = filters.q;
+  await Promise.all([fillDrugFilter(), fillReleaseFilter()]);
+  fillSelect(byId("explorer-review"), "All statuses", REVIEW_STATUS_CODES, (code) => code, (code) => reviewStatusMeta(code).label);
+  const search = byId("explorer-q");
+  if (document.activeElement !== search) {
+    search.value = filters.q;
+  }
   byId("explorer-drug").value = filters.drug;
   byId("explorer-state").value = filters.state;
+  byId("explorer-release").value = filters.release;
+  byId("explorer-review").value = filters.review_status;
+  byId("explorer-labels").value = filters.labels_changed;
+  byId("explorer-clear").hidden = !(filters.q || filters.drug || filters.state || filters.release || filters.review_status || filters.labels_changed);
+  showFilterCount(filters);
   explorerOffset = offset;
 
   setStatus(status, "loading", "Loading cases…");
@@ -3429,16 +3643,16 @@ async function loadExplorer(filters, offset = 0) {
     results.append(
       renderDataTable(
         [
-          ["Case", (row) => caseLink(row.case_id)],
-          ["Isolate", (row) => make("code", { text: row.target_acc })],
-          ["Antibiotic", "antibiotic"],
+          ["Case", explorerCase],
           ["Current state", (row) => stateBadge(row.current_state)],
           ["Release", "current_release_id"],
           ["Review status", (row) => reviewBadge(row.review_status)],
           ["Labels changed", (row) => (row.labels_changed ? badge(String(row.labels_changed), "badge-amber") : "—")],
+          ["", (row) => explorerGraphLink(row.case_id)],
         ],
         page,
         "No cases match these filters.",
+        { rowHref: (row) => routeHash("dossier", row.case_id) },
       ),
     );
 
@@ -3469,7 +3683,7 @@ function submitExplorer(event) {
   const data = new FormData(event.currentTarget);
   const params = new URLSearchParams();
 
-  for (const key of ["q", "drug", "state"]) {
+  for (const key of ["q", "drug", "state", "release", "review_status", "labels_changed"]) {
     const value = String(data.get(key) ?? "").trim();
     if (value) {
       params.set(key, value);
@@ -3515,7 +3729,7 @@ async function fillReviewQueueDrugs() {
       "All antibiotics",
       summary.drugs ?? [],
       (item) => item.antibiotic,
-      (item) => item.antibiotic,
+      (item) => drugLabel(item.antibiotic),
     );
     reviewQueueDrugsLoaded = true;
   } catch {
@@ -3564,6 +3778,7 @@ async function loadReviewQueue(filters, offset = 0) {
   if (token !== reviewQueueRequestToken) return;
   byId("review-queue-drug").value = filters.drug;
   byId("review-queue-state").value = filters.state;
+  byId("review-queue-tier").value = filters.tier ?? "";
   byId("review-queue-sort").value = filters.sort ?? "";
 
   try {
@@ -3584,16 +3799,14 @@ async function loadReviewQueue(filters, offset = 0) {
 
     results.append(renderDataTable(
       [
-        ["Priority", (item) => triageBadge(item)],
-        ["Case", (item) => caseLink(item.case_id)],
-        ["Isolate", (item) => make("code", { text: item.target_acc })],
-        ["Antibiotic", "antibiotic"],
+        ["Case", (item) => explorerCase(item)],
+        ["Priority", (item) => triageBadge(item, true)],
         ["State", (item) => stateBadge(item.state_code)],
         ["Release", "release_id"],
         ["Changed labels", "labels_changed"],
         ["Review", (item) => {
           const button = make("button", {
-            className: "button button-primary",
+            className: "button",
             text: "Review",
             attributes: { type: "button", "aria-label": "Review " + item.case_id },
           });
@@ -3669,7 +3882,7 @@ async function openReviewQueueCase(item) {
     summary.append(definitionList({
       Case: caseLink(item.case_id),
       Isolate: item.target_acc,
-      Antibiotic: item.antibiotic,
+      Antibiotic: drugLabel(item.antibiotic),
       "Current state": current.state_code,
       "Published release": current.release_id,
       "Changed labels": current.labels_changed,
@@ -3755,23 +3968,10 @@ function submitReviewQueueFilters(event) {
   navigate("review-queue", reviewQueueRouteId({
     drug: data.get("drug"),
     state: data.get("state"),
+    tier: data.get("tier"),
     sort: data.get("sort"),
   }));
 }
-
-// the top bar search opens the dossier of whatever case was typed
-async function submitTopbarSearch(event) {
-  event.preventDefault();
-  const input = byId("topbar-case");
-  const caseId = await resolveTypedCase(input.value.trim(), byId("topbar-status"));
-
-  if (caseId) {
-    hideStatus(byId("topbar-status"));
-    input.value = "";
-    navigate("dossier", caseId);
-  }
-}
-
 
 // the register form stays folded away until someone asks for it, as in the prototype
 function toggleChangeForm() {
@@ -3847,15 +4047,32 @@ function boot() {
   byId("dossier-review-form").addEventListener("submit", submitDossierReview);
   byId("dossier-review-action").addEventListener("change", syncReviewCorrection);
   byId("explorer-form").addEventListener("submit", submitExplorer);
+
+  // filters apply as they change; typing waits a moment so every key does not reload the list
+  let explorerTimer = null;
+  byId("explorer-q").addEventListener("input", () => {
+    clearTimeout(explorerTimer);
+    explorerTimer = setTimeout(() => byId("explorer-form").requestSubmit(), 350);
+  });
+  for (const id of ["explorer-drug", "explorer-state", "explorer-release", "explorer-review", "explorer-labels"]) {
+    byId(id).addEventListener("change", () => byId("explorer-form").requestSubmit());
+  }
+  byId("explorer-filters-toggle").addEventListener("click", () => {
+    filterPanelTouched = true;
+    setFilterPanel(byId("explorer-filter-panel").hidden);
+  });
+  byId("explorer-clear").addEventListener("click", () => navigate("explorer", null));
   byId("review-queue-filters").addEventListener("submit", submitReviewQueueFilters);
-  byId("review-queue-refresh").addEventListener("click", () => void loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset));
+  // the queue filters apply as they change, like the explorer, so there is no apply button
+  for (const id of ["review-queue-drug", "review-queue-state", "review-queue-tier", "review-queue-sort"]) {
+    byId(id).addEventListener("change", () => byId("review-queue-filters").requestSubmit());
+  }
   byId("review-queue-close").addEventListener("click", () => {
     ++reviewQueueRequestToken;
     closeReviewQueueCase();
   });
   byId("review-queue-action").addEventListener("change", syncQueueCorrection);
   byId("review-queue-review-form").addEventListener("submit", submitQueueReview);
-  byId("topbar-search").addEventListener("submit", submitTopbarSearch);
   byId("exports-form").addEventListener("submit", submitExportSnapshot);
   byId("exports-download-hash").addEventListener("click", downloadExportHash);
   byId("exports-release").addEventListener("change", () => {
@@ -3873,7 +4090,6 @@ function boot() {
   renderGraphLegends();
   bindCaseSuggestions(byId("case-id"));
   bindCaseSuggestions(byId("dossier-case-id"));
-  bindCaseSuggestions(byId("topbar-case"));
 
   void loadReleaseChips();
   void applyRoute();

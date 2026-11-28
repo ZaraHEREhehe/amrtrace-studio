@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from typing import Literal
 
 import psycopg
 from fastapi import APIRouter, Depends, Query
@@ -158,6 +159,21 @@ def _interpretation_for_state(conn: psycopg.Connection, case_id: str, release_id
     return views
 
 
+# the review status as the case list shows it, written in SQL so it can be filtered on (the same rule as review_status_for)
+_REVIEW_STATUS_SQL = """
+    CASE
+        WHEN current_state.state_id IS NULL THEN NULL
+        WHEN latest_review.action = 'CONFIRM' THEN 'CONFIRMED'
+        WHEN latest_review.action = 'CORRECT' THEN 'CORRECTED'
+        WHEN latest_review.action = 'MARK_UNRESOLVED' THEN 'MARKED_UNRESOLVED'
+        WHEN COALESCE((current_state.explanation ->> 'labels_changed')::int, 0) > 0 THEN 'UNVERIFIED'
+        ELSE 'NOT_REQUIRED'
+    END"""
+
+# a case has changed labels when its current state counts one or more; no count means none
+_LABELS_CHANGED_SQL = "COALESCE((current_state.explanation ->> 'labels_changed')::int, 0) > 0"
+
+
 # the rows a typed text could mean: a full or short case id, or an accession followed by a drug
 def _resolution_candidates(conn: psycopg.Connection, text: str) -> list[dict]:
     query = text.strip()
@@ -207,11 +223,14 @@ def list_cases(
     drug: str | None = Query(default=None, min_length=1),
     state: str | None = Query(default=None, min_length=1),
     q: str | None = Query(default=None, min_length=2),
+    release: str | None = Query(default=None, min_length=1),
+    review_status: Literal["UNVERIFIED", "CONFIRMED", "CORRECTED", "MARKED_UNRESOLVED", "NOT_REQUIRED"] | None = None,
+    labels_changed: Literal["changed", "unchanged"] | None = None,
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     conn: psycopg.Connection = Depends(get_connection),
 ) -> list[CaseSummary]:
-    """List cases with optional drug and current-published-state filters."""
+    """List cases with optional drug, state, release, review status and changed-label filters."""
 
     sql = """
     SELECT
@@ -243,9 +262,12 @@ def list_cases(
     WHERE (%s::text IS NULL OR c.antibiotic = %s)
       AND (%s::text IS NULL OR current_state.state_code = %s)
       AND (%s::text IS NULL OR c.case_id ILIKE %s OR c.target_acc ILIKE %s)
+      AND (%s::text IS NULL OR current_state.release_id = %s)
+      AND (%s::text IS NULL OR __REVIEW_STATUS__ = %s)
+      AND (%s::text IS NULL OR (current_state.state_id IS NOT NULL AND (__LABELS_CHANGED__) = (%s = 'changed')))
     ORDER BY c.case_id
     LIMIT %s OFFSET %s
-    """
+    """.replace("__REVIEW_STATUS__", _REVIEW_STATUS_SQL).replace("__LABELS_CHANGED__", _LABELS_CHANGED_SQL)
 
     # q searches as you type: a case id that starts with it (CASE_ may be left out) or an accession that does
     search = None if q is None else q.strip()
@@ -253,7 +275,14 @@ def list_cases(
     by_accession = None if search is None else search + "%"
 
     with conn.cursor(row_factory=dict_row) as cur:
-        cur.execute(sql, (drug, drug, state, state, search, by_id, by_accession, limit, offset))
+        cur.execute(
+            sql,
+            (
+                drug, drug, state, state, search, by_id, by_accession,
+                release, release, review_status, review_status, labels_changed, labels_changed,
+                limit, offset,
+            ),
+        )
         rows = cur.fetchall()
 
     summaries = []

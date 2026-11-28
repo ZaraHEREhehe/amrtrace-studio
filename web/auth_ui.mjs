@@ -1,9 +1,27 @@
 // Z-18 identity view; deliberately isolated from dossier, change, and evaluator logic.
+import { formatWhen, roleLabel } from "./ids.mjs";
 import { can, currentAccount, listAdminUsers, login, logout, restoreSession, subscribeSession } from "./auth_client.mjs";
 
 const $ = (id) => document.getElementById(id);
 let previousRole = null;
 let adminRequestRevision = 0;
+// where to go back to after signing in
+let loginReturn = "#/dashboard";
+
+// the sign-in page replaces the whole shell while the address is #/login
+function syncLoginPage() {
+  const onLogin = window.location.hash === "#/login";
+
+  if (onLogin && currentAccount()) {
+    window.location.hash = loginReturn;
+    return;
+  }
+
+  document.body.classList.toggle("login-mode", onLogin);
+  $("login-page").hidden = !onLogin;
+
+  if (onLogin) $("auth-username").focus();
+}
 
 function showMessage(message, error = false) {
   const el = $("auth-status");
@@ -15,7 +33,7 @@ function showMessage(message, error = false) {
 function setVisibility() {
   ++adminRequestRevision;
   const actor = currentAccount();
-  $("auth-identity").textContent = actor ? `${actor.username} · ${actor.role}` : "Read-only visitor";
+  $("auth-identity").textContent = actor ? `${actor.username} · ${roleLabel(actor.role)}` : "Read-only visitor";
   $("auth-show-login").hidden = Boolean(actor);
   $("auth-signout").hidden = !actor;
   $("admin-nav").hidden = !can("manage_users");
@@ -48,6 +66,7 @@ function setVisibility() {
   }
   $("run-submit").hidden = !can("run_evaluation");
   if (window.location.hash === "#/admin") void loadAdminPage();
+  syncLoginPage();
 }
 
 async function loadAdminPage() {
@@ -79,8 +98,8 @@ async function loadAdminPage() {
     const tbody = document.createElement("tbody");
     for (const user of rows) {
       const tr = document.createElement("tr");
-      for (const value of [user.username, user.role, user.active ? "Active" : "Disabled",
-        user.last_login_at ?? "Never"]) {
+      for (const value of [user.username, roleLabel(user.role), user.active ? "Active" : "Disabled",
+        formatWhen(user.last_login_at) || "Never"]) {
         const td = document.createElement("td");
         td.textContent = String(value); // never turn API text into HTML
         tr.append(td);
@@ -98,10 +117,10 @@ async function initAuthUi() {
   subscribeSession(setVisibility);
   setVisibility();
   $("auth-show-login").addEventListener("click", () => {
-    $("auth-login-panel").hidden = false;
-    $("auth-username").focus();
+    const here = window.location.hash;
+    loginReturn = here && here !== "#/login" ? here : "#/dashboard";
+    window.location.hash = "#/login";
   });
-  $("auth-cancel-login").addEventListener("click", () => { $("auth-login-panel").hidden = true; });
   $("auth-login-form").addEventListener("submit", async (event) => {
     event.preventDefault();
     const submit = $("auth-login-submit");
@@ -110,8 +129,8 @@ async function initAuthUi() {
     try {
       await login($("auth-username").value.trim(), $("auth-password").value);
       $("auth-password").value = "";
-      $("auth-login-panel").hidden = true;
-      showMessage("Signed in successfully");
+      showMessage("");
+      window.location.hash = loginReturn;
     } catch (error) {
       showMessage(error.message, true);
     } finally {
@@ -123,7 +142,11 @@ async function initAuthUi() {
     try { await logout(); showMessage("Signed out"); }
     catch { showMessage("Signed out locally; session revocation could not be confirmed.", true); }
   });
-  window.addEventListener("hashchange", () => { if (location.hash === "#/admin") void loadAdminPage(); });
+  window.addEventListener("hashchange", () => {
+    if (location.hash === "#/admin") void loadAdminPage();
+    syncLoginPage();
+  });
+  syncLoginPage();
   await restoreSession();
 }
 
