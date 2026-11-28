@@ -3858,4 +3858,113 @@ body.login-mode .assistant-launcher {
   .mismatch-sides {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* theme: a cool page, cards that float, a colour stripe on each folding section, and bars that frost over what scrolls beneath */
+:root {
+  --bg: #e8eff4;
+  --radius: 12px;
+  --edge: rgba(11, 58, 91, 0.06);
+  --float: 0 1px 2px rgba(11, 58, 91, 0.05), 0 8px 24px rgba(11, 58, 91, 0.07);
+  --float-open: 0 2px 4px rgba(11, 58, 91, 0.06), 0 14px 34px rgba(11, 58, 91, 0.1);
+  --glass: rgba(232, 239, 244, 0.78);
 }
+
+body,
+.app-shell {
+  background: var(--bg);
+}
+
+.card,
+.axis-card,
+.metric-card {
+  border-color: var(--edge);
+  border-radius: var(--radius);
+  box-shadow: var(--float);
+}
+
+/* folding sections: the wrapper goes quiet and each fold floats as a card of its own */
+.card.accordion {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.accordion > .fold {
+  margin-bottom: 12px;
+  border: 1px solid var(--edge);
+  border-left: 4px solid var(--stripe, #0b3a5b);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--float);
+  transition: box-shadow 0.15s;
+}
+
+.accordion > .fold:first-child {
+  border-top: 1px solid var(--edge);
+}
+
+.accordion > .fold:last-child {
+  margin-bottom: 0;
+}
+
+.accordion > .fold[open] {
+  box-shadow: var(--float-open);
+}
+
+/* the stripe cycles through the poster navy and three blues; the chip uses a darker shade of the same colour so it stays readable */
+.accordion > .fold:nth-child(4n + 1) { --stripe: #0b3a5b; --stripe-soft: #dde3e8; --stripe-ink: #0b3a5b; }
+.accordion > .fold:nth-child(4n + 2) { --stripe: #0f7a8a; --stripe-soft: #dbebee; --stripe-ink: #0a5f6c; }
+.accordion > .fold:nth-child(4n + 3) { --stripe: #3b82c4; --stripe-soft: #e1ecf6; --stripe-ink: #23669f; }
+.accordion > .fold:nth-child(4n + 4) { --stripe: #4fa3a5; --stripe-soft: #e0f0f0; --stripe-ink: #2c7b7d; }
+
+.accordion > .fold .fold-hint {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--stripe-soft, #e8eff4);
+  color: var(--stripe-ink, #0b3a5b);
+  font-size: 11.5px;
+}
+
+/* the whole workspace scrolls, so the top bar can stay put and frost over the page beneath it */
+.workspace {
+  overflow-y: auto;
+}
+
+.main {
+  flex: 1 0 auto;
+  overflow: visible;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  border-bottom-color: var(--edge);
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+}
+
+.assistant.floating {
+  border-color: rgba(11, 58, 91, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.82);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
+}
+
+/* the equivalence report holds floating cards already, so it needs no frame of its own */
+section.card:has(> #equivalence-detail) {
+  padding-right: 0;
+  padding-left: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+section.card:has(> #equivalence-detail) > .section-heading {
+  padding-right: 0;
+  padding-left: 0;
+}
+
