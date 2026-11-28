@@ -434,88 +434,157 @@ function renderChangeRows(changes) {
 }
 
 
-function renderChangedEntities(entities) {
-  const wrapper = make("div", {
-    className: "entity-list",
-  });
+// long lists start with a short batch and grow on request, inside a box that scrolls on its own
+const LIST_STEP = 25;
 
-  if (!entities.length) {
-    wrapper.append(
-      make("p", {
-        className: "muted",
-        text: "No changed entities were stored.",
-      }),
-    );
-    return wrapper;
-  }
+function pagedBlock(items, render, word) {
+  if (!items.length) return render([]);
 
-  for (const entity of entities) {
-    const item = make("article", {
-      className: "entity-card",
+  const wrap = make("div");
+  const box = make("div", { className: "scroll-limited" });
+  const footer = make("div", { className: "list-footer" });
+  let shown = Math.min(LIST_STEP, items.length);
+
+  const draw = (refocus = false) => {
+    const top = box.scrollTop;
+    box.replaceChildren(render(items.slice(0, shown)));
+    box.scrollTop = top;
+
+    clear(footer);
+    footer.hidden = items.length <= LIST_STEP;
+    footer.append(make("span", { className: "muted", text: `Showing ${formatCount(shown)} of ${formatCount(items.length)} ${word}` }));
+    if (shown >= items.length) return;
+
+    const left = items.length - shown;
+    const more = make("button", { className: "button", text: `Show ${formatCount(Math.min(LIST_STEP, left))} more`, attributes: { type: "button" } });
+    more.addEventListener("click", () => {
+      shown = Math.min(shown + LIST_STEP, items.length);
+      draw(true);
     });
+    footer.append(more);
 
-    item.append(
-      make("strong", {
-        text: `${entity.node_type} / ${entity.node_id}`,
-      }),
-      make("span", {
-        text:
-          `${entity.old_version ?? "∅"} → ` +
-          `${entity.new_version ?? "∅"}`,
-      }),
-    );
-
-    if (entity.changed_region) {
-      item.append(
-        renderValue(entity.changed_region),
-      );
+    if (left > LIST_STEP) {
+      const all = make("button", { className: "button", text: "Show all", attributes: { type: "button" } });
+      all.addEventListener("click", () => {
+        shown = items.length;
+        draw();
+      });
+      footer.append(all);
     }
 
-    wrapper.append(item);
-  }
+    if (refocus) more.focus();
+  };
 
-  return wrapper;
+  draw();
+  wrap.append(box, footer);
+  return wrap;
 }
 
 
-// the stored impact set; long sets show their first rows, since every case is also one click away in its dossier
-const IMPACT_ROWS_SHOWN = 50;
+// small label-over-value pairs that sit side by side and wrap on narrow screens
+function factGrid(values) {
+  const grid = make("div", { className: "fact-grid" });
 
-function renderImpact(impact) {
-  const wrapper = make("div");
-
-  wrapper.append(
-    definitionList({
-      Release: impact.release_id,
-      "Level 1 candidates": formatCount(impact.level1_size),
-      "Level 2 selected": formatCount(impact.level2_size),
-    }),
-  );
-
-  const shown = impact.items.slice(0, IMPACT_ROWS_SHOWN);
-
-  wrapper.append(
-    renderDataTable(
-      [
-        ["Case", (item) => caseLink(item.case_id)],
-        ["Mechanism", "mechanism"],
-        ["Reason", "reason"],
-      ],
-      shown,
-      "The stored impact set is empty.",
-    ),
-  );
-
-  if (impact.items.length > shown.length) {
-    wrapper.append(
-      make("p", {
-        className: "muted",
-        text: `Showing the first ${shown.length} of ${formatCount(impact.items.length)} selected cases.`,
-      }),
-    );
+  for (const [label, value] of Object.entries(values)) {
+    const fact = make("div", { className: "fact" });
+    const body = make("div", { className: "fact-value" });
+    const isNode = value instanceof Node;
+    body.append(isNode ? value : renderValue(value));
+    // a stored object opens into several fields, so it gets the whole row
+    if (value && typeof value === "object" && !isNode) fact.classList.add("fact-wide");
+    fact.append(make("span", { className: "fact-label", text: label }), body);
+    grid.append(fact);
   }
 
-  return wrapper;
+  return grid;
+}
+
+
+// a sentence that names long evidence ids is shown with each id cut short, and the full text on hover
+function shortenIds(text) {
+  const value = String(text ?? "");
+  const short = value.replace(/\b[A-Za-z0-9]+_[0-9a-f]{16,}\b/g, (id) => shortId(id));
+  return make("span", { text: short, attributes: short === value ? {} : { title: value } });
+}
+
+
+// a reason that joins many findings with semicolons shows the first one, and the rest wait in a folded list
+function renderReason(text) {
+  const value = String(text ?? "");
+  const parts = value.split("; ").filter(Boolean);
+  if (parts.length < 2) return shortenIds(value);
+
+  const wrap = make("div", { className: "reason" });
+  wrap.append(shortenIds(parts[0]));
+
+  const more = make("details", { className: "reason-more" });
+  more.append(make("summary", { text: `${formatCount(parts.length - 1)} more` }));
+  const list = make("ul");
+  for (const part of parts.slice(1)) {
+    const item = make("li");
+    item.append(shortenIds(part));
+    list.append(item);
+  }
+  more.append(list);
+  wrap.append(more);
+  return wrap;
+}
+
+
+// one row per changed entity: what kind, which one (short, full on hover) and how its version moved
+function renderChangedEntities(entities) {
+  return pagedBlock(
+    entities,
+    (batch) => {
+      if (!batch.length) {
+        return make("p", { className: "muted", text: "No changed entities were stored." });
+      }
+
+      return renderDataTable(
+        [
+          ["Kind", (entity) => make("span", { text: entity.node_type })],
+          [
+            "Entity",
+            (entity) => {
+              const cell = make("div", { className: "entity-name" });
+              cell.append(shortIdCell(entity.node_id));
+              if (entity.changed_region) cell.append(renderValue(entity.changed_region));
+              return cell;
+            },
+          ],
+          ["Version change", (entity) => make("span", { className: "muted", text: `${entity.old_version ?? "∅"} → ${entity.new_version ?? "∅"}` })],
+        ],
+        batch,
+        "No changed entities were stored.",
+      );
+    },
+    "entities",
+  );
+}
+
+
+// the stored impact set as a table that grows on request; every case is also one click away in its dossier
+function renderImpact(impact) {
+  return pagedBlock(
+    impact.items,
+    (batch) =>
+      renderDataTable(
+        [
+          ["Case", (item) => caseLink(item.case_id)],
+          ["Mechanism", "mechanism"],
+          ["Reason", (item) => renderReason(item.reason)],
+        ],
+        batch,
+        "The stored impact set is empty.",
+      ),
+    "cases",
+  );
+}
+
+
+// the one-line summary beside the impact heading
+function impactHint(impact) {
+  return `${impact.release_id} · ${formatCount(impact.level2_size)} of ${formatCount(impact.level1_size)} candidates selected`;
 }
 
 
@@ -562,30 +631,30 @@ async function loadChangeDetail(changeId) {
         .catch((error) => ({ impact: null, error })),
     ]);
 
-    const columns = make("div", { className: "grid-two" });
-    const left = make("div");
-    const right = make("div");
+    const facts = factGrid({
+      Type: event.type,
+      Initiator: event.initiator,
+      Created: humanDate(event.created_at),
+      From: make("code", { text: event.old_version ?? "∅" }),
+      To: make("code", { text: event.new_version ?? "∅" }),
+      Scope: event.declared_scope,
+    });
 
-    left.append(
-      make("h4", { text: "Event" }),
-      definitionList({
-        Type: event.type,
-        From: event.old_version,
-        To: event.new_version,
-        Initiator: event.initiator,
-        Created: humanDate(event.created_at),
-        Scope: event.declared_scope,
-      }),
-      make("h4", { text: `Changed entities (${event.changed_entities.length})` }),
-      renderChangedEntities(event.changed_entities),
+    const sections = make("div", { className: "card accordion" });
+    sections.append(
+      foldSection("Changed entities", `${formatCount(event.changed_entities.length)} ${event.changed_entities.length === 1 ? "entity" : "entities"}`, false, [
+        renderChangedEntities(event.changed_entities),
+      ]),
     );
 
-    right.append(make("h4", { text: "Stored impact" }));
-
     if (impactResult.impact) {
-      right.append(renderImpact(impactResult.impact));
+      sections.append(foldSection("Stored impact", impactHint(impactResult.impact), false, [renderImpact(impactResult.impact)]));
     } else if (impactResult.error instanceof ApiError && impactResult.error.errorCode === "impact_not_found") {
-      right.append(make("div", { className: "empty-state", text: "This event does not have a stored impact set." }));
+      sections.append(
+        foldSection("Stored impact", "none stored", false, [
+          make("div", { className: "empty-state", text: "This event does not have a stored impact set." }),
+        ]),
+      );
     } else {
       throw impactResult.error;
     }
@@ -598,11 +667,10 @@ async function loadChangeDetail(changeId) {
         attributes: { href: routeHash("runs") },
       }),
     );
-    right.append(make("div", { className: "form-actions" }));
-    right.lastChild.append(actions);
+    const footerActions = make("div", { className: "form-actions" });
+    footerActions.append(actions);
 
-    columns.append(left, right);
-    panel.append(columns);
+    panel.append(facts, sections, footerActions);
     hideStatus(status);
   } catch (error) {
     setStatus(status, "error", errorText(error));
@@ -1823,7 +1891,7 @@ function renderDossierOverview(dossier, history = []) {
   const actions = make("div", { className: "page-actions" });
   const foldAll = make("button", {
     className: "button",
-    text: "Collapse all",
+    text: "Expand all",
     attributes: { type: "button", id: "dossier-fold-all" },
   });
   foldAll.addEventListener("click", () => {
@@ -2086,13 +2154,13 @@ function renderDossierDiff(diff) {
     })),
   ];
 
-  // the same folding sections as the overview; a section with nothing in it starts folded
+  // the same folding sections as the overview, all closed until opened
   const section = (title, rows, children) =>
-    foldSection(title, countHint(rows.length, "change"), rows.length > 0, children);
+    foldSection(title, countHint(rows.length, "change"), false, children);
 
   const sections = make("div", { className: "card accordion" });
   sections.append(
-    foldSection("Before and after", `${diff.before?.release_id ?? "none"} → ${diff.after?.release_id ?? "none"}`, true, [
+    foldSection("Before and after", `${diff.before?.release_id ?? "none"} → ${diff.after?.release_id ?? "none"}`, false, [
       heading,
       states,
       definitionList({
@@ -3233,8 +3301,8 @@ function renderGraphLegends() {
 
 
 // a card with a small uppercase title, holding whatever is passed in
-// sections the person has folded stay folded when another case or tab is opened; the long gene list and the version vector start folded
-const foldedCards = new Set(["Genotype evidence", "Version vector"]);
+// every section starts folded; the ones the person opens stay open while they move between cases and tabs
+const openCards = new Set();
 
 // "3 findings", "1 result": the hint beside a section heading
 function countHint(count, word) {
@@ -3253,10 +3321,10 @@ function foldSection(title, hint, open, children) {
 
 // an overview section: the person's own folding is remembered while the page stays open
 function cardWith(title, hint, ...children) {
-  const card = foldSection(title, hint, !foldedCards.has(title), children);
+  const card = foldSection(title, hint, openCards.has(title), children);
   card.addEventListener("toggle", () => {
-    if (card.open) foldedCards.delete(title);
-    else foldedCards.add(title);
+    if (card.open) openCards.add(title);
+    else openCards.delete(title);
   });
   return card;
 }

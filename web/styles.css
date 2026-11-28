@@ -3614,3 +3614,104 @@ body.login-mode .assistant-launcher {
     text-align: left;
   }
 }
+
+
+/* change events: dates stay on one line, counts line up, and the detail is a summary plus two folding lists */
+.change-table > tbody > tr > td:nth-child(6) {
+  white-space: nowrap;
+}
+
+.change-table > thead > tr > th:last-child,
+.change-table > tbody > tr:not(.detail-row) > td:last-child {
+  text-align: right;
+}
+
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px 24px;
+  margin-bottom: 16px;
+}
+
+.fact {
+  display: grid;
+  align-content: start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fact-wide {
+  grid-column: 1 / -1;
+}
+
+.fact-label {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.fact-value {
+  overflow-wrap: anywhere;
+}
+
+.fact-value code {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.change-detail-body .accordion {
+  background: #ffffff;
+}
+
+.list-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+
+.list-footer .muted {
+  margin-right: auto;
+}
+
+.scroll-limited .table-wrap {
+  overflow: visible;
+}
+
+.scroll-limited td {
+  overflow-wrap: anywhere;
+}
+
+.scroll-limited td:first-child,
+.scroll-limited td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.entity-name {
+  display: grid;
+  gap: 4px;
+}
+
+
+/* a long reason shows its first finding, with the rest behind a small "more" control */
+.reason-more > summary {
+  display: inline-block;
+  margin-top: 2px;
+  color: var(--teal);
+  font-size: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.reason-more > summary::-webkit-details-marker {
+  display: none;
+}
+
+.reason-more ul {
+  margin: 6px 0 0;
+  padding-left: 16px;
+}
+
+.reason-more li {
+  margin: 3px 0;
+}
