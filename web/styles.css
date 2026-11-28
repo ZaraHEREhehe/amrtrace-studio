@@ -1253,38 +1253,43 @@ tr.clickable {
 
 .transition {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) 120px minmax(0, 1fr) minmax(0, 1.3fr);
   align-items: stretch;
   gap: 16px;
 }
 
 .transition-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
   padding: 12px 14px;
   border: 1px solid;
   border-radius: 4px;
 }
 
-.transition-previous {
-  border-color: #fde68a;
-  background: #fffbeb;
+.transition-previous,
+.transition-current {
+  border-color: var(--border);
+  background: #fafbfc;
 }
 
-.transition-current {
-  border-color: #bbf7d0;
-  background: #f0fdf4;
+/* only a state that really changed gets a tint, so an unchanged case stays calm */
+.transition-current.is-changed {
+  border-color: #b8d6e0;
+  background: #eef6f9;
 }
 
 .transition-label {
-  margin-bottom: 6px;
-  font-size: 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
   color: var(--text-2);
 }
 
 .transition-arrow {
   display: grid;
+  align-self: center;
   place-items: center;
   align-content: center;
   color: var(--text-2);
@@ -1302,6 +1307,23 @@ tr.clickable {
   border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 12px;
+}
+
+.transition-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+
+.transition-facts dt {
+  color: var(--muted);
+}
+
+.transition-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--text-2);
 }
 
 .timeline {
@@ -1374,9 +1396,8 @@ tr.clickable {
 
 .vector-item span {
   display: block;
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  margin-bottom: 2px;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -1578,7 +1599,97 @@ tr.clickable {
 .evidence-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
   gap: 16px;
+}
+
+/* the overview is one card of folding sections separated by hairlines */
+.accordion {
+  padding: 0;
+}
+
+.accordion > .fold {
+  padding: 0 20px;
+  border-top: 1px solid var(--border);
+}
+
+.accordion > .fold:first-child {
+  border-top: 0;
+}
+
+.accordion > .fold[open] {
+  padding-bottom: 20px;
+}
+
+.fold > summary {
+  margin-bottom: 0;
+  padding: 16px 0;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+}
+
+.fold[open] > summary {
+  padding-bottom: 14px;
+}
+
+.fold > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fold-hint {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.fold > summary::after {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin: 0 4px 3px 14px;
+  border-right: 2px solid var(--muted);
+  border-bottom: 2px solid var(--muted);
+  transform: rotate(-45deg);
+  transition: transform 0.15s;
+}
+
+.fold[open] > summary::after {
+  margin-bottom: 4px;
+  transform: rotate(45deg);
+}
+
+.fold > summary:hover h3 {
+  color: var(--teal);
+}
+
+.fold > summary:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* a long gene list scrolls inside its own box and keeps its header in view */
+.scroll-limited {
+  max-height: 340px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.scroll-limited th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.id-line-review {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 6px;
+  font-size: 12px;
 }
 
 .evidence-grid > .card:last-child:nth-child(odd) {
@@ -3377,5 +3488,129 @@ body.login-mode .assistant-launcher {
   .login-card {
     height: auto;
     padding: 28px 24px;
+  }
+}
+
+/* the tab bar holds the tabs on the left and one action on the right */
+.tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tab-list {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tab-bar-action {
+  flex: none;
+  margin-right: 6px;
+}
+
+/* the copy button is just an icon beside the case id */
+.copy-button.icon-only {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  cursor: pointer;
+}
+
+.copy-button.icon-only:hover {
+  color: var(--navy);
+}
+
+/* the compare results sit under the release form as their own folding card */
+#dossier-diff:not(:empty) {
+  margin-top: 16px;
+}
+
+.fold .diff-heading {
+  margin: 0 0 12px;
+}
+
+.fold .state-panel .eyebrow {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.fold .state-grid + dl {
+  margin-top: 12px;
+}
+
+/* summary: the story on the left, the checks beside it, and a trace with one link per group */
+.copilot-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr);
+  gap: 16px 32px;
+  align-items: start;
+}
+
+.copilot-body.is-solo {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.copilot-body.is-solo .copilot-headline,
+.copilot-body.is-solo .copilot-story {
+  max-width: 110ch;
+}
+
+.copilot-headline,
+.copilot-story {
+  max-width: none;
+}
+
+.copilot-checks {
+  max-width: none;
+  margin: 0;
+}
+
+.copilot-checks strong {
+  font-size: 13px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.copilot-followups {
+  margin: 14px 0 0;
+}
+
+.copilot-trace-group {
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+}
+
+.copilot-trace-label {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.copilot-trace-links {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding-top: 4px;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .copilot-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .copilot-trace-group {
+    grid-template-columns: 1fr;
+  }
+
+  .copilot-trace-links {
+    text-align: left;
   }
 }

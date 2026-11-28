@@ -99,14 +99,17 @@ test("case dossier exposes the complete Z-11 workflow", () => {
   assert.match(index, /id="dossier-overview"/);
   assert.match(index, /id="dossier-history"/);
   assert.match(index, /id="dossier-diff-form"/);
-  assert.match(index, /id="dossier-graph"/);
+  // the dependency graph lives on its own page; the dossier only links to it from the tab bar
+  assert.match(index, /id="dossier-view-dependencies"/);
+  assert.doesNotMatch(index, /id="dossier-tab-dependencies"/);
   assert.match(index, /id="dossier-review-form"/);
   assert.match(index, /id="dossier-reviews"/);
   assert.match(index, /id="dossier-export"/);
 
   assert.match(app, /getCaseDiff/);
   assert.match(app, /createReview/);
-  assert.match(app, /renderDossierDependencies/);
+  assert.doesNotMatch(app, /renderDossierDependencies/);
+  assert.match(app, /dossier-view-dependencies/);
   assert.match(app, /routeHash\("exports", current\.release_id\)/);
 });
 
