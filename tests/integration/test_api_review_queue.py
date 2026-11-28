@@ -146,3 +146,18 @@ def test_correcting_through_the_api_appends_a_review_and_never_edits_a_state(cli
     assert listed["CASE_U2"]["current_state"] == "CONCORDANT_RESISTANT"     # the state itself is unchanged
     assert client.get("/review-queue").json()["total"] == 1
     assert _states(review_database) == before
+
+
+def test_the_queue_filters_by_triage_tier_and_pages_the_filtered_list(client):
+    both = client.get("/review-queue?tier=LABEL_CHANGED").json()
+    assert both["total"] == 2 and [i["case_id"] for i in both["items"]] == ["CASE_U1", "CASE_U2"]
+    assert {i["triage_tier"] for i in both["items"]} == {"LABEL_CHANGED"}
+    assert client.get("/review-queue?tier=RE_VERIFIED").json()["total"] == 0
+    one = client.get("/review-queue?tier=LABEL_CHANGED&state=UNRESOLVED").json()
+    assert one["total"] == 1 and one["items"][0]["case_id"] == "CASE_U1"
+    second = client.get("/review-queue?tier=LABEL_CHANGED&limit=1&offset=1").json()
+    assert second["total"] == 2 and [i["case_id"] for i in second["items"]] == ["CASE_U2"]
+
+
+def test_an_unknown_tier_is_a_validation_error(client):
+    assert client.get("/review-queue?tier=SOMETHING_ELSE").status_code == 422

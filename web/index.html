@@ -243,14 +243,22 @@
                 </select>
               </div>
               <div class="field">
+                <label for="review-queue-tier">Priority</label>
+                <select id="review-queue-tier" name="tier">
+                  <option value="">All priorities</option>
+                  <option value="NEWLY_DISCORDANT">1 · Newly discordant</option>
+                  <option value="STATE_CHANGED">2 · State changed</option>
+                  <option value="LABEL_CHANGED">3 · Label changed</option>
+                  <option value="RE_VERIFIED">4 · Re-verified</option>
+                </select>
+              </div>
+              <div class="field">
                 <label for="review-queue-sort">Order</label>
                 <select id="review-queue-sort" name="sort">
                   <option value="">Case ID</option>
                   <option value="triage">Priority (triage)</option>
                 </select>
               </div>
-              <button class="button button-primary" type="submit">Apply filters</button>
-              <button id="review-queue-refresh" class="button" type="button">Refresh</button>
             </form>
             <div id="review-queue-status" class="status" aria-live="polite" hidden></div>
             <div id="review-queue-failed-audits"></div>

@@ -4,9 +4,10 @@ Read-only. The rule lives in amrtrace.ledger.verification; reviewers confirm or 
 POST /cases/{case_id}/review, which appends a review_event and never edits a state.
 
     GET /cases/{case_id}/review-status     the review status of the case's current published state
-    GET /review-queue?drug=&state=&limit=&offset=&sort=
+    GET /review-queue?drug=&state=&tier=&limit=&offset=&sort=
                                            every UNVERIFIED case, ordered by case id or, with sort=triage, in the
-                                           A-14 review order; every item carries its triage tier and reason.
+                                           A-14 review order; tier narrows it to one triage tier; every item carries
+                                           its triage tier and reason.
                                            failed_audits lists every published release whose latest Admin audit
                                            failed (I-27), with the cases that differ, so they are raised for review
 """
@@ -45,15 +46,18 @@ def case_review_status(
 def review_queue(
     drug: str | None = Query(default=None, min_length=1),
     state: str | None = Query(default=None, min_length=1),
+    tier: Literal["NEWLY_DISCORDANT", "STATE_CHANGED", "LABEL_CHANGED", "RE_VERIFIED"] | None = Query(default=None),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     sort: Literal["case_id", "triage"] = Query(default="case_id"),
     conn: psycopg.Connection = Depends(get_connection),
 ) -> ReviewQueueView:
-    """Every UNVERIFIED case, optionally for one drug or one current state code."""
-    # with sort=triage the whole queue is ranked before paging, so every page follows the same order
-    if sort == "triage":
-        ranked = rank_review_queue(conn, drug=drug, state=state, limit=limit, offset=offset)
+    """Every UNVERIFIED case, optionally for one drug, one current state code or one triage tier."""
+    # a triage order or a tier filter needs the whole queue ranked before paging, so every page follows the same order
+    if sort == "triage" or tier is not None:
+        ranked = rank_review_queue(
+            conn, drug=drug, state=state, tier=tier, by_case_id=sort != "triage", limit=limit, offset=offset
+        )
         total, pairs = ranked.total, list(ranked.items)
     else:
         page = list_review_queue(conn, drug=drug, state=state, limit=limit, offset=offset)

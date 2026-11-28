@@ -3168,18 +3168,22 @@ function badge(text, className = "") {
 
 
 // A-14: the triage tier as a badge, with the reason written underneath so a reviewer sees why it ranks there
-function triageBadge(item) {
+function triageBadge(item, compact = false) {
   const meta = triageMeta(item.triage_tier);
-  const cell = make("div", { className: "triage-cell" });
-  cell.append(make("span", {
+  const reason = item.triage_reason
+    ? readableTriageReason(item.triage_reason, (code) => stateMeta(code).label)
+    : "";
+  const badge = make("span", {
     className: `badge ${meta.cls}`.trim(),
     text: meta.label,
-    attributes: { title: item.triage_reason ?? "" },
-  }));
-  if (item.triage_reason) {
-    const reason = readableTriageReason(item.triage_reason, (code) => stateMeta(code).label);
-    cell.append(make("div", { className: "triage-reason muted", text: reason }));
-  }
+    attributes: { title: reason },
+  });
+  // the compact form keeps the badge alone and leaves the reason on hover
+  if (compact) return badge;
+
+  const cell = make("div", { className: "triage-cell" });
+  cell.append(badge);
+  if (reason) cell.append(make("div", { className: "triage-reason muted", text: reason }));
   return cell;
 }
 
@@ -3756,6 +3760,7 @@ async function loadReviewQueue(filters, offset = 0) {
   if (token !== reviewQueueRequestToken) return;
   byId("review-queue-drug").value = filters.drug;
   byId("review-queue-state").value = filters.state;
+  byId("review-queue-tier").value = filters.tier ?? "";
   byId("review-queue-sort").value = filters.sort ?? "";
 
   try {
@@ -3776,16 +3781,14 @@ async function loadReviewQueue(filters, offset = 0) {
 
     results.append(renderDataTable(
       [
-        ["Priority", (item) => triageBadge(item)],
-        ["Case", (item) => caseLink(item.case_id)],
-        ["Isolate", (item) => make("code", { text: item.target_acc })],
-        ["Antibiotic", (row) => drugLabel(row.antibiotic)],
+        ["Case", (item) => explorerCase(item)],
+        ["Priority", (item) => triageBadge(item, true)],
         ["State", (item) => stateBadge(item.state_code)],
         ["Release", "release_id"],
         ["Changed labels", "labels_changed"],
         ["Review", (item) => {
           const button = make("button", {
-            className: "button button-primary",
+            className: "button",
             text: "Review",
             attributes: { type: "button", "aria-label": "Review " + item.case_id },
           });
@@ -3947,6 +3950,7 @@ function submitReviewQueueFilters(event) {
   navigate("review-queue", reviewQueueRouteId({
     drug: data.get("drug"),
     state: data.get("state"),
+    tier: data.get("tier"),
     sort: data.get("sort"),
   }));
 }
@@ -4041,7 +4045,10 @@ function boot() {
   });
   byId("explorer-clear").addEventListener("click", () => navigate("explorer", null));
   byId("review-queue-filters").addEventListener("submit", submitReviewQueueFilters);
-  byId("review-queue-refresh").addEventListener("click", () => void loadReviewQueue(currentReviewQueueFilters, reviewQueueOffset));
+  // the queue filters apply as they change, like the explorer, so there is no apply button
+  for (const id of ["review-queue-drug", "review-queue-state", "review-queue-tier", "review-queue-sort"]) {
+    byId(id).addEventListener("change", () => byId("review-queue-filters").requestSubmit());
+  }
   byId("review-queue-close").addEventListener("click", () => {
     ++reviewQueueRequestToken;
     closeReviewQueueCase();

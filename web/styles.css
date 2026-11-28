@@ -3715,3 +3715,14 @@ body.login-mode .assistant-launcher {
 .reason-more li {
   margin: 3px 0;
 }
+
+
+/* review queue: the case reads as drug and isolate, the priority is a badge, and the action sits at the right edge */
+#review-queue-results th:last-child,
+#review-queue-results td:last-child {
+  text-align: right;
+}
+
+#review-queue-results td {
+  vertical-align: middle;
+}

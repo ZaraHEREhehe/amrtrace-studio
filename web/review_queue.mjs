@@ -53,11 +53,18 @@ function cleanSort(value) {
   return REVIEW_SORTS.includes(sort) ? sort : "";
 }
 
+// an unknown priority in a link is ignored instead of breaking the page
+function cleanTier(value) {
+  const tier = String(value ?? "").trim();
+  return Object.hasOwn(TRIAGE_META, tier) ? tier : "";
+}
+
 export function reviewQueueFilters(encoded = "") {
   const params = new URLSearchParams(String(encoded ?? ""));
   return {
     drug: (params.get("drug") ?? "").trim(),
     state: (params.get("state") ?? "").trim(),
+    tier: cleanTier(params.get("tier")),
     sort: cleanSort(params.get("sort")),
   };
 }
@@ -68,6 +75,8 @@ export function reviewQueueRouteId(filters) {
     const value = String(filters?.[key] ?? "").trim();
     if (value) params.set(key, value);
   }
+  const tier = cleanTier(filters?.tier);
+  if (tier) params.set("tier", tier);
   const sort = cleanSort(filters?.sort);
   if (sort) params.set("sort", sort);
   return params.toString() || null;
@@ -88,6 +97,8 @@ export function reviewQueuePath(filters = {}, offset = 0, limit = REVIEW_PAGE_SI
     const value = String(filters?.[key] ?? "").trim();
     if (value) params.set(key, value);
   }
+  const tier = cleanTier(filters?.tier);
+  if (tier) params.set("tier", tier);
   const sort = cleanSort(filters?.sort);
   if (sort) params.set("sort", sort);
   return "/review-queue?" + params.toString();
